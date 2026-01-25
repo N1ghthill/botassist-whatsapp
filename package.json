@@ -1,0 +1,58 @@
+{
+  "name": "botassist-whatsapp",
+  "version": "4.0.1",
+  "description": "BotAssist - Assistente WhatsApp IA com Interface Gráfica",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "reset": "node scripts/maintenance.js reset",
+    "backup": "node scripts/maintenance.js backup",
+    "clean": "node scripts/maintenance.js clean && npm i"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "dotenv": "^16.6.1",
+    "electron-updater": "^6.6.2",
+    "groq-sdk": "^0.7.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "author": "Irving Ruas <irving@ruas.dev.br>",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/N1ghthill/botassist-whatsapp.git"
+  },
+  "build": {
+    "appId": "br.dev.ruas.botassist",
+    "productName": "BotAssist WhatsApp",
+    "directories": {
+      "output": "dist"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "N1ghthill",
+        "repo": "botassist-whatsapp"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

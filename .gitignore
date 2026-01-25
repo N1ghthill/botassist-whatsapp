@@ -1,0 +1,21 @@
+node_modules/
+dist/
+backups/
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env/local
+.env
+.env.*
+!.env.example
+
+# Electron runtime data (not in repo)
+*.sqlite
+*.sqlite3
+
