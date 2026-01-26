@@ -25,7 +25,7 @@ O app tem 3 camadas:
 - `src/renderer/*`: UI (HTML/CSS/JS)
 
 O bot roda separado em:
-- `src/core/bot.js`: processo Node do bot (Baileys + Groq), emitindo eventos para a UI via stdout (`BOTASSIST:{...}`).
+- `src/core/bot.js`: processo Node do bot (Baileys + Groq), emitindo eventos para a UI via **IPC** (`process.send`) com fallback via stdout (`BOTASSIST:{...}`).
 
 ## Requisitos
 - Node.js (recomendado: versão LTS)
@@ -34,6 +34,14 @@ O bot roda separado em:
 ## Instalação
 ```bash
 npm i
+```
+
+### Dependência nativa (keytar)
+O app usa `keytar` para armazenar a API Key da Groq de forma segura no sistema (Keychain/Secret Service/Credential Manager).
+
+Em alguns ambientes pode ser necessário rebuildar o módulo nativo para o Electron:
+```bash
+npx electron-builder install-app-deps
 ```
 
 ## Executar em desenvolvimento
@@ -46,7 +54,9 @@ As configurações são salvas em `settings.json` dentro do `userData` do Electr
 
 Principais campos:
 - `persona`: `ruasbot` | `univitoria`
-- `apiKey`: sua chave da Groq (ou use `GROQ_API_KEY` no ambiente)
+- `apiKeyRef`: referência de onde a API Key está armazenada:
+  - `keytar:groq_apiKey` (recomendado; a chave fica no sistema via `keytar`)
+  - `settings.json` (fallback; a chave pode ser persistida no arquivo se o keychain não estiver disponível)
 - `model`: ex. `llama-3.3-70b-versatile`
 - `systemPrompt`: instruções extras do “prompt do sistema”
 - `restrictToOwner`: só responde ao owner
@@ -55,6 +65,10 @@ Principais campos:
 - `allowedGroups`: allowlist de grupos (JIDs `...@g.us`)
 - `cooldownSecondsDm` / `cooldownSecondsGroup`: cooldown por chat
 - `maxResponseChars`: limita o tamanho da resposta
+
+### API Key (Groq)
+- Configure pela UI. A chave não fica exposta no `settings.json` quando `keytar` está disponível.
+- Alternativa: defina `GROQ_API_KEY` no ambiente.
 
 ### Como pegar o JID do grupo (para allowlist)
 No grupo, mencione o bot e envie:
@@ -89,4 +103,4 @@ Para publicar builds e habilitar auto-update, use o workflow do GitHub Actions:
 ## Troubleshooting
 - Se o QR não aparecer: verifique os logs e se o bot está iniciando.
 - Se precisar gerar novo QR/sessão: apague a pasta `auth` dentro do `userData`.
-- Se a IA não responder: configure `apiKey` na UI ou defina `GROQ_API_KEY`.
+- Se a IA não responder: configure a API Key pela UI (armazenada via `keytar`) ou defina `GROQ_API_KEY`.

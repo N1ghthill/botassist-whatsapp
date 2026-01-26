@@ -1,19 +1,33 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const { spawn } = require('child_process');
+const { fork } = require('child_process');
 const fs = require('fs');
+
+let keytar = null;
+try {
+  // Optional native dependency (recommended) for secure credential storage.
+  keytar = require('keytar');
+} catch {
+  keytar = null;
+}
 
 let mainWindow = null;
 let tray = null;
 let botProcess = null;
 let isBotRunning = false;
+let botStopRequested = false;
+let botStatus = 'offline';
 let settings = null;
 let updateState = { status: 'idle' };
+
+const KEYTAR_SERVICE = 'botassist-whatsapp';
+const KEYTAR_ACCOUNT_GROQ = 'groq_apiKey';
 
 const DEFAULT_SETTINGS = {
   persona: 'ruasbot',
   apiKey: '',
+  apiKeyRef: '',
   ownerNumber: '',
   botTag: '[RuasBot]',
   autoStart: true,
@@ -35,6 +49,78 @@ const DEFAULT_SETTINGS = {
   cooldownSecondsGroup: 12,
   maxResponseChars: 1500
 };
+
+function buildGroqApiKeyRef() {
+  return keytar ? `keytar:${KEYTAR_ACCOUNT_GROQ}` : 'settings.json';
+}
+
+async function getGroqApiKey() {
+  if (keytar) {
+    try {
+      const secret = await keytar.getPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_GROQ);
+      if (secret) return secret;
+    } catch (err) {
+      console.error('Failed to read apiKey from keytar:', err);
+    }
+  }
+  return settings?.apiKey || process.env.GROQ_API_KEY || '';
+}
+
+async function trySetGroqApiKeyInKeytar(value) {
+  if (!keytar) return false;
+  const apiKeyValue = String(value || '').trim();
+  if (!apiKeyValue) return false;
+
+  try {
+    await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT_GROQ, apiKeyValue);
+    return true;
+  } catch (err) {
+    console.error('Failed to save apiKey to keytar:', err);
+    return false;
+  }
+}
+
+async function setGroqApiKey(value) {
+  const apiKeyValue = String(value || '').trim();
+  if (!apiKeyValue) return false;
+
+  const savedInKeytar = await trySetGroqApiKeyInKeytar(apiKeyValue);
+  if (savedInKeytar) {
+    saveSettings({ apiKeyRef: buildGroqApiKeyRef(), apiKey: '' });
+    return true;
+  }
+
+  // Fallback (less secure): store in settings.json if keytar isn't available.
+  saveSettings({ apiKey: apiKeyValue, apiKeyRef: 'settings.json' });
+  return true;
+}
+
+async function hasGroqApiKey() {
+  const apiKeyValue = await getGroqApiKey();
+  return Boolean(String(apiKeyValue || '').trim());
+}
+
+async function migrateLegacyApiKeyToKeytar() {
+  if (!keytar) return;
+  if (!settings?.apiKey) return;
+
+  const legacy = String(settings.apiKey || '').trim();
+  if (!legacy) {
+    delete settings.apiKey;
+    saveSettings({ apiKeyRef: buildGroqApiKeyRef(), apiKey: '' });
+    return;
+  }
+
+  const ok = await trySetGroqApiKeyInKeytar(legacy);
+  if (ok) {
+    delete settings.apiKey;
+    saveSettings({ apiKeyRef: buildGroqApiKeyRef(), apiKey: '' });
+    return;
+  }
+
+  // Can't migrate (e.g. no keychain/secret service in the environment): keep legacy key in settings.json.
+  saveSettings({ apiKeyRef: 'settings.json', apiKey: legacy });
+}
 
 function ensureDirSync(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -84,7 +170,7 @@ function sanitizeSettings(partial) {
   if (safe.requireGroupAllowlist != null) safe.requireGroupAllowlist = Boolean(safe.requireGroupAllowlist);
   if (safe.groupRequireCommand != null) safe.groupRequireCommand = Boolean(safe.groupRequireCommand);
 
-  for (const key of ['persona', 'apiKey', 'ownerNumber', 'botTag', 'model', 'systemPrompt']) {
+  for (const key of ['persona', 'apiKey', 'apiKeyRef', 'ownerNumber', 'botTag', 'model', 'systemPrompt']) {
     if (safe[key] != null) safe[key] = String(safe[key]);
   }
 
@@ -112,6 +198,7 @@ function sanitizeSettings(partial) {
 
 function saveSettings(partial) {
   const next = { ...(settings || DEFAULT_SETTINGS), ...sanitizeSettings(partial) };
+  if (keytar && String(next.apiKeyRef || '').startsWith('keytar:')) delete next.apiKey;
   settings = next;
   try {
     fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf8');
@@ -119,6 +206,30 @@ function saveSettings(partial) {
     console.error('Failed to save settings:', err);
   }
   return settings;
+}
+
+async function getSettingsForRenderer() {
+  const base = settings || loadSettings();
+  const hasKey = await hasGroqApiKey();
+  return {
+    ...base,
+    apiKey: '',
+    apiKeyRef: base.apiKeyRef || buildGroqApiKeyRef(),
+    hasApiKey: hasKey,
+    keytarAvailable: Boolean(keytar)
+  };
+}
+
+function setBotStatus(next) {
+  const normalized = String(next || '').trim() || 'offline';
+  if (botStatus === normalized) return;
+  botStatus = normalized;
+
+  if (normalized === 'online') isBotRunning = true;
+  if (normalized === 'offline' || normalized === 'error') isBotRunning = false;
+
+  updateTrayStatus();
+  mainWindow?.webContents.send('bot-status', botStatus);
 }
 
 function getAssetPath(filename) {
@@ -277,64 +388,102 @@ function createTray() {
   });
 }
 
-function startBot() {
-  if (botProcess) {
-    botProcess.kill();
-  }
+async function startBot() {
+  try {
+    botStopRequested = false;
+    if (botProcess) stopBot();
 
-  const botPath = path.join(__dirname, 'core/bot.js');
-  const env = {
-    ...process.env,
-    ELECTRON_RUN_AS_NODE: '1',
-    BOTASSIST_CONFIG_PATH: getSettingsPath(),
-    BOTASSIST_DATA_DIR: getUserDataDir()
-  };
+    setBotStatus('starting');
 
-  botProcess = spawn(process.execPath, [botPath], {
-    env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: true
-  });
+    const botPath = path.join(__dirname, 'core/bot.js');
+    const groqApiKey = await getGroqApiKey();
+    const env = {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: '1',
+      BOTASSIST_CONFIG_PATH: getSettingsPath(),
+      BOTASSIST_DATA_DIR: getUserDataDir()
+    };
+    if (groqApiKey) env.GROQ_API_KEY = groqApiKey;
 
-  let stdoutBuffer = '';
-  botProcess.stdout.on('data', (data) => {
-    stdoutBuffer += data.toString();
-    const lines = stdoutBuffer.split(/\r?\n/);
-    stdoutBuffer = lines.pop() || '';
+    botProcess = fork(botPath, [], {
+      env,
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      windowsHide: true
+    });
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      if (trimmed.startsWith('BOTASSIST:')) {
-        try {
-          const payload = JSON.parse(trimmed.slice('BOTASSIST:'.length));
-          handleBotEvent(payload);
-          continue;
-        } catch {
-          // fall through to raw log
-        }
+    botProcess.on('message', (payload) => {
+      try {
+        handleBotEvent(payload);
+      } catch (err) {
+        console.error('Failed to handle bot IPC message:', err);
       }
+    });
 
-      mainWindow?.webContents.send('bot-log', trimmed);
-    }
-  });
+    botProcess.on('error', (err) => {
+      console.error('Bot process error:', err);
+      mainWindow?.webContents.send('bot-error', err?.message || String(err));
+      setBotStatus('error');
+    });
 
-  botProcess.stderr.on('data', (data) => {
-    console.error('Bot Error:', data.toString());
-    mainWindow?.webContents.send('bot-error', data.toString());
-  });
+    let stdoutBuffer = '';
+    botProcess.stdout?.on('data', (data) => {
+      stdoutBuffer += data.toString();
+      const lines = stdoutBuffer.split(/\r?\n/);
+      stdoutBuffer = lines.pop() || '';
 
-  botProcess.on('close', (code) => {
-    console.log(`Bot process exited with code ${code}`);
-    isBotRunning = false;
-    updateTrayStatus();
-    mainWindow?.webContents.send('bot-status', 'offline');
-  });
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        if (trimmed.startsWith('BOTASSIST:')) {
+          try {
+            const payload = JSON.parse(trimmed.slice('BOTASSIST:'.length));
+            handleBotEvent(payload);
+            continue;
+          } catch {
+            // fall through to raw log
+          }
+        }
+
+        mainWindow?.webContents.send('bot-log', { message: trimmed, level: 'info' });
+      }
+    });
+
+    botProcess.stderr?.on('data', (data) => {
+      const message = data.toString();
+      console.error('Bot Error:', message);
+      mainWindow?.webContents.send('bot-error', message);
+    });
+
+    botProcess.on('exit', (code, signal) => {
+      console.log(`Bot process exited (code=${code}, signal=${signal || 'n/a'})`);
+      botProcess = null;
+      isBotRunning = false;
+      updateTrayStatus();
+
+      const abnormal = !botStopRequested && code != null && code !== 0;
+      setBotStatus(abnormal ? 'error' : 'offline');
+      mainWindow?.webContents.send('bot-exit', { code, signal, abnormal });
+
+      if (abnormal) {
+        mainWindow?.webContents.send(
+          'bot-error',
+          `Bot encerrou inesperadamente (code=${code}, signal=${signal || 'n/a'}).`
+        );
+      }
+    });
+  } catch (err) {
+    console.error('Failed to start bot:', err);
+    mainWindow?.webContents.send('bot-error', err?.message || String(err));
+    mainWindow?.webContents.send('bot-status', 'error');
+    throw err;
+  }
 }
 
 function stopBot() {
   if (botProcess) {
+    botStopRequested = true;
+    setBotStatus('stopping');
     botProcess.kill('SIGTERM');
     const proc = botProcess;
     setTimeout(() => {
@@ -344,13 +493,14 @@ function stopBot() {
     botProcess = null;
     isBotRunning = false;
     updateTrayStatus();
-    mainWindow?.webContents.send('bot-status', 'offline');
+    setBotStatus('offline');
   }
 }
 
 function restartBot() {
+  setBotStatus('restarting');
   stopBot();
-  setTimeout(() => startBot(), 1000);
+  setTimeout(() => startBot().catch((err) => console.error('Failed to start bot:', err)), 1000);
 }
 
 function updateTrayStatus() {
@@ -434,7 +584,8 @@ function handleBotEvent(payload) {
 
   if (payload.event === 'log') {
     const message = String(payload.message ?? '');
-    if (message) mainWindow?.webContents.send('bot-log', message);
+    const level = String(payload.level ?? 'info');
+    if (message) mainWindow?.webContents.send('bot-log', { message, level });
     return;
   }
 
@@ -447,9 +598,7 @@ function handleBotEvent(payload) {
   if (payload.event === 'status') {
     const status = String(payload.status ?? '');
     if (!status) return;
-    isBotRunning = status === 'online';
-    updateTrayStatus();
-    mainWindow?.webContents.send('bot-status', status);
+    setBotStatus(status);
     return;
   }
 
@@ -460,8 +609,22 @@ function handleBotEvent(payload) {
 }
 
 // IPC Handlers
-ipcMain.handle('start-bot', () => {
-  startBot();
+ipcMain.handle('start-bot', async (event, config) => {
+  try {
+    const incoming = config && typeof config === 'object' ? { ...config } : null;
+    const apiKeyValue = incoming && 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
+    if (incoming) delete incoming.apiKey;
+
+    if (incoming) saveSettings(incoming);
+    if (apiKeyValue.trim()) await setGroqApiKey(apiKeyValue);
+
+    await startBot();
+    return { ok: true };
+  } catch (err) {
+    console.error('start-bot failed:', err);
+    mainWindow?.webContents.send('bot-error', err?.message || String(err));
+    throw err;
+  }
 });
 
 ipcMain.handle('stop-bot', () => {
@@ -473,17 +636,22 @@ ipcMain.handle('restart-bot', () => {
 });
 
 ipcMain.handle('get-bot-status', () => {
-  return isBotRunning ? 'online' : 'offline';
+  return botStatus || (isBotRunning ? 'online' : 'offline');
 });
 
 ipcMain.handle('get-settings', () => {
-  return settings || loadSettings();
+  return getSettingsForRenderer();
 });
 
-ipcMain.handle('set-settings', (event, partial) => {
-  const updated = saveSettings(partial);
+ipcMain.handle('set-settings', async (event, partial) => {
+  const incoming = partial && typeof partial === 'object' ? { ...partial } : {};
+  const apiKeyValue = 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
+  delete incoming.apiKey;
+
+  if (apiKeyValue.trim()) await setGroqApiKey(apiKeyValue);
+  saveSettings(incoming);
   if (botProcess) restartBot();
-  return updated;
+  return getSettingsForRenderer();
 });
 
 ipcMain.handle('get-app-version', () => {
@@ -513,13 +681,18 @@ ipcMain.on('preload-error', (event, message) => {
 });
 
 // App Events
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   loadSettings();
+  try {
+    await migrateLegacyApiKeyToKeytar();
+  } catch (err) {
+    console.error('Secret migration failed:', err);
+  }
   createWindow();
   createTray();
   configureAutoUpdater();
-  
-  if (settings?.autoStart) setTimeout(() => startBot(), 1000);
+
+  if (settings?.autoStart) setTimeout(() => startBot().catch((err) => console.error('Failed to start bot:', err)), 1000);
 
   if (app.isPackaged) setTimeout(() => checkForUpdatesFromMenu(), 2500);
 });

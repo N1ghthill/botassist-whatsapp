@@ -1,6 +1,6 @@
 {
   "name": "botassist-whatsapp",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "BotAssist - Assistente WhatsApp IA com Interface Gráfica",
   "private": true,
   "main": "src/main.js",
@@ -19,6 +19,7 @@
     "dotenv": "^16.6.1",
     "electron-updater": "^6.6.2",
     "groq-sdk": "^0.7.0",
+    "keytar": "^7.9.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
@@ -38,6 +39,14 @@
       "output": "dist"
     },
     "electronDist": "node_modules/electron/dist",
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!backups/**",
+      "!.git/**",
+      "!**/.env",
+      "!**/.env.*"
+    ],
     "publish": [
       {
         "provider": "github",

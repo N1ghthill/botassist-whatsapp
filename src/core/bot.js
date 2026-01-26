@@ -56,7 +56,16 @@ const PERSONAS = {
 };
 
 function emit(event, payload = {}) {
-  process.stdout.write(`BOTASSIST:${JSON.stringify({ event, ...payload })}\n`);
+  const message = { event, ...payload };
+  if (typeof process.send === 'function') {
+    try {
+      process.send(message);
+      return;
+    } catch {
+      // fall through to stdout
+    }
+  }
+  process.stdout.write(`BOTASSIST:${JSON.stringify(message)}\n`);
 }
 
 function log(message, level = 'info') {
@@ -513,5 +522,11 @@ function fatal(err) {
   log(message, 'error');
   process.exit(1);
 }
+
+process.on('uncaughtException', (err) => fatal(err));
+process.on('unhandledRejection', (reason) => {
+  if (reason instanceof Error) return fatal(reason);
+  fatal(new Error(String(reason)));
+});
 
 main().catch((err) => fatal(err));

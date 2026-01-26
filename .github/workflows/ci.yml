@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild native deps for Electron
+        run: npx electron-builder install-app-deps
+
       - name: Syntax checks
         run: |
           node --check src/main.js
@@ -39,4 +42,3 @@ jobs:
       - name: Package (dir only)
         run: npm run build:linux -- --dir
         if: runner.os == 'Linux'
-

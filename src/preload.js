@@ -17,7 +17,7 @@ try {
 
 const electronAPI = {
   // Bot control
-  startBot: () => ipcRenderer?.invoke('start-bot'),
+  startBot: (config) => ipcRenderer?.invoke('start-bot', config),
   stopBot: () => ipcRenderer?.invoke('stop-bot'),
   restartBot: () => ipcRenderer?.invoke('restart-bot'),
   getBotStatus: () => ipcRenderer?.invoke('get-bot-status'),
@@ -37,6 +37,7 @@ const electronAPI = {
   onQRCode: (callback) => ipcRenderer?.on('qr-code', (event, data) => callback(data)),
   onBotStatus: (callback) => ipcRenderer?.on('bot-status', (event, data) => callback(data)),
   onBotError: (callback) => ipcRenderer?.on('bot-error', (event, data) => callback(data)),
+  onBotExit: (callback) => ipcRenderer?.on('bot-exit', (event, data) => callback(data)),
   onOpenSettings: (callback) => ipcRenderer?.on('open-settings', () => callback()),
   onUpdateEvent: (callback) => ipcRenderer?.on('update-event', (event, data) => callback(data)),
   

@@ -16,11 +16,16 @@ Você precisa:
 2) Criar um token com permissão de release (ex.: `GH_TOKEN`).
 
 ### Passo a passo (exemplo)
-1) Atualize a versão no `package.json` (ex.: `4.0.1`).
-2) Faça commit e crie uma tag `v4.0.1` apontando para esse commit.
+1) Atualize a versão no `package.json` (ex.: `4.1.0`).
+2) Faça commit e crie uma tag `v4.1.0` apontando para esse commit.
 3) Faça push da tag:
-   - `git push origin v4.0.1`
+   - `git push origin v4.1.0`
 4) O GitHub Actions executa `.github/workflows/release.yml` e publica os artefatos no GitHub Release.
+
+## Nota sobre dependências nativas (keytar)
+Este projeto inclui `keytar` (módulo nativo) para armazenar segredos no sistema. Por isso, os workflows executam:
+- `npx electron-builder install-app-deps`
+antes do build para garantir que os binários estejam compatíveis com a versão do Electron.
 
 ## Assinatura de código (recomendado)
 Para evitar alertas e melhorar confiança:

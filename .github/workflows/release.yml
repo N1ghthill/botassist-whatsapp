@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild native deps for Electron
+        run: npx electron-builder install-app-deps
+
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: npm run build:linux -- --publish always
@@ -51,4 +54,3 @@ jobs:
         run: npm run build:mac -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

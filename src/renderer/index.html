@@ -152,7 +152,21 @@
             <div class="page" id="logsPage">
                 <div class="logs-header">
                     <h3>Logs do Sistema</h3>
-                    <div>
+                    <div class="logs-actions">
+                        <div class="log-filters" aria-label="Filtros de log">
+                            <label class="filter-chip">
+                                <input type="checkbox" id="filterInfo" checked>
+                                <span>INFO</span>
+                            </label>
+                            <label class="filter-chip">
+                                <input type="checkbox" id="filterError" checked>
+                                <span>ERRO</span>
+                            </label>
+                            <label class="filter-chip">
+                                <input type="checkbox" id="filterQr" checked>
+                                <span>QR CODE</span>
+                            </label>
+                        </div>
                         <button id="clearLogsBtn" class="btn btn-secondary">
                             <i class="fas fa-trash"></i> Limpar
                         </button>
@@ -194,6 +208,7 @@
                         <label for="apiKey">API Key Groq</label>
                         <input type="password" id="apiKey" class="form-control" 
                                placeholder="Sua chave da Groq">
+                        <small id="apiKeyHint" class="hint"></small>
                     </div>
                     
                     <div class="form-group">

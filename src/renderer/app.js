@@ -25,6 +25,9 @@ const clearLogsBtn = document.getElementById('clearLogsBtn');
 const saveLogsBtn = document.getElementById('saveLogsBtn');
 const recentLogs = document.getElementById('recentLogs');
 const fullLogs = document.getElementById('fullLogs');
+const filterInfo = document.getElementById('filterInfo');
+const filterError = document.getElementById('filterError');
+const filterQr = document.getElementById('filterQr');
 
 // QR Code
 const qrCodeContainer = document.getElementById('qrCode');
@@ -48,6 +51,8 @@ const themeToggleIcon = document.getElementById('themeToggleIcon');
 let appState = {
     botStatus: 'offline',
     logs: [],
+    logFilters: { info: true, error: true, qr: true },
+    lastBotStatusLogged: null,
     settings: {
         persona: 'ruasbot',
         apiKey: '',
@@ -102,7 +107,7 @@ startBtn.addEventListener('click', async () => {
         if (!window.electronAPI?.startBot) {
             throw new Error('API do Electron não está disponível (preload não carregou). Reinicie o app e verifique o console do Electron.');
         }
-        await window.electronAPI.startBot();
+        await window.electronAPI.startBot(appState.settings);
         updateBotStatus('starting');
         addLog('Bot iniciando...');
     } catch (error) {
@@ -286,8 +291,19 @@ function addLog(message, type = 'info') {
 }
 
 function updateLogsDisplay() {
+    const filters = appState.logFilters || { info: true, error: true, qr: true };
+    const categorize = (type) => {
+        if (type === 'error') return 'error';
+        if (type === 'qr') return 'qr';
+        return 'info';
+    };
+    const filteredLogs = (appState.logs || []).filter((log) => {
+        const category = categorize(log?.type);
+        return Boolean(filters[category]);
+    });
+
     // Update recent logs (last 10)
-    const recent = appState.logs.slice(-10);
+    const recent = filteredLogs.slice(-10);
     recentLogs.innerHTML = recent.map(log => `
         <div class="log-entry">
             <span class="log-time" style="color: ${getLogColor(log.type)}">[${log.time}]</span>
@@ -296,7 +312,7 @@ function updateLogsDisplay() {
     `).join('');
     
     // Update full logs
-    fullLogs.textContent = appState.logs.map(log => `[${log.time}] ${log.message}`).join('\n');
+    fullLogs.textContent = filteredLogs.map(log => `[${log.time}] ${log.message}`).join('\n');
     
     // Auto-scroll to bottom
     recentLogs.scrollTop = recentLogs.scrollHeight;
@@ -308,31 +324,26 @@ function getLogColor(type) {
         case 'error': return '#e74c3c';
         case 'success': return '#2ecc71';
         case 'warning': return '#f39c12';
+        case 'qr': return '#8b5cf6';
         default: return '#3498db';
     }
 }
 
 // Bot Status Functions
 function updateBotStatus(status) {
-    appState.botStatus = status;
+    const normalized = String(status || 'offline');
+    appState.botStatus = normalized;
     
     // Update UI
-    statusIndicator.className = 'status-indicator ' + status;
-    statusText.textContent = getStatusText(status);
-    botStatusText.textContent = getStatusText(status);
+    statusIndicator.className = 'status-indicator ' + normalized;
+    statusText.textContent = getStatusText(normalized);
+    botStatusText.textContent = getStatusText(normalized);
     
     // Update button states
-    startBtn.disabled = status === 'online' || status === 'starting';
-    stopBtn.disabled = status === 'offline' || status === 'stopping';
-    
-    // Update indicator color
-    if (status === 'online') {
-        statusIndicator.classList.add('online');
-    } else {
-        statusIndicator.classList.remove('online');
-    }
+    startBtn.disabled = normalized === 'online' || normalized === 'starting' || normalized === 'restarting';
+    stopBtn.disabled = normalized === 'offline' || normalized === 'stopping' || normalized === 'error';
 
-    if (status === 'offline') {
+    if (normalized === 'offline' || normalized === 'error') {
         if (qrMessage) qrMessage.style.display = '';
     }
 }
@@ -343,7 +354,8 @@ function getStatusText(status) {
         'online': 'Online',
         'starting': 'Iniciando...',
         'stopping': 'Parando...',
-        'restarting': 'Reiniciando...'
+        'restarting': 'Reiniciando...',
+        'error': 'Erro'
     };
     return statusMap[status] || 'Desconhecido';
 }
@@ -439,7 +451,31 @@ async function loadSettings() {
 
     // Update form fields
     document.getElementById('personaSelect').value = appState.settings.persona ?? 'ruasbot';
-    document.getElementById('apiKey').value = appState.settings.apiKey ?? '';
+    const apiKeyEl = document.getElementById('apiKey');
+    if (apiKeyEl) {
+        apiKeyEl.value = '';
+        apiKeyEl.placeholder = appState.settings.hasApiKey
+            ? 'Chave salva (deixe vazio para manter)'
+            : 'Sua chave da Groq';
+    }
+    const apiKeyHintEl = document.getElementById('apiKeyHint');
+    if (apiKeyHintEl) {
+        const ref = String(appState.settings.apiKeyRef || '');
+        const usingKeytar = ref.startsWith('keytar:');
+        const usingFile = ref === 'settings.json';
+
+        if (appState.settings.keytarAvailable === false) {
+            apiKeyHintEl.textContent = 'Dica: instale o keytar para armazenar a chave com segurança no sistema.';
+        } else if (usingFile && appState.settings.keytarAvailable) {
+            apiKeyHintEl.textContent = 'Aviso: o keytar está instalado, mas o sistema de credenciais não está disponível. A chave será salva no settings.json.';
+        } else if (usingKeytar && appState.settings.hasApiKey) {
+            apiKeyHintEl.textContent = 'Chave salva com segurança no sistema. Para trocar, cole uma nova e salve.';
+        } else if (appState.settings.hasApiKey) {
+            apiKeyHintEl.textContent = 'Chave já configurada. Para trocar, cole uma nova e salve.';
+        } else {
+            apiKeyHintEl.textContent = 'Cole sua chave e clique em “Salvar Configurações”.';
+        }
+    }
     document.getElementById('ownerNumber').value = appState.settings.ownerNumber ?? '';
     document.getElementById('botTag').value = appState.settings.botTag ?? '';
     document.getElementById('autoStart').checked = Boolean(appState.settings.autoStart);
@@ -498,6 +534,19 @@ async function init() {
 
     // Load settings
     await loadSettings();
+
+    const applyLogFilters = () => {
+        appState.logFilters = {
+            info: filterInfo ? Boolean(filterInfo.checked) : true,
+            error: filterError ? Boolean(filterError.checked) : true,
+            qr: filterQr ? Boolean(filterQr.checked) : true
+        };
+        updateLogsDisplay();
+    };
+    filterInfo?.addEventListener('change', applyLogFilters);
+    filterError?.addEventListener('change', applyLogFilters);
+    filterQr?.addEventListener('change', applyLogFilters);
+    applyLogFilters();
     
     // Get initial bot status
     try {
@@ -509,28 +558,55 @@ async function init() {
     
     // Set up event listeners from main process
     window.electronAPI.onBotLog((data) => {
-        const msg = String(data ?? '').trim();
-        if (msg) addLog(msg, 'info');
+        const message = typeof data === 'object' && data ? String(data.message ?? '') : String(data ?? '');
+        const levelRaw = typeof data === 'object' && data ? String(data.level ?? 'info') : 'info';
+        const msg = String(message ?? '').trim();
+        if (!msg) return;
+
+        const level = levelRaw.toLowerCase();
+        const type = level === 'error' ? 'error' : level === 'warning' || level === 'warn' ? 'warning' : 'info';
+        addLog(msg, type);
     });
     
     window.electronAPI.onQRCode((data) => {
         showQRCode(data);
-        addLog('QR Code gerado! Escaneie com WhatsApp.', 'success');
+        addLog('QR Code gerado! Escaneie com WhatsApp.', 'qr');
     });
     
 window.electronAPI.onBotStatus((status) => {
     updateBotStatus(status);
-    addLog(`Bot ${status === 'online' ? 'conectado' : 'desconectado'}`, 
-           status === 'online' ? 'success' : 'warning');
+    const normalized = String(status || '');
+    if (normalized && appState.lastBotStatusLogged !== normalized) {
+        appState.lastBotStatusLogged = normalized;
+        const type =
+            normalized === 'online' ? 'success' :
+            normalized === 'error' ? 'error' :
+            normalized === 'offline' ? 'warning' :
+            'info';
+        addLog(`Bot: ${getStatusText(normalized)}`, type);
+    }
 
     const aiStatusEl = document.getElementById('aiStatus');
     if (aiStatusEl) {
-        aiStatusEl.textContent = status === 'online' ? 'Aguardando mensagens' : 'Desconectada';
+        aiStatusEl.textContent = normalized === 'online' ? 'Aguardando mensagens' : normalized === 'error' ? 'Erro' : 'Desconectada';
     }
 });
     
     window.electronAPI.onBotError((error) => {
-        addLog(`Erro: ${error}`, 'error');
+        const msg = typeof error === 'object' && error ? String(error.message ?? '') : String(error ?? '');
+        addLog(`Erro: ${msg}`, 'error');
+    });
+
+    window.electronAPI?.onBotExit?.((data) => {
+        const code = data?.code;
+        const signal = data?.signal;
+        const abnormal = Boolean(data?.abnormal);
+        addLog(`Bot encerrou (code=${code ?? 'n/a'}, signal=${signal ?? 'n/a'})`, abnormal ? 'error' : 'warning');
+
+        if (abnormal) {
+            const shouldRestart = window.confirm('O bot encerrou inesperadamente. Deseja reiniciar?');
+            if (shouldRestart) restartBtn?.click();
+        }
     });
 
     window.electronAPI.onOpenSettings(() => {
