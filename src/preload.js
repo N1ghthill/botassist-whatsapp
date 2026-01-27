@@ -26,6 +26,12 @@ const electronAPI = {
   getSettings: () => ipcRenderer?.invoke('get-settings'),
   setSettings: (settings) => ipcRenderer?.invoke('set-settings', settings),
 
+  // Maintenance (userData)
+  getUserDataStats: () => ipcRenderer?.invoke('get-userdata-stats'),
+  backupUserData: () => ipcRenderer?.invoke('backup-userdata'),
+  resetSession: () => ipcRenderer?.invoke('reset-session'),
+  openUserDataDir: () => ipcRenderer?.invoke('open-userdata-dir'),
+
   // App / Updates
   getAppVersion: () => ipcRenderer?.invoke('get-app-version'),
   getUpdateState: () => ipcRenderer?.invoke('get-update-state'),

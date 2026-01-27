@@ -1,0 +1,31 @@
+name: ✨ Sugestão (app)
+description: Sugira melhorias para o BotAssist WhatsApp (aplicativo).
+title: "[Sugestão]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideias são bem-vindas — o objetivo é colaborar com software livre, gratuito e de qualidade.
+
+        Se a sugestão for do **site**, use: https://github.com/N1ghthill/botassist-site/issues
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qual problema você quer resolver?
+      placeholder: "Ex.: Hoje é difícil..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Sua sugestão
+      placeholder: "Ex.: Poderia ter um botão/uma tela..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto adicional (opcional)
+      placeholder: "Links, prints, referências..."
+    validations:
+      required: false

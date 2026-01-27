@@ -15,7 +15,7 @@
         })();
     </script>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -41,7 +41,7 @@
                 </a>
                 <a href="#" class="nav-item" data-page="database">
                     <i class="fas fa-database"></i>
-                    <span>Banco de Dados</span>
+                    <span>Manutenção</span>
                 </a>
                 <a href="#" class="nav-item" data-page="about">
                     <i class="fas fa-info-circle"></i>
@@ -330,38 +330,41 @@
                 </div>
             </div>
             
-            <!-- Database Page -->
+            <!-- Maintenance Page -->
             <div class="page" id="databasePage">
-                <h3>Gerenciamento do Banco de Dados</h3>
+                <h3>Manutenção</h3>
                 <p style="opacity:.85; margin-top:8px;">
-                    Em breve: esta seção está em desenvolvimento. Por enquanto, o bot funciona sem banco local.
+                    Ferramentas para gerenciar os dados locais do app (sessão/QR e backups).
                 </p>
                 <div class="db-actions">
                     <button id="backupDbBtn" class="btn btn-success">
-                        <i class="fas fa-download"></i> Backup
+                        <i class="fas fa-download"></i> Backup dos dados
                     </button>
                     <button id="restoreDbBtn" class="btn btn-warning">
-                        <i class="fas fa-upload"></i> Restaurar
+                        <i class="fas fa-folder-open"></i> Abrir pasta de dados
                     </button>
                     <button id="cleanDbBtn" class="btn btn-danger">
-                        <i class="fas fa-broom"></i> Limpar Dados
+                        <i class="fas fa-qrcode"></i> Resetar sessão (novo QR)
                     </button>
                 </div>
                 
                 <div class="db-stats">
                     <h4>Estatísticas</h4>
+                    <p style="opacity:.8; margin-top:6px;">
+                        Pasta: <code id="userDataPath">-</code>
+                    </p>
                     <div class="stats-grid">
                         <div class="stat-item">
-                            <span class="stat-label">Tamanho do DB:</span>
+                            <span class="stat-label">Tamanho dos dados:</span>
                             <span class="stat-value" id="dbSize">0 MB</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Conversas:</span>
-                            <span class="stat-value" id="dbConversations">0</span>
+                            <span class="stat-label">Sessão (auth):</span>
+                            <span class="stat-value" id="dbConversations">-</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Mensagens:</span>
-                            <span class="stat-value" id="dbMessages">0</span>
+                            <span class="stat-label">Configurações:</span>
+                            <span class="stat-value" id="dbMessages">-</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Último Backup:</span>
@@ -385,18 +388,28 @@
 	                            <strong>Assistente de IA para WhatsApp com interface gráfica</strong>
 	                        </p>
 
-	                        <div class="credits">
-	                            <h4>Créditos</h4>
-	                            <p>
-	                                Desenvolvimento: <strong>Irving Ruas</strong><br>
-	                                <a href="https://ruas.dev.br" target="_blank">ruas.dev.br</a>
-	                            </p>
-	                        </div>
+		                        <div class="credits">
+		                            <h4>Créditos</h4>
+		                            <p>
+		                                Desenvolvimento: <strong>Irving Ruas</strong><br>
+		                                <a href="https://ruas.dev.br" target="_blank">ruas.dev.br</a>
+		                            </p>
+		                        </div>
 
-	                        <div class="updates">
-	                            <h4>Atualizações</h4>
-	                            <p>
-	                                Versão instalada: <span id="appVersion">-</span><br>
+		                        <div class="credits">
+		                            <h4>Software livre</h4>
+		                            <p style="margin:0;">
+		                                Licença: <strong>MIT</strong> • Sem garantias (“AS IS”).
+		                            </p>
+		                            <small style="display:block; opacity:.8; margin-top:6px;">
+		                                Contribuições são bem-vindas — issues e PRs no GitHub.
+		                            </small>
+		                        </div>
+
+		                        <div class="updates">
+		                            <h4>Atualizações</h4>
+		                            <p>
+		                                Versão instalada: <span id="appVersion">-</span><br>
 	                                Status: <span id="updateStatus">-</span>
 	                            </p>
 	                            <div class="update-actions">
@@ -427,19 +440,23 @@
 	                            </ul>
                         </div>
                         
-	                        <div class="links">
-	                            <a href="https://github.com/N1ghthill/botassist-whatsapp" 
-	                               class="btn btn-secondary" target="_blank">
-	                                <i class="fab fa-github"></i> GitHub
-	                            </a>
-                            <a href="https://ruas.dev.br" 
-                               class="btn btn-primary" target="_blank">
-                                <i class="fas fa-globe"></i> Site Oficial
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+		                        <div class="links">
+		                            <a href="https://github.com/N1ghthill/botassist-whatsapp"
+		                               class="btn btn-secondary" target="_blank">
+		                                <i class="fab fa-github"></i> Repositório
+		                            </a>
+		                            <a href="https://botassist.ruas.dev.br"
+		                               class="btn btn-primary" target="_blank">
+		                                <i class="fas fa-globe"></i> Site
+		                            </a>
+		                            <a href="https://github.com/sponsors/N1ghthill"
+		                               class="btn btn-secondary" target="_blank">
+		                                <i class="fas fa-heart"></i> Doar
+		                            </a>
+		                        </div>
+	                    </div>
+	                </div>
+	            </div>
         </div>
     </div>
     

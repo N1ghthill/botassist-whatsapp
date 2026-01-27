@@ -235,25 +235,113 @@ resetSettingsBtn?.addEventListener('click', async () => {
 });
 
 // Database Functions
-backupDbBtn.addEventListener('click', async () => {
-    // This would call a backend function to backup database
-    addLog('Backup do banco de dados iniciado...');
-    
-    // Simulate backup (in real app, this would call electron API)
-    setTimeout(() => {
-        addLog('Backup concluído com sucesso!', 'success');
+function formatBytes(bytes) {
+    const value = Number(bytes);
+    if (!Number.isFinite(value) || value <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const exponent = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+    const num = value / Math.pow(1024, exponent);
+    return `${num.toFixed(num >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function formatIsoToLocale(iso) {
+    const value = String(iso || '').trim();
+    if (!value) return 'Nunca';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return value;
+    return dt.toLocaleString();
+}
+
+async function refreshMaintenanceStats() {
+    const userDataPathEl = document.getElementById('userDataPath');
+    const sizeEl = document.getElementById('dbSize');
+    const authEl = document.getElementById('dbConversations');
+    const settingsEl = document.getElementById('dbMessages');
+    const lastBackupEl = document.getElementById('lastBackup');
+
+    if (!window.electronAPI?.getUserDataStats) {
+        if (userDataPathEl) userDataPathEl.textContent = '-';
+        if (sizeEl) sizeEl.textContent = '-';
+        if (authEl) authEl.textContent = '-';
+        if (settingsEl) settingsEl.textContent = '-';
+        if (lastBackupEl) lastBackupEl.textContent = '-';
+        return;
+    }
+
+    try {
+        const stats = await window.electronAPI.getUserDataStats();
+        if (userDataPathEl) userDataPathEl.textContent = stats?.userDataPath || '-';
+        if (sizeEl) sizeEl.textContent = formatBytes(stats?.sizeBytes || 0);
+        if (authEl) authEl.textContent = stats?.hasAuth ? 'OK' : 'Não encontrado';
+        if (settingsEl) settingsEl.textContent = stats?.hasSettings ? 'OK' : 'Não encontrado';
+        if (lastBackupEl) lastBackupEl.textContent = formatIsoToLocale(stats?.lastBackupAt);
+    } catch (error) {
+        addLog(`Erro ao ler dados do app: ${error.message}`, 'error');
+    }
+}
+
+backupDbBtn?.addEventListener('click', async () => {
+    try {
+        if (!window.electronAPI?.backupUserData) {
+            addLog('Backup não disponível (API do Electron ausente).', 'warning');
+            showNotification('Backup indisponível', 'warning');
+            return;
+        }
+
+        addLog('Criando backup dos dados...', 'info');
+        const result = await window.electronAPI.backupUserData();
+        if (result?.canceled) {
+            addLog('Backup cancelado.', 'info');
+            return;
+        }
+        if (!result?.ok) throw new Error(result?.error || 'Falha ao criar backup.');
+
+        addLog(`Backup criado em: ${result.backupPath}`, 'success');
         showNotification('Backup criado!', 'success');
-    }, 1500);
+        await refreshMaintenanceStats();
+    } catch (error) {
+        addLog(`Erro no backup: ${error.message}`, 'error');
+        showNotification('Erro ao criar backup', 'error');
+    }
 });
 
-restoreDbBtn?.addEventListener('click', () => {
-    addLog('Restaurar ainda não implementado nesta versão.', 'warning');
-    showNotification('Restaurar ainda não implementado', 'warning');
+restoreDbBtn?.addEventListener('click', async () => {
+    try {
+        if (!window.electronAPI?.openUserDataDir) {
+            showNotification('Ação indisponível', 'warning');
+            return;
+        }
+        const result = await window.electronAPI.openUserDataDir();
+        if (result && result.ok === false) throw new Error(result.error || 'Falha ao abrir pasta.');
+    } catch (error) {
+        addLog(`Erro ao abrir pasta: ${error.message}`, 'error');
+        showNotification('Erro ao abrir pasta', 'error');
+    }
 });
 
-cleanDbBtn?.addEventListener('click', () => {
-    addLog('Limpar dados ainda não implementado nesta versão.', 'warning');
-    showNotification('Limpar dados ainda não implementado', 'warning');
+cleanDbBtn?.addEventListener('click', async () => {
+    try {
+        if (!window.electronAPI?.resetSession) {
+            showNotification('Ação indisponível', 'warning');
+            return;
+        }
+
+        addLog('Resetando sessão...', 'warning');
+        const result = await window.electronAPI.resetSession();
+        if (result?.canceled) {
+            addLog('Reset de sessão cancelado.', 'info');
+            return;
+        }
+        if (!result?.ok) throw new Error(result?.error || 'Falha ao resetar sessão.');
+
+        addLog('Sessão resetada. Inicie o bot para gerar um novo QR Code.', 'success');
+        showNotification('Sessão resetada', 'success');
+        await refreshMaintenanceStats();
+        updateBotStatus('offline');
+    } catch (error) {
+        addLog(`Erro ao resetar sessão: ${error.message}`, 'error');
+        showNotification('Erro ao resetar sessão', 'error');
+    }
 });
 
 // Logs Functions
@@ -653,9 +741,7 @@ window.electronAPI.onBotStatus((status) => {
     document.getElementById('conversationsCount').textContent = '0';
     document.getElementById('messagesToday').textContent = '0';
     document.getElementById('aiStatus').textContent = 'Desconectada';
-    document.getElementById('dbSize').textContent = '0 MB';
-    document.getElementById('dbConversations').textContent = '0';
-    document.getElementById('dbMessages').textContent = '0';
+    await refreshMaintenanceStats();
 }
 
 // Initialize when DOM is loaded

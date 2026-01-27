@@ -1,0 +1,59 @@
+name: 🐛 Bug (app)
+description: Reporte um problema no BotAssist WhatsApp (aplicativo).
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por ajudar a melhorar o projeto.
+
+        Se o problema for do **site**, use: https://github.com/N1ghthill/botassist-site/issues
+  - type: input
+    id: version
+    attributes:
+      label: Versão do app
+      placeholder: "Ex.: 4.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema operacional
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passo a passo para reproduzir
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+      placeholder: "O que deveria acontecer?"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado atual
+      placeholder: "O que está acontecendo?"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / prints (opcional)
+      description: Se puder, inclua logs da aba “Logs” (remova dados sensíveis).
+      render: text
+    validations:
+      required: false
