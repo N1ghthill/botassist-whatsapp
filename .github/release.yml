@@ -1,0 +1,18 @@
+changelog:
+  categories:
+    - title: "Novidades"
+      labels:
+        - "feature"
+        - "enhancement"
+    - title: "Correções"
+      labels:
+        - "fix"
+        - "bug"
+    - title: "Build & CI"
+      labels:
+        - "build"
+        - "ci"
+        - "infra"
+    - title: "Outras mudanças"
+      labels:
+        - "*"
