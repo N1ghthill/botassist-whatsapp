@@ -496,7 +496,11 @@ function getTheme() {
 function applyTheme(theme) {
     const next = theme === 'dark' ? 'dark' : 'light';
     document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('theme', next); } catch {}
+    try {
+        localStorage.setItem('theme', next);
+    } catch {
+        // Ignore storage failures (private mode / quota)
+    }
 
     if (themeToggleIcon) {
         themeToggleIcon.className = `fas ${next === 'dark' ? 'fa-sun' : 'fa-moon'}`;
@@ -715,8 +719,8 @@ window.electronAPI.onBotStatus((status) => {
         if (window.electronAPI?.getUpdateState) {
             setUpdateUI(await window.electronAPI.getUpdateState());
         }
-    } catch (error) {
-        // ignore
+    } catch (err) {
+        console.debug('Update init failed:', err);
     }
 
     window.electronAPI?.onUpdateEvent?.((state) => setUpdateUI(state));
