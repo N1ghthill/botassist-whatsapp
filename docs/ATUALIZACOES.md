@@ -37,3 +37,4 @@ Para evitar alertas e melhorar confiança:
 - Se você usar outro servidor (S3, servidor próprio), dá pra trocar o provider do `publish`.
 - Este projeto define `build.electronDist` para usar o Electron já instalado em `node_modules/electron/dist` (evita downloads durante o build).
 - O workflow de release usa o `GITHUB_TOKEN` do próprio GitHub Actions para publicar releases.
+- No Linux, o release publica `AppImage`, `.deb` e `.rpm`. Para usuários finais, recomende `.deb` (Ubuntu/Debian) ou `.rpm` (Fedora/openSUSE). O `.rpm` é gerado via build dedicado.

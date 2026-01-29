@@ -144,12 +144,13 @@ No app, a aba **Manutenção** permite:
 npm run build:win
 npm run build:mac
 npm run build:linux
+npm run build:linux:rpm
 ```
 
 ### Observações
 - Windows: pode exigir executar no Windows, ou Linux com Wine configurado.
 - macOS: recomenda-se gerar no macOS (assinatura/notarização e DMG).
-- Linux: deve funcionar diretamente no Linux.
+- Linux: `build:linux` gera `AppImage` + `.deb`; `build:linux:rpm` gera `.rpm`. Para usuários finais, recomende `.deb` (Ubuntu/Debian) ou `.rpm` (Fedora/openSUSE); `AppImage` fica como alternativa portátil.
 
 <a id="release-auto-update"></a>
 ## Release (auto-update)

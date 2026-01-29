@@ -9,7 +9,8 @@
     "dev": "NODE_ENV=development electron .",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
+    "build:linux": "electron-builder --linux AppImage deb",
+    "build:linux:rpm": "bash scripts/build-rpm.sh",
     "reset": "node scripts/maintenance.js reset",
     "backup": "node scripts/maintenance.js backup",
     "clean": "node scripts/maintenance.js clean && npm i"
@@ -24,6 +25,7 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@electron/asar": "^4.0.1",
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3"
   },
@@ -56,13 +58,21 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": [
+        "nsis",
+        "portable",
+        "msi"
+      ]
     },
     "mac": {
       "target": "dmg"
     },
     "linux": {
-      "target": "AppImage"
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ]
     }
   }
 }
