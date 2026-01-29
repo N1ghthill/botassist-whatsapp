@@ -60,8 +60,7 @@
     "win": {
       "target": [
         "nsis",
-        "portable",
-        "msi"
+        "portable"
       ]
     },
     "mac": {

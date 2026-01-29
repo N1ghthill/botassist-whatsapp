@@ -20,6 +20,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout
@@ -41,32 +43,28 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
+      - name: Ensure GitHub Release exists (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+          gh release create "${{ github.ref_name }}" --draft --title "${{ github.ref_name }}" --notes ""
+
       - name: Build (Linux AppImage + deb)
         if: runner.os == 'Linux'
         run: npm run build:linux -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (Linux rpm)
         if: runner.os == 'Linux'
         run: npm run build:linux:rpm -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload RPM to GitHub Release
         if: runner.os == 'Linux'
         run: gh release upload "${{ github.ref_name }}" dist/*.rpm --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: npm run build:win -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: npm run build:mac -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
