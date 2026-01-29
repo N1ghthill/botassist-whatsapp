@@ -63,8 +63,11 @@ StartupWMClass=BotAssist WhatsApp
 Categories=Utility;
 EOF
 
-ICON_SRC="$ROOT_DIR/node_modules/app-builder-lib/templates/icons/electron-linux"
-for size in 16 32 48 64 128 256; do
+ICON_SRC="$ROOT_DIR/assets/icons"
+if [[ ! -d "$ICON_SRC" ]]; then
+  ICON_SRC="$ROOT_DIR/node_modules/app-builder-lib/templates/icons/electron-linux"
+fi
+for size in 16 32 48 64 128 256 512; do
   install -Dm644 "$ICON_SRC/${size}x${size}.png" "$STAGE_DIR/usr/share/icons/hicolor/${size}x${size}/apps/$APP_NAME.png"
 done
 

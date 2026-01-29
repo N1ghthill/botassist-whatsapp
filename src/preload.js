@@ -45,6 +45,7 @@ const electronAPI = {
   onBotError: (callback) => ipcRenderer?.on('bot-error', (event, data) => callback(data)),
   onBotExit: (callback) => ipcRenderer?.on('bot-exit', (event, data) => callback(data)),
   onOpenSettings: (callback) => ipcRenderer?.on('open-settings', () => callback()),
+  onOpenPrivacy: (callback) => ipcRenderer?.on('open-privacy', () => callback()),
   onUpdateEvent: (callback) => ipcRenderer?.on('update-event', (event, data) => callback(data)),
   
   // QR helpers (render in renderer without nodeIntegration)

@@ -47,6 +47,10 @@
                     <i class="fas fa-info-circle"></i>
                     <span>Sobre</span>
                 </a>
+                <a href="#" class="nav-item" data-page="privacy">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Privacidade</span>
+                </a>
             </nav>
             
             <div class="user-info">
@@ -457,6 +461,65 @@
 	                    </div>
 	                </div>
 	            </div>
+
+            <!-- Privacy Page -->
+            <div class="page" id="privacyPage">
+                <div class="privacy-content">
+                    <h2>Privacidade & Dados</h2>
+                    <p class="privacy-intro">
+                        O BotAssist roda localmente na sua máquina. Ele não envia conversas para servidores externos
+                        além do provedor de IA configurado (ex.: Groq) e do WhatsApp.
+                    </p>
+
+                    <div class="privacy-grid">
+                        <div class="privacy-card">
+                            <h4>O que é armazenado localmente</h4>
+                            <ul>
+                                <li>Sessão do WhatsApp (QR/credenciais do Baileys).</li>
+                                <li>Configurações do bot e preferências.</li>
+                                <li>Logs locais exibidos na interface.</li>
+                            </ul>
+                        </div>
+                        <div class="privacy-card">
+                            <h4>Chaves de API</h4>
+                            <p>
+                                Quando possível, a chave da Groq é salva com segurança via keytar (sistema operacional).
+                                Em ambientes sem keytar, ela fica no <code>settings.json</code> local.
+                            </p>
+                        </div>
+                        <div class="privacy-card">
+                            <h4>Uso de dados</h4>
+                            <p>
+                                Mensagens só são processadas quando o bot está ativo. Você pode limitar
+                                por usuário, grupos e cooldowns para reduzir risco e exposição.
+                            </p>
+                        </div>
+                        <div class="privacy-card">
+                            <h4>WhatsApp (não-oficial)</h4>
+                            <p>
+                                A conexão usa Baileys (não-oficial). Isso pode violar termos do WhatsApp e causar
+                                bloqueio da conta. Use por sua conta e risco.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="privacy-actions">
+                        <p>
+                            Recomendamos revisar as configurações antes de disponibilizar o bot para terceiros.
+                        </p>
+                        <div class="links">
+                            <a href="https://github.com/N1ghthill/botassist-whatsapp"
+                               class="btn btn-secondary" target="_blank">
+                                <i class="fab fa-github"></i> Repositório
+                            </a>
+                            <a href="https://botassist.ruas.dev.br"
+                               class="btn btn-primary" target="_blank">
+                                <i class="fas fa-globe"></i> Site
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     

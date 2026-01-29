@@ -701,6 +701,10 @@ window.electronAPI.onBotStatus((status) => {
         activatePage('settings');
     });
 
+    window.electronAPI?.onOpenPrivacy?.(() => {
+        activatePage('privacy');
+    });
+
     // Updates
     try {
         if (appVersionEl && window.electronAPI?.getAppVersion) {

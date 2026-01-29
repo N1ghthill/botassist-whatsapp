@@ -35,10 +35,18 @@ jobs:
       - name: Syntax checks
         run: |
           node --check src/main.js
+          node --check src/main/botManager.js
+          node --check src/main/paths.js
+          node --check src/main/settings.js
+          node --check src/main/ui.js
+          node --check src/main/updates.js
+          node --check src/main/userData.js
           node --check src/preload.js
           node --check src/core/bot.js
           node --check src/renderer/app.js
 
       - name: Package (dir only)
-        run: npm run build:linux -- --dir
+        run: npm run build:linux:dir
         if: runner.os == 'Linux'
+        env:
+          ELECTRON_BUILDER_PUBLISH: never
