@@ -1214,18 +1214,13 @@ html[data-theme="dark"] .advanced-panel {
     gap: var(--space-4);
 }
 
-.ruas-logo-placeholder {
+.ruas-logo {
     width: 170px;
-    height: 70px;
+    height: auto;
     border-radius: 14px;
     background: linear-gradient(180deg, #ffffff 0%, #f4f7f2 100%);
     border: 1px solid rgba(15, 23, 42, 0.06);
-    padding: 5px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: var(--secondary-color);
+    padding: 5px 7px;
     box-shadow:
         0 14px 24px rgba(2, 6, 23, 0.18),
         0 0 0 1px rgba(255, 255, 255, 0.6) inset;
@@ -1537,7 +1532,7 @@ a:not(.btn):not(.nav-item):focus-visible {
         align-items: flex-start;
     }
 
-    .ruas-logo-placeholder {
+    .ruas-logo {
         width: 140px;
     }
 }
