@@ -22,6 +22,10 @@ Você precisa:
    - `git push origin v4.1.0`
 4) O GitHub Actions executa `.github/workflows/release.yml` e publica os artefatos no GitHub Release.
 
+### Garantia de builds no deploy
+As builds sao geradas **no deploy de release** (tags `vX.Y.Z` ou `workflow_dispatch`).
+O workflow `release.yml` roda em Windows, macOS e Linux e publica os artefatos no GitHub Release.
+
 ## Nota sobre dependências nativas (keytar)
 Este projeto inclui `keytar` (módulo nativo) para armazenar segredos no sistema. Por isso, os workflows executam:
 - `npx electron-builder install-app-deps`

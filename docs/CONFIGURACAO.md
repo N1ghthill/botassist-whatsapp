@@ -4,15 +4,27 @@ As configurações são gerenciadas pela UI e persistidas pelo Electron no arqui
 
 ## Campos
 
-### IA / Persona
-- `persona` (`ruasbot` | `univitoria`): perfil do bot.
+### Perfis (agentes)
+Os perfis ficam em `profiles` e o ativo em `activeProfileId`.
+
+Cada perfil possui:
+- `id`: identificador interno
+- `name`: nome do agente
+- `provider`: `groq` | `openai` | `openaiCompatible`
+- `model`: modelo (ex.: `llama-3.3-70b-versatile`)
+- `systemPrompt`: instrucao principal do agente
+- `botTag`: prefixo adicionado nas respostas (opcional)
+
+Na UI, voce pode criar, duplicar, excluir e importar/exportar perfis.
+
+Campos gerais:
+- `activeProfileId`: id do perfil ativo
+- `persona` (legado): mantido apenas para compatibilidade
 - `apiKeyRef`: referência de onde a API Key da Groq está armazenada:
   - `keytar:groq_apiKey` (padrão/recomendado; a chave fica no sistema via `keytar`)
   - `settings.json` (fallback; a chave pode ser persistida no arquivo se o keychain não estiver disponível)
 - API Key (Groq): configure pela UI. Alternativa: variável de ambiente `GROQ_API_KEY`.
-- `model`: modelo (ex.: `llama-3.3-70b-versatile`).
-- `systemPrompt`: texto extra que complementa o prompt do sistema.
-- `botTag`: prefixo adicionado nas respostas (opcional).
+- `systemPrompt`: instrucoes adicionais (extras) que complementam o agente ativo.
 
 ### Acesso
 - `ownerNumber`: seu número (o bot usa para identificar o “owner”).
@@ -52,6 +64,23 @@ Ele retorna o JID para você colar em `allowedGroups`.
   "respondToGroups": true,
   "allowedGroups": ["1203630...@g.us"],
   "groupRequireCommand": false
+}
+```
+
+### Exemplo: perfis
+```json
+{
+  "activeProfileId": "profile_abc123",
+  "profiles": [
+    {
+      "id": "profile_abc123",
+      "name": "Atendimento",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "systemPrompt": "Voce atende clientes com linguagem simples e objetiva.",
+      "botTag": "[Atendimento]"
+    }
+  ]
 }
 ```
 

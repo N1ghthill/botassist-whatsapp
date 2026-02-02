@@ -1,7 +1,56 @@
-const { app, Menu, Tray, nativeImage, dialog, shell } = require('electron');
+const { app, Menu, Tray, nativeImage, dialog, shell, nativeTheme } = require('electron');
 const { getAssetPath, fileExists } = require('./paths');
 
 let tray = null;
+let trayThemeListenerAttached = false;
+
+function normalizeBotStatus(status, isRunning) {
+  const raw = String(status || '').toLowerCase();
+  if (raw === 'online') return 'online';
+  if (raw === 'offline') return 'offline';
+  if (raw === 'error') return 'warning';
+  if (raw === 'starting' || raw === 'restarting') return 'online';
+  if (raw === 'stopping') return 'offline';
+  if (isRunning) return 'online';
+  return 'offline';
+}
+
+function getStatusMeta(status, isRunning) {
+  const raw = String(status || '').toLowerCase();
+  if (raw === 'online') return { state: 'online', label: 'Bot: Online', tooltip: 'Online' };
+  if (raw === 'offline') return { state: 'offline', label: 'Bot: Offline', tooltip: 'Offline' };
+  if (raw === 'error') return { state: 'warning', label: 'Bot: Erro', tooltip: 'Erro' };
+  if (raw === 'starting') return { state: 'warning', label: 'Bot: Conectando', tooltip: 'Conectando' };
+  if (raw === 'stopping') return { state: 'warning', label: 'Bot: Parando', tooltip: 'Parando' };
+  if (raw === 'restarting') return { state: 'warning', label: 'Bot: Reiniciando', tooltip: 'Reiniciando' };
+  if (isRunning) return { state: 'online', label: 'Bot: Online', tooltip: 'Online' };
+  return { state: 'offline', label: 'Bot: Offline', tooltip: 'Offline' };
+}
+
+function getTrayIconPath(status, isRunning) {
+  const normalized = normalizeBotStatus(status, isRunning);
+  const candidates = [];
+
+  if (normalized === 'online')
+    candidates.push('tray-icon-online.png', 'tray-icon-online-bolt.png');
+  if (normalized === 'warning')
+    candidates.push('tray-icon-warning.png', 'tray-icon-warning-bolt.png');
+  if (normalized === 'offline')
+    candidates.push('tray-icon-offline.png', 'tray-icon-offline-bolt.png');
+
+  if (process.platform === 'linux') {
+    candidates.push('tray-icon-mono.png');
+  }
+
+  const prefersDark = nativeTheme?.shouldUseDarkColors;
+  if (prefersDark) {
+    candidates.push('tray-icon-dark.png', 'tray-icon.png', 'icon.png');
+  } else {
+    candidates.push('tray-icon-light.png', 'tray-icon.png', 'icon.png');
+  }
+
+  return candidates.map(getAssetPath).find(fileExists);
+}
 
 function showAbout() {
   dialog.showMessageBox({
@@ -88,27 +137,33 @@ function createMenu({ restartBot, stopBot, openSettings, openPrivacy, checkForUp
   Menu.setApplicationMenu(menu);
 }
 
-function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning }) {
-  const trayIconPath = [getAssetPath('tray-icon.png'), getAssetPath('icon.png')].find(fileExists);
+function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning, getBotStatus }) {
+  const trayIconPath = getTrayIconPath(getBotStatus?.(), getIsBotRunning?.());
   if (!trayIconPath) return;
 
   const icon = nativeImage.createFromPath(trayIconPath);
   tray = new Tray(icon);
 
+  const window = getMainWindow?.();
+  const isVisible = window ? window.isVisible() : false;
+  const toggleLabel = isVisible ? 'Ocultar' : 'Mostrar';
+  const meta = getStatusMeta(getBotStatus?.(), getIsBotRunning?.());
+
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Abrir',
+      label: toggleLabel,
       click: () => {
         const window = getMainWindow?.();
         if (window) {
-          window.show();
+          window.isVisible() ? window.hide() : window.show();
         } else {
           createWindow?.();
         }
+        updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotStatus });
       }
     },
     {
-      label: getIsBotRunning?.() ? 'Bot: Online' : 'Bot: Offline',
+      label: meta.label,
       enabled: false
     },
     { type: 'separator' },
@@ -123,30 +178,47 @@ function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning }
     }
   ]);
 
-  tray.setToolTip('BotAssist WhatsApp');
+  tray.setToolTip(`BotAssist WhatsApp • ${meta.tooltip}`);
   tray.setContextMenu(contextMenu);
 
   tray.on('click', () => {
     const window = getMainWindow?.();
     if (window) {
       window.isVisible() ? window.hide() : window.show();
+      updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotStatus });
     }
   });
+
+  if (!trayThemeListenerAttached && nativeTheme?.on) {
+    trayThemeListenerAttached = true;
+    nativeTheme.on('updated', () => {
+      if (!tray) return;
+      const nextPath = getTrayIconPath(getBotStatus?.(), getIsBotRunning?.());
+      if (!nextPath) return;
+      tray.setImage(nativeImage.createFromPath(nextPath));
+    });
+  }
 }
 
-function updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning }) {
+function updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotStatus }) {
   if (!tray) return;
+
+  const window = getMainWindow?.();
+  const isVisible = window ? window.isVisible() : false;
+  const toggleLabel = isVisible ? 'Ocultar' : 'Mostrar';
+  const statusValue = getBotStatus?.();
+  const meta = getStatusMeta(statusValue, getIsBotRunning?.());
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Abrir',
+      label: toggleLabel,
       click: () => {
         const window = getMainWindow?.();
-        if (window) window.show();
+        if (window) window.isVisible() ? window.hide() : window.show();
       }
     },
     {
-      label: getIsBotRunning?.() ? 'Bot: Online' : 'Bot: Offline',
+      label: meta.label,
       enabled: false
     },
     { type: 'separator' },
@@ -161,6 +233,11 @@ function updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning }) {
     }
   ]);
   tray.setContextMenu(contextMenu);
+
+  const nextPath = getTrayIconPath(statusValue, getIsBotRunning?.());
+  if (nextPath) tray.setImage(nativeImage.createFromPath(nextPath));
+
+  tray.setToolTip(`BotAssist WhatsApp • ${meta.tooltip}`);
 }
 
 module.exports = {

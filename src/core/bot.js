@@ -5,6 +5,11 @@ const path = require('path');
 const nodeCrypto = require('crypto');
 const Groq = require('groq-sdk');
 
+const OPENAI_COMPAT_TIMEOUT_MS = 30000;
+const SETTINGS_RELOAD_DEBOUNCE_MS = 200;
+const REPLY_MAP_TTL_MS = 6 * 60 * 60 * 1000;
+const REPLY_MAP_CLEAN_INTERVAL_MS = 10 * 60 * 1000;
+
 // Baileys expects WebCrypto on globalThis.crypto.subtle.
 // Electron's Node runtime (depending on version) may not define globalThis.crypto by default.
 if (!globalThis.crypto) {
@@ -16,13 +21,20 @@ if (!globalThis.crypto) {
 }
 
 const DEFAULT_SETTINGS = {
-  persona: 'ruasbot',
+  persona: 'custom',
+  provider: 'groq',
   apiKey: '',
+  openaiApiKey: '',
+  openaiBaseUrl: 'https://api.openai.com/v1',
+  openaiCompatApiKey: '',
+  openaiCompatBaseUrl: '',
   ownerNumber: '',
-  botTag: '[RuasBot]',
+  botTag: '[Meu Bot]',
   autoStart: true,
   model: 'llama-3.3-70b-versatile',
   systemPrompt: '',
+  profiles: [],
+  activeProfileId: '',
 
   // Access control / routing
   restrictToOwner: false,
@@ -47,11 +59,9 @@ const PERSONAS = {
       'Você é o RuasBot, assistente pessoal do Irving Ruas no WhatsApp. ' +
       'Seja direto, educado e prático. Quando não souber, diga que não sabe.'
   },
-  univitoria: {
-    name: 'Univitória Técnico',
-    systemPrompt:
-      'Você é o assistente técnico da Univitória. Ajude com suporte, dúvidas e procedimentos internos. ' +
-      'Seja objetivo e proponha passos claros.'
+  custom: {
+    name: 'Personalizado',
+    systemPrompt: ''
   }
 };
 
@@ -85,19 +95,71 @@ function readJsonFile(filePath) {
   }
 }
 
-function readSettings() {
-  const configPath = process.env.BOTASSIST_CONFIG_PATH;
-  const fromFile = configPath ? readJsonFile(configPath) : null;
+const SETTINGS_PATH = process.env.BOTASSIST_CONFIG_PATH || '';
+const SETTINGS_BASENAME = SETTINGS_PATH ? path.basename(SETTINGS_PATH) : '';
+let cachedSettings = null;
+let settingsWatchStarted = false;
+let settingsReloadTimer = null;
+
+function scheduleSettingsReload() {
+  if (settingsReloadTimer) return;
+  settingsReloadTimer = setTimeout(() => {
+    settingsReloadTimer = null;
+    cachedSettings = loadSettingsFromDisk();
+  }, SETTINGS_RELOAD_DEBOUNCE_MS);
+}
+
+function startSettingsWatcher() {
+  if (settingsWatchStarted || !SETTINGS_PATH) return;
+  settingsWatchStarted = true;
+
+  const watchTarget = fs.existsSync(SETTINGS_PATH) ? SETTINGS_PATH : path.dirname(SETTINGS_PATH);
+  try {
+    fs.watch(watchTarget, { persistent: false }, (eventType, filename) => {
+      if (!filename) {
+        scheduleSettingsReload();
+        return;
+      }
+      const name = filename.toString();
+      if (watchTarget === SETTINGS_PATH || name === SETTINGS_BASENAME) {
+        scheduleSettingsReload();
+      }
+    });
+  } catch {
+    // ignore watcher errors
+  }
+}
+
+function loadSettingsFromDisk() {
+  const fromFile = SETTINGS_PATH ? readJsonFile(SETTINGS_PATH) : null;
   const merged = { ...DEFAULT_SETTINGS, ...(fromFile || {}) };
 
   // Env fallback
+  if (!merged.provider) merged.provider = process.env.BOTASSIST_PROVIDER || '';
   if (!merged.apiKey) merged.apiKey = process.env.GROQ_API_KEY || '';
+  if (!merged.openaiApiKey) merged.openaiApiKey = process.env.OPENAI_API_KEY || '';
+  if (!merged.openaiCompatApiKey) merged.openaiCompatApiKey = process.env.OPENAI_COMPAT_API_KEY || '';
+  if (!merged.openaiBaseUrl) merged.openaiBaseUrl = process.env.OPENAI_BASE_URL || DEFAULT_SETTINGS.openaiBaseUrl;
+  if (!merged.openaiCompatBaseUrl) merged.openaiCompatBaseUrl = process.env.OPENAI_COMPAT_BASE_URL || '';
 
   // Normalize
-  for (const key of ['persona', 'apiKey', 'ownerNumber', 'botTag', 'model', 'systemPrompt']) {
+  for (const key of [
+    'persona',
+    'provider',
+    'apiKey',
+    'openaiApiKey',
+    'openaiBaseUrl',
+    'openaiCompatApiKey',
+    'openaiCompatBaseUrl',
+    'ownerNumber',
+    'botTag',
+    'model',
+    'systemPrompt'
+  ]) {
     if (merged[key] == null) merged[key] = DEFAULT_SETTINGS[key];
     merged[key] = String(merged[key]);
   }
+  merged.provider = normalizeProvider(merged.provider);
   merged.autoStart = Boolean(merged.autoStart);
   merged.restrictToOwner = Boolean(merged.restrictToOwner);
   merged.respondToGroups = Boolean(merged.respondToGroups);
@@ -120,13 +182,165 @@ function readSettings() {
     merged[key] = Array.isArray(merged[key]) ? merged[key].map((v) => String(v)) : [];
   }
 
-  return merged;
+  return applyActiveProfile(merged);
+}
+
+function readSettings() {
+  if (!cachedSettings) cachedSettings = loadSettingsFromDisk();
+  startSettingsWatcher();
+  return cachedSettings;
+}
+
+function resolveActiveProfile(settings) {
+  const profiles = Array.isArray(settings.profiles) ? settings.profiles : [];
+  if (profiles.length === 0) return null;
+  const activeId = String(settings.activeProfileId || '').trim();
+  return profiles.find((profile) => profile && profile.id === activeId) || profiles[0] || null;
+}
+
+function applyActiveProfile(settings) {
+  const active = resolveActiveProfile(settings);
+  if (!active) return settings;
+  return {
+    ...settings,
+    persona: String(active.persona || settings.persona || 'custom'),
+    provider: String(active.provider || settings.provider || 'groq'),
+    model: String(active.model || settings.model || 'llama-3.3-70b-versatile'),
+    botTag: String(active.botTag || settings.botTag || ''),
+    profilePrompt: String(active.systemPrompt || '')
+  };
 }
 
 function buildSystemPrompt(settings) {
-  const persona = PERSONAS[settings.persona] || PERSONAS.ruasbot;
+  const profilePrompt = String(settings.profilePrompt || '').trim();
+  const persona = PERSONAS[settings.persona] || PERSONAS.custom;
+  const base = profilePrompt || persona.systemPrompt || '';
   const extra = (settings.systemPrompt || '').trim();
-  return [persona.systemPrompt, extra].filter(Boolean).join('\n\n');
+  return [base, extra].filter(Boolean).join('\n\n');
+}
+
+function normalizeProvider(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 'groq';
+  const lowered = raw.toLowerCase();
+  if (lowered === 'openai') return 'openai';
+  if (
+    lowered === 'openaicompatible' ||
+    lowered === 'openai_compat' ||
+    lowered === 'openai-compatible' ||
+    lowered === 'compat' ||
+    lowered === 'custom'
+  ) {
+    return 'openaiCompatible';
+  }
+  return 'groq';
+}
+
+function normalizeBaseUrl(value) {
+  const base = String(value || '').trim();
+  if (!base) return '';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
+function isValidHttpUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function buildChatCompletionsUrl(baseUrl) {
+  const raw = String(baseUrl || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (lower.endsWith('/chat/completions') || lower.endsWith('/chat/completions/')) {
+    return raw.endsWith('/') ? raw : `${raw}/`;
+  }
+  return `${normalizeBaseUrl(raw)}chat/completions`;
+}
+
+function getProviderLabel(provider) {
+  const normalized = normalizeProvider(provider);
+  if (normalized === 'openai') return 'OpenAI';
+  if (normalized === 'openaiCompatible') return 'OpenAI compatível';
+  return 'Groq';
+}
+
+function resolveProviderConfig(settings) {
+  const provider = normalizeProvider(settings.provider);
+  if (provider === 'openai') {
+    return {
+      provider,
+      apiKey: settings.openaiApiKey || '',
+      baseUrl: normalizeBaseUrl(settings.openaiBaseUrl || DEFAULT_SETTINGS.openaiBaseUrl)
+    };
+  }
+  if (provider === 'openaiCompatible') {
+    return {
+      provider,
+      apiKey: settings.openaiCompatApiKey || '',
+      baseUrl: normalizeBaseUrl(settings.openaiCompatBaseUrl || '')
+    };
+  }
+  return { provider: 'groq', apiKey: settings.apiKey || '', baseUrl: '' };
+}
+
+async function callOpenAiCompatible({ apiKey, baseUrl, model, messages, temperature, maxTokens }) {
+  if (typeof fetch !== 'function') {
+    throw new Error('Fetch indisponível neste runtime.');
+  }
+  const endpoint = buildChatCompletionsUrl(baseUrl);
+  if (!endpoint || !isValidHttpUrl(endpoint)) {
+    throw new Error('Base URL inválida para API compatível com OpenAI.');
+  }
+
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), OPENAI_COMPAT_TIMEOUT_MS)
+    : null;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens
+      }),
+      signal: controller?.signal
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      const details = raw ? raw.slice(0, 400) : `status=${response.status}`;
+      throw new Error(`Falha na API (${response.status}): ${details}`);
+    }
+
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new Error('Resposta inválida da API.');
+    }
+
+    return data?.choices?.[0]?.message?.content?.trim() || '';
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Timeout ao chamar a API compatível com OpenAI.');
+    }
+    throw err;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function extractTextMessage(message) {
@@ -273,6 +487,15 @@ async function main() {
   let reconnectTimer = null;
   let shuttingDown = false;
   const lastReplyAtByChat = new Map();
+  const cleanupReplyMap = () => {
+    const now = Date.now();
+    for (const [jid, last] of lastReplyAtByChat.entries()) {
+      if (now - last > REPLY_MAP_TTL_MS) lastReplyAtByChat.delete(jid);
+    }
+  };
+  const cleanupTimer =
+    REPLY_MAP_CLEAN_INTERVAL_MS > 0 ? setInterval(cleanupReplyMap, REPLY_MAP_CLEAN_INTERVAL_MS) : null;
+  cleanupTimer?.unref?.();
   let warnedGroupAllowlistEmpty = false;
 
   async function startSocket() {
@@ -350,7 +573,11 @@ async function main() {
       if (event.type !== 'notify') return;
       const settings = readSettings();
       const systemPrompt = buildSystemPrompt(settings);
-      const groqApiKey = settings.apiKey;
+      const providerConfig = resolveProviderConfig(settings);
+      const provider = providerConfig.provider;
+      const providerLabel = getProviderLabel(provider);
+      const providerApiKey = providerConfig.apiKey;
+      const providerBaseUrl = providerConfig.baseUrl;
       const model = settings.model || DEFAULT_SETTINGS.model;
       const botTag = (settings.botTag || '').trim();
       const ownerPhone = normalizePhone(settings.ownerNumber);
@@ -393,9 +620,12 @@ async function main() {
 
         if (isOwner && command.isCommand && command.command === 'status') {
           if (isGroup && !isGroupAllowed(settings, remoteJid)) continue;
+          const activeProfile = resolveActiveProfile(settings);
+          const profileLabel = activeProfile?.name ? `Perfil: ${activeProfile.name}\n` : '';
           const summary =
             `Status: online\n` +
-            `Persona: ${settings.persona}\n` +
+            `Provedor: ${providerLabel}\n` +
+            profileLabel +
             `Modelo: ${model}\n` +
             `Responde em grupos: ${settings.respondToGroups ? 'sim' : 'não'}\n` +
             `Allowlist obrigatória (grupos): ${settings.requireGroupAllowlist ? 'sim' : 'não'}\n` +
@@ -459,31 +689,69 @@ async function main() {
           lastReplyAtByChat.set(remoteJid, now);
         }
 
-        if (!groqApiKey) {
+        if (!providerApiKey) {
           await sock.sendMessage(
             remoteJid,
             {
               text:
                 (botTag ? `${botTag} ` : '') +
-                'Configure a API Key da Groq na tela de Configurações para ativar a IA.'
+                `Configure a API Key do provedor (${providerLabel}) na tela de Configurações para ativar a IA.`
             },
             { quoted: message }
           );
           continue;
         }
 
-        const groq = new Groq({ apiKey: groqApiKey });
-        const completion = await groq.chat.completions.create({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: command.isCommand ? command.rawArgs || text : text }
-          ],
-          temperature: 0.7,
-          max_tokens: 700
-        });
+        const baseUrlError =
+          provider !== 'groq'
+            ? !providerBaseUrl
+              ? 'missing'
+              : !isValidHttpUrl(providerBaseUrl)
+                ? 'invalid'
+                : null
+            : null;
+        if (baseUrlError) {
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                (botTag ? `${botTag} ` : '') +
+                (baseUrlError === 'missing'
+                  ? 'Configure a Base URL do provedor nas Configurações.'
+                  : 'Base URL inválida. Use um endereço http(s) válido (ex.: https://seu-provedor/v1).')
+            },
+            { quoted: message }
+          );
+          continue;
+        }
 
-        let answer = completion.choices?.[0]?.message?.content?.trim() || '';
+        let answer = '';
+        if (provider === 'groq') {
+          const groq = new Groq({ apiKey: providerApiKey });
+          const completion = await groq.chat.completions.create({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: command.isCommand ? command.rawArgs || text : text }
+            ],
+            temperature: 0.7,
+            max_tokens: 700
+          });
+          answer = completion.choices?.[0]?.message?.content?.trim() || '';
+        } else {
+          answer = await callOpenAiCompatible({
+            apiKey: providerApiKey,
+            baseUrl: providerBaseUrl,
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: command.isCommand ? command.rawArgs || text : text }
+            ],
+            temperature: 0.7,
+            maxTokens: 700
+          });
+        }
+
         if (!answer) continue;
         if (answer.length > settings.maxResponseChars) {
           answer = answer.slice(0, settings.maxResponseChars - 1).trimEnd() + '…';
@@ -504,6 +772,7 @@ async function main() {
     shuttingDown = true;
     emit('status', { status: 'offline' });
     try {
+      if (cleanupTimer) clearInterval(cleanupTimer);
       sock?.end?.(new Error('SIGTERM'));
       sock?.ws?.close?.();
     } catch {

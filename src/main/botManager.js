@@ -1,11 +1,24 @@
 const { fork } = require('child_process');
 const path = require('path');
 
-function createBotManager({ sendToRenderer, getSettingsPath, getUserDataDir, getGroqApiKey, updateTrayStatus }) {
+function createBotManager({
+  sendToRenderer,
+  getSettingsPath,
+  getUserDataDir,
+  getGroqApiKey,
+  getOpenAiApiKey,
+  getOpenAiCompatApiKey,
+  getSettingsSnapshot,
+  updateTrayStatus
+}) {
   let botProcess = null;
   let botStopRequested = false;
   let botStatus = 'offline';
   let isBotRunning = false;
+  let stopInProgress = false;
+  let startInProgress = false;
+  let pendingStart = false;
+  let killTimer = null;
 
   function setBotStatus(next) {
     const normalized = String(next || '').trim() || 'offline';
@@ -50,20 +63,34 @@ function createBotManager({ sendToRenderer, getSettingsPath, getUserDataDir, get
 
   async function startBot() {
     try {
+      if (startInProgress) return;
+      if (botProcess) {
+        pendingStart = true;
+        stopBot();
+        return;
+      }
+      startInProgress = true;
       botStopRequested = false;
-      if (botProcess) stopBot();
-
       setBotStatus('starting');
 
       const botPath = path.join(__dirname, '..', 'core', 'bot.js');
-      const groqApiKey = await getGroqApiKey();
+      const groqApiKey = await getGroqApiKey?.();
+      const openaiApiKey = await getOpenAiApiKey?.();
+      const openaiCompatApiKey = await getOpenAiCompatApiKey?.();
+      const settingsSnapshot = getSettingsSnapshot?.() || {};
+      const provider = String(settingsSnapshot.provider || 'groq');
       const env = {
         ...process.env,
         ELECTRON_RUN_AS_NODE: '1',
         BOTASSIST_CONFIG_PATH: getSettingsPath(),
-        BOTASSIST_DATA_DIR: getUserDataDir()
+        BOTASSIST_DATA_DIR: getUserDataDir(),
+        BOTASSIST_PROVIDER: provider
       };
       if (groqApiKey) env.GROQ_API_KEY = groqApiKey;
+      if (openaiApiKey) env.OPENAI_API_KEY = openaiApiKey;
+      if (openaiCompatApiKey) env.OPENAI_COMPAT_API_KEY = openaiCompatApiKey;
+      if (settingsSnapshot.openaiBaseUrl) env.OPENAI_BASE_URL = settingsSnapshot.openaiBaseUrl;
+      if (settingsSnapshot.openaiCompatBaseUrl) env.OPENAI_COMPAT_BASE_URL = settingsSnapshot.openaiCompatBaseUrl;
 
       botProcess = fork(botPath, [], {
         env,
@@ -117,7 +144,12 @@ function createBotManager({ sendToRenderer, getSettingsPath, getUserDataDir, get
 
       botProcess.on('exit', (code, signal) => {
         console.log(`Bot process exited (code=${code}, signal=${signal || 'n/a'})`);
+        if (killTimer) {
+          clearTimeout(killTimer);
+          killTimer = null;
+        }
         botProcess = null;
+        stopInProgress = false;
         isBotRunning = false;
         updateTrayStatus?.();
 
@@ -131,36 +163,64 @@ function createBotManager({ sendToRenderer, getSettingsPath, getUserDataDir, get
             `Bot encerrou inesperadamente (code=${code}, signal=${signal || 'n/a'}).`
           );
         }
+
+        if (pendingStart) {
+          pendingStart = false;
+          setTimeout(() => startBot().catch((err) => console.error('Failed to start bot:', err)), 250);
+        }
       });
+      pendingStart = false;
+      startInProgress = false;
     } catch (err) {
       console.error('Failed to start bot:', err);
       sendToRenderer?.('bot-error', err?.message || String(err));
       sendToRenderer?.('bot-status', 'error');
+      startInProgress = false;
+      pendingStart = false;
       throw err;
     }
   }
 
   function stopBot() {
-    if (botProcess) {
-      botStopRequested = true;
-      setBotStatus('stopping');
-      botProcess.kill('SIGTERM');
-      const proc = botProcess;
-      setTimeout(() => {
-        if (proc.exitCode == null) proc.kill('SIGKILL');
-      }, 3000);
-
-      botProcess = null;
+    if (!botProcess) {
       isBotRunning = false;
       updateTrayStatus?.();
       setBotStatus('offline');
+      return;
     }
+    if (stopInProgress) return;
+
+    botStopRequested = true;
+    stopInProgress = true;
+    setBotStatus('stopping');
+
+    try {
+      botProcess.kill('SIGTERM');
+    } catch {
+      // ignore kill errors; exit handler will clean up
+    }
+
+    const proc = botProcess;
+    if (killTimer) clearTimeout(killTimer);
+    killTimer = setTimeout(() => {
+      if (proc && proc.exitCode == null) {
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          // ignore
+        }
+      }
+    }, 3000);
   }
 
   function restartBot() {
     setBotStatus('restarting');
-    stopBot();
-    setTimeout(() => startBot().catch((err) => console.error('Failed to start bot:', err)), 1000);
+    pendingStart = true;
+    if (botProcess) {
+      stopBot();
+      return;
+    }
+    startBot().catch((err) => console.error('Failed to start bot:', err));
   }
 
   function getBotStatus() {

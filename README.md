@@ -50,7 +50,8 @@ Este projeto é **software livre** e está licenciado sob a **MIT License**.
 <a id="funcionalidades"></a>
 ## ✨ Funcionalidades
 - Interface gráfica para iniciar/parar o bot, ver logs e QR Code
-- Configurações persistentes (persona, prompt do sistema, modelo, etc.)
+- Configurações persistentes com **perfis (agentes)**, prompt principal e modelo
+- Perfis com **criar/duplicar/excluir** e **importar/exportar**
 - Modo anti-ban para grupos:
   - Só responde **quando mencionado**
   - Só responde em **grupos allowlistados**
@@ -97,13 +98,21 @@ npm run dev
 As configurações são salvas em `settings.json` dentro do `userData` do Electron (`app.getPath('userData')`).
 
 Principais campos:
-- `persona`: `ruasbot` | `univitoria`
+- `profiles`: lista de perfis (agentes). Cada perfil possui:
+  - `id`: identificador interno
+  - `name`: nome do agente
+  - `provider`: `groq` | `openai` | `openaiCompatible`
+  - `model`: ex. `llama-3.3-70b-versatile`
+  - `systemPrompt`: instrucao principal do agente
+  - `botTag`: prefixo nas respostas (ex.: `[Meu Bot]`)
+- `activeProfileId`: id do perfil ativo
+- `persona` (legado): mantido por compatibilidade, mas a UI usa perfis
+- A UI permite **criar/duplicar/excluir** e **importar/exportar** perfis
 - `apiKeyRef`: referência de onde a API Key está armazenada:
   - `keytar:groq_apiKey` (recomendado; a chave fica no sistema via `keytar`)
   - `settings.json` (fallback; a chave pode ser persistida no arquivo se o keychain não estiver disponível)
-- `model`: ex. `llama-3.3-70b-versatile`
-- `systemPrompt`: instruções extras do “prompt do sistema”
-- `restrictToOwner`: só responde ao owner
+- `systemPrompt`: instrucoes adicionais (extras) do sistema
+- `restrictToOwner`: so responde ao owner
 - `allowedUsers`: allowlist de usuários (um por linha; telefone ou JID)
 - `respondToGroups`: habilita respostas em grupos
 - `allowedGroups`: allowlist de grupos (JIDs `...@g.us`)
@@ -155,7 +164,7 @@ npm run build:linux:rpm
 <a id="release-auto-update"></a>
 ## Release (auto-update)
 Para publicar builds e habilitar auto-update, use o workflow do GitHub Actions:
-- Suba a versão no `package.json`, crie uma tag `vX.Y.Z` e dê push. Detalhes em `docs/ATUALIZACOES.md`.
+- Suba a versao no `package.json`, crie uma tag `vX.Y.Z` e de push. Detalhes em `docs/ATUALIZACOES.md`.
 
 ## Troubleshooting
 - Se o QR não aparecer: verifique os logs e se o bot está iniciando.

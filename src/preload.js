@@ -16,6 +16,7 @@ try {
 }
 
 const electronAPI = {
+  platform: process.platform,
   // Bot control
   startBot: (config) => ipcRenderer?.invoke('start-bot', config),
   stopBot: () => ipcRenderer?.invoke('stop-bot'),
@@ -25,6 +26,8 @@ const electronAPI = {
   // Settings
   getSettings: () => ipcRenderer?.invoke('get-settings'),
   setSettings: (settings) => ipcRenderer?.invoke('set-settings', settings),
+  exportProfiles: (payload) => ipcRenderer?.invoke('export-profiles', payload),
+  importProfiles: () => ipcRenderer?.invoke('import-profiles'),
 
   // Maintenance (userData)
   getUserDataStats: () => ipcRenderer?.invoke('get-userdata-stats'),
@@ -37,6 +40,14 @@ const electronAPI = {
   getUpdateState: () => ipcRenderer?.invoke('get-update-state'),
   checkForUpdates: () => ipcRenderer?.invoke('check-for-updates'),
   quitAndInstallUpdate: () => ipcRenderer?.invoke('quit-and-install-update'),
+
+  // Window controls
+  windowMinimize: () => ipcRenderer?.invoke('window-minimize'),
+  windowToggleMaximize: () => ipcRenderer?.invoke('window-toggle-maximize'),
+  windowClose: () => ipcRenderer?.invoke('window-close'),
+  windowIsMaximized: () => ipcRenderer?.invoke('window-is-maximized'),
+  appQuit: () => ipcRenderer?.invoke('app-quit'),
+  onWindowState: (callback) => ipcRenderer?.on('window-state', (event, data) => callback(data)),
   
   // Events
   onBotLog: (callback) => ipcRenderer?.on('bot-log', (event, data) => callback(data)),
