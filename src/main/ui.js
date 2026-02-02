@@ -4,6 +4,17 @@ const { getAssetPath, fileExists } = require('./paths');
 let tray = null;
 let trayThemeListenerAttached = false;
 
+function normalizeBotStatus(status, isRunning) {
+  const raw = String(status || '').toLowerCase();
+  if (raw === 'online') return 'online';
+  if (raw === 'offline') return 'offline';
+  if (raw === 'error') return 'warning';
+  if (raw === 'starting' || raw === 'restarting') return 'online';
+  if (raw === 'stopping') return 'offline';
+  if (isRunning) return 'online';
+  return 'offline';
+}
+
 function getStatusMeta(status, isRunning) {
   const raw = String(status || '').toLowerCase();
   if (raw === 'online') return { state: 'online', label: 'Bot: Online', tooltip: 'Online' };
@@ -16,11 +27,14 @@ function getStatusMeta(status, isRunning) {
   return { state: 'offline', label: 'Bot: Offline', tooltip: 'Offline' };
 }
 
-function getTrayIconPath() {
+function getTrayIconPath(status, isRunning) {
+  const normalized = normalizeBotStatus(status, isRunning);
   const candidates = [];
-  if (process.platform === 'linux') {
-    candidates.push('tray-icon.png');
-  }
+
+  if (normalized === 'online') candidates.push('tray-icon-online.png');
+  if (normalized === 'warning') candidates.push('tray-icon-warning.png');
+  if (normalized === 'offline') candidates.push('tray-icon-offline.png');
+
   candidates.push('tray-icon.png', 'icon.png');
 
   return candidates.map(getAssetPath).find(fileExists);
@@ -112,7 +126,7 @@ function createMenu({ restartBot, stopBot, openSettings, openPrivacy, checkForUp
 }
 
 function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning, getBotStatus }) {
-  const trayIconPath = getTrayIconPath();
+  const trayIconPath = getTrayIconPath(getBotStatus?.(), getIsBotRunning?.());
   if (!trayIconPath) return;
 
   const icon = nativeImage.createFromPath(trayIconPath);
@@ -167,7 +181,7 @@ function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning, 
     trayThemeListenerAttached = true;
     nativeTheme.on('updated', () => {
       if (!tray) return;
-      const nextPath = getTrayIconPath();
+      const nextPath = getTrayIconPath(getBotStatus?.(), getIsBotRunning?.());
       if (!nextPath) return;
       tray.setImage(nativeImage.createFromPath(nextPath));
     });
