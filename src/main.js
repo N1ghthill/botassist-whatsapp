@@ -8,6 +8,7 @@ const settings = require('./main/settings');
 const { createBotManager } = require('./main/botManager');
 const { createUserDataManager } = require('./main/userData');
 const { getAssetPath, fileExists } = require('./main/paths');
+const { runToolsDiagnostics } = require('./main/toolsDiagnostics');
 
 let mainWindow = null;
 let bot = null;
@@ -17,12 +18,22 @@ const getMainWindow = () => mainWindow;
 const sendToRenderer = (channel, payload) => mainWindow?.webContents.send(channel, payload);
 const getIsBotRunning = () => (bot ? bot.getIsBotRunning() : false);
 
+function applyLaunchOnStartup(value) {
+  try {
+    if (typeof app.setLoginItemSettings !== 'function') return;
+    const enabled = Boolean(value);
+    app.setLoginItemSettings({ openAtLogin: enabled });
+  } catch (err) {
+    console.error('Falha ao aplicar inicio com o sistema:', err);
+  }
+}
+
 function updateTray() {
   updateTrayStatus({
     getMainWindow,
     restartBot: bot?.restartBot,
     getIsBotRunning,
-    getBotStatus: bot?.getBotStatus
+    getBotStatus: bot?.getBotStatus,
   });
 }
 
@@ -31,16 +42,16 @@ bot = createBotManager({
   getSettingsPath: settings.getSettingsPath,
   getUserDataDir: settings.getUserDataDir,
   getGroqApiKey: settings.getGroqApiKey,
-  getOpenAiApiKey: settings.getOpenAiApiKey,
-  getOpenAiCompatApiKey: settings.getOpenAiCompatApiKey,
   getSettingsSnapshot: settings.getSettingsSnapshot,
-  updateTrayStatus: updateTray
+  updateSettings: settings.saveSettings,
+  updateTrayStatus: updateTray,
 });
 
 const userDataManager = createUserDataManager({
   stopBot: () => bot.stopBot(),
+  stopBotAndWait: (options) => bot.stopBotAndWait(options),
   setBotStatus: bot.setBotStatus,
-  getMainWindow
+  getMainWindow,
 });
 
 function openSettings() {
@@ -69,8 +80,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: enableSandbox,
-      preload: preloadPath
-    }
+      preload: preloadPath,
+    },
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
@@ -114,7 +125,7 @@ function createWindow() {
     stopBot: bot.stopBot,
     openSettings,
     openPrivacy,
-    checkForUpdates: updates.checkForUpdates
+    checkForUpdates: updates.checkForUpdates,
   });
 }
 
@@ -123,12 +134,12 @@ ipcMain.handle('start-bot', async (event, config) => {
   try {
     const incoming = config && typeof config === 'object' ? { ...config } : null;
     const apiKeyValue = incoming && 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
-    const providerValue = incoming && 'provider' in incoming ? String(incoming.provider || '') : '';
     if (incoming) delete incoming.apiKey;
 
     if (incoming) settings.saveSettings(incoming);
-    const provider = providerValue || settings.getSettingsSnapshot()?.provider || 'groq';
+    const provider = 'groq';
     if (apiKeyValue.trim()) await settings.setApiKeyForProvider(provider, apiKeyValue);
+    applyLaunchOnStartup(settings.getSettingsSnapshot()?.launchOnStartup);
 
     await bot.startBot();
     return { ok: true };
@@ -160,9 +171,10 @@ ipcMain.handle('set-settings', async (event, partial) => {
   const apiKeyValue = 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
   delete incoming.apiKey;
 
-  const provider = String(incoming.provider || settings.getSettingsSnapshot()?.provider || 'groq');
+  const provider = 'groq';
   if (apiKeyValue.trim()) await settings.setApiKeyForProvider(provider, apiKeyValue);
   settings.saveSettings(incoming);
+  applyLaunchOnStartup(settings.getSettingsSnapshot()?.launchOnStartup);
   if (bot.hasProcess()) bot.restartBot();
   return settings.getSettingsForRenderer();
 });
@@ -174,14 +186,15 @@ ipcMain.handle('export-profiles', async (event, payload) => {
     const data = {
       version: payload?.version || 1,
       exportedAt: payload?.exportedAt || new Date().toISOString(),
-      profiles
+      profiles,
     };
-    const defaultName = payload?.filename || `botassist-perfis-${new Date().toISOString().slice(0, 10)}.json`;
+    const defaultName =
+      payload?.filename || `botassist-perfis-${new Date().toISOString().slice(0, 10)}.json`;
     const defaultPath = path.join(app.getPath('documents'), defaultName);
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Exportar perfis',
       defaultPath,
-      filters: [{ name: 'JSON', extensions: ['json'] }]
+      filters: [{ name: 'JSON', extensions: ['json'] }],
     });
     if (result.canceled || !result.filePath) return { canceled: true };
     fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2), 'utf8');
@@ -196,7 +209,7 @@ ipcMain.handle('import-profiles', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Importar perfis',
       properties: ['openFile'],
-      filters: [{ name: 'JSON', extensions: ['json'] }]
+      filters: [{ name: 'JSON', extensions: ['json'] }],
     });
     if (result.canceled || !result.filePaths?.length) return { canceled: true };
     const filePath = result.filePaths[0];
@@ -220,6 +233,10 @@ ipcMain.handle('reset-session', async () => {
   return userDataManager.resetSession();
 });
 
+ipcMain.handle('clear-history', async () => {
+  return userDataManager.clearHistory();
+});
+
 ipcMain.handle('open-userdata-dir', async () => {
   const opened = await shell.openPath(settings.getUserDataPath());
   return opened ? { ok: false, error: opened } : { ok: true };
@@ -235,6 +252,14 @@ ipcMain.handle('get-update-state', () => {
 
 ipcMain.handle('check-for-updates', async () => {
   return updates.checkForUpdates();
+});
+
+ipcMain.handle('test-tools', async () => {
+  try {
+    return runToolsDiagnostics(settings.getSettingsSnapshot());
+  } catch (err) {
+    return { ok: false, reason: 'erro interno', error: err?.message || String(err) };
+  }
 });
 
 ipcMain.handle('quit-and-install-update', () => {
@@ -291,13 +316,17 @@ app.whenReady().then(async () => {
     createWindow,
     restartBot: bot.restartBot,
     getIsBotRunning,
-    getBotStatus: bot.getBotStatus
+    getBotStatus: bot.getBotStatus,
   });
   updates.configureAutoUpdater();
 
   const currentSettings = settings.getSettingsSnapshot();
+  applyLaunchOnStartup(currentSettings?.launchOnStartup);
   if (currentSettings?.autoStart) {
-    setTimeout(() => bot.startBot().catch((err) => console.error('Failed to start bot:', err)), 1000);
+    setTimeout(
+      () => bot.startBot().catch((err) => console.error('Failed to start bot:', err)),
+      1000
+    );
   }
 
   if (app.isPackaged) {

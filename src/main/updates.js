@@ -21,10 +21,16 @@ function configureAutoUpdater() {
 
   autoUpdater.on('checking-for-update', () => sendUpdateEvent({ status: 'checking' }));
   autoUpdater.on('update-available', (info) => sendUpdateEvent({ status: 'available', info }));
-  autoUpdater.on('update-not-available', (info) => sendUpdateEvent({ status: 'not-available', info }));
-  autoUpdater.on('download-progress', (progress) => sendUpdateEvent({ status: 'downloading', progress }));
+  autoUpdater.on('update-not-available', (info) =>
+    sendUpdateEvent({ status: 'not-available', info })
+  );
+  autoUpdater.on('download-progress', (progress) =>
+    sendUpdateEvent({ status: 'downloading', progress })
+  );
   autoUpdater.on('update-downloaded', (info) => sendUpdateEvent({ status: 'downloaded', info }));
-  autoUpdater.on('error', (err) => sendUpdateEvent({ status: 'error', error: err?.message || String(err) }));
+  autoUpdater.on('error', (err) =>
+    sendUpdateEvent({ status: 'error', error: err?.message || String(err) })
+  );
 }
 
 async function checkForUpdates() {
@@ -32,7 +38,7 @@ async function checkForUpdates() {
     if (!app.isPackaged) {
       sendUpdateEvent({
         status: 'not-supported',
-        error: 'Atualizações automáticas só funcionam no app instalado (build).'
+        error: 'Atualizações automáticas só funcionam no app instalado (build).',
       });
       return updateState;
     }
@@ -58,5 +64,5 @@ module.exports = {
   checkForUpdates,
   getUpdateState,
   quitAndInstallUpdate,
-  setUpdateEmitter
+  setUpdateEmitter,
 };

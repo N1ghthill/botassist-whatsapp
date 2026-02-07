@@ -34,12 +34,14 @@ const electronAPI = {
   backupUserData: () => ipcRenderer?.invoke('backup-userdata'),
   resetSession: () => ipcRenderer?.invoke('reset-session'),
   openUserDataDir: () => ipcRenderer?.invoke('open-userdata-dir'),
+  clearHistory: () => ipcRenderer?.invoke('clear-history'),
 
   // App / Updates
   getAppVersion: () => ipcRenderer?.invoke('get-app-version'),
   getUpdateState: () => ipcRenderer?.invoke('get-update-state'),
   checkForUpdates: () => ipcRenderer?.invoke('check-for-updates'),
   quitAndInstallUpdate: () => ipcRenderer?.invoke('quit-and-install-update'),
+  testTools: () => ipcRenderer?.invoke('test-tools'),
 
   // Window controls
   windowMinimize: () => ipcRenderer?.invoke('window-minimize'),
@@ -48,7 +50,7 @@ const electronAPI = {
   windowIsMaximized: () => ipcRenderer?.invoke('window-is-maximized'),
   appQuit: () => ipcRenderer?.invoke('app-quit'),
   onWindowState: (callback) => ipcRenderer?.on('window-state', (event, data) => callback(data)),
-  
+
   // Events
   onBotLog: (callback) => ipcRenderer?.on('bot-log', (event, data) => callback(data)),
   onQRCode: (callback) => ipcRenderer?.on('qr-code', (event, data) => callback(data)),
@@ -58,15 +60,15 @@ const electronAPI = {
   onOpenSettings: (callback) => ipcRenderer?.on('open-settings', () => callback()),
   onOpenPrivacy: (callback) => ipcRenderer?.on('open-privacy', () => callback()),
   onUpdateEvent: (callback) => ipcRenderer?.on('update-event', (event, data) => callback(data)),
-  
+
   // QR helpers (render in renderer without nodeIntegration)
   qrToDataURL: (text, options) => {
     if (!QRCode) return Promise.reject(new Error('QRCode module not available'));
     return QRCode.toDataURL(text, options);
   },
-  
+
   // Remove listeners
-  removeAllListeners: (channel) => ipcRenderer?.removeAllListeners(channel)
+  removeAllListeners: (channel) => ipcRenderer?.removeAllListeners(channel),
 };
 
 try {

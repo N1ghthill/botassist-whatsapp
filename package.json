@@ -1,6 +1,6 @@
 {
   "name": "botassist-whatsapp",
-  "version": "4.1.9",
+  "version": "4.1.10",
   "description": "BotAssist - Assistente WhatsApp IA com Interface Gráfica",
   "private": true,
   "main": "src/main.js",
@@ -15,6 +15,7 @@
     "lint": "eslint \"src/**/*.js\"",
     "format": "prettier --write \"src/**/*.{js,css,html,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,css,html,json,md}\"",
+    "test": "node scripts/test.js",
     "reset": "node scripts/maintenance.js reset",
     "backup": "node scripts/maintenance.js backup",
     "clean": "node scripts/maintenance.js clean && npm i"
@@ -25,7 +26,9 @@
     "dotenv": "^16.6.1",
     "electron-updater": "^6.6.2",
     "groq-sdk": "^0.7.0",
+    "imap": "^0.8.19",
     "keytar": "^7.9.0",
+    "mailparser": "^3.9.3",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

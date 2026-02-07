@@ -6,10 +6,9 @@ function createBotManager({
   getSettingsPath,
   getUserDataDir,
   getGroqApiKey,
-  getOpenAiApiKey,
-  getOpenAiCompatApiKey,
   getSettingsSnapshot,
-  updateTrayStatus
+  updateSettings,
+  updateTrayStatus,
 }) {
   let botProcess = null;
   let botStopRequested = false;
@@ -59,6 +58,63 @@ function createBotManager({
       const message = String(payload.message ?? '');
       if (message) sendToRenderer?.('bot-error', message);
     }
+
+    if (payload.event === 'settings-update') {
+      const action = String(payload.action || '');
+      if (!action) return;
+      if (typeof updateSettings !== 'function') return;
+
+      const current = getSettingsSnapshot?.() || {};
+
+      if (action === 'allowlist-group') {
+        const groupJid = String(payload.groupJid || '').trim();
+        if (!groupJid) return;
+        const allowedGroups = Array.isArray(current.allowedGroups)
+          ? current.allowedGroups.map((v) => String(v).trim()).filter(Boolean)
+          : [];
+        if (!allowedGroups.includes(groupJid)) {
+          updateSettings({ allowedGroups: [...allowedGroups, groupJid] });
+        }
+        return;
+      }
+
+      if (action === 'allowlist-user') {
+        const userRef = String(payload.userRef || '').trim();
+        if (!userRef) return;
+        const allowedUsers = Array.isArray(current.allowedUsers)
+          ? current.allowedUsers.map((v) => String(v).trim()).filter(Boolean)
+          : [];
+        if (!allowedUsers.includes(userRef)) {
+          updateSettings({ allowedUsers: [...allowedUsers, userRef] });
+        }
+        return;
+      }
+    }
+  }
+
+  function waitForProcessExit(proc, timeoutMs = 5000) {
+    if (!proc) return Promise.resolve({ ok: true, alreadyExited: true });
+    if (proc.exitCode != null) {
+      return Promise.resolve({ ok: true, alreadyExited: true, code: proc.exitCode });
+    }
+
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (result) => {
+        if (done) return;
+        done = true;
+        if (timer) clearTimeout(timer);
+        proc.removeListener('exit', onExit);
+        resolve(result);
+      };
+      const onExit = (code, signal) => finish({ ok: true, code, signal });
+      const timer =
+        typeof timeoutMs === 'number' && timeoutMs > 0
+          ? setTimeout(() => finish({ ok: false, timeout: true }), timeoutMs)
+          : null;
+
+      proc.once('exit', onExit);
+    });
   }
 
   async function startBot() {
@@ -75,27 +131,20 @@ function createBotManager({
 
       const botPath = path.join(__dirname, '..', 'core', 'bot.js');
       const groqApiKey = await getGroqApiKey?.();
-      const openaiApiKey = await getOpenAiApiKey?.();
-      const openaiCompatApiKey = await getOpenAiCompatApiKey?.();
-      const settingsSnapshot = getSettingsSnapshot?.() || {};
-      const provider = String(settingsSnapshot.provider || 'groq');
+      const provider = 'groq';
       const env = {
         ...process.env,
         ELECTRON_RUN_AS_NODE: '1',
         BOTASSIST_CONFIG_PATH: getSettingsPath(),
         BOTASSIST_DATA_DIR: getUserDataDir(),
-        BOTASSIST_PROVIDER: provider
+        BOTASSIST_PROVIDER: provider,
       };
       if (groqApiKey) env.GROQ_API_KEY = groqApiKey;
-      if (openaiApiKey) env.OPENAI_API_KEY = openaiApiKey;
-      if (openaiCompatApiKey) env.OPENAI_COMPAT_API_KEY = openaiCompatApiKey;
-      if (settingsSnapshot.openaiBaseUrl) env.OPENAI_BASE_URL = settingsSnapshot.openaiBaseUrl;
-      if (settingsSnapshot.openaiCompatBaseUrl) env.OPENAI_COMPAT_BASE_URL = settingsSnapshot.openaiCompatBaseUrl;
 
       botProcess = fork(botPath, [], {
         env,
         stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-        windowsHide: true
+        windowsHide: true,
       });
 
       botProcess.on('message', (payload) => {
@@ -166,7 +215,10 @@ function createBotManager({
 
         if (pendingStart) {
           pendingStart = false;
-          setTimeout(() => startBot().catch((err) => console.error('Failed to start bot:', err)), 250);
+          setTimeout(
+            () => startBot().catch((err) => console.error('Failed to start bot:', err)),
+            250
+          );
         }
       });
       pendingStart = false;
@@ -213,6 +265,18 @@ function createBotManager({
     }, 3000);
   }
 
+  function stopBotAndWait({ timeoutMs = 5000 } = {}) {
+    if (!botProcess) {
+      isBotRunning = false;
+      updateTrayStatus?.();
+      setBotStatus('offline');
+      return Promise.resolve({ ok: true, alreadyStopped: true });
+    }
+    const proc = botProcess;
+    if (!stopInProgress) stopBot();
+    return waitForProcessExit(proc, timeoutMs);
+  }
+
   function restartBot() {
     setBotStatus('restarting');
     pendingStart = true;
@@ -238,11 +302,12 @@ function createBotManager({
   return {
     startBot,
     stopBot,
+    stopBotAndWait,
     restartBot,
     getBotStatus,
     getIsBotRunning,
     hasProcess,
-    setBotStatus
+    setBotStatus,
   };
 }
 

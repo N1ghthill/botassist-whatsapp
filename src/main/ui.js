@@ -9,14 +9,16 @@ function getStatusMeta(status, isRunning) {
   if (raw === 'online') return { state: 'online', label: 'Bot: Online', tooltip: 'Online' };
   if (raw === 'offline') return { state: 'offline', label: 'Bot: Offline', tooltip: 'Offline' };
   if (raw === 'error') return { state: 'warning', label: 'Bot: Erro', tooltip: 'Erro' };
-  if (raw === 'starting') return { state: 'warning', label: 'Bot: Conectando', tooltip: 'Conectando' };
+  if (raw === 'starting')
+    return { state: 'warning', label: 'Bot: Conectando', tooltip: 'Conectando' };
   if (raw === 'stopping') return { state: 'warning', label: 'Bot: Parando', tooltip: 'Parando' };
-  if (raw === 'restarting') return { state: 'warning', label: 'Bot: Reiniciando', tooltip: 'Reiniciando' };
+  if (raw === 'restarting')
+    return { state: 'warning', label: 'Bot: Reiniciando', tooltip: 'Reiniciando' };
   if (isRunning) return { state: 'online', label: 'Bot: Online', tooltip: 'Online' };
   return { state: 'offline', label: 'Bot: Offline', tooltip: 'Offline' };
 }
 
-function getTrayIconPath(status, isRunning) {
+function getTrayIconPath() {
   const candidates = ['tray-icon.png', 'icon.png'];
 
   return candidates.map(getAssetPath).find(fileExists);
@@ -30,7 +32,7 @@ function showAbout() {
     detail:
       'Assistente de IA para WhatsApp com interface gráfica\n' +
       'Software livre (MIT) • Sem garantias (“AS IS”)\n' +
-      'Desenvolvido por Irving Ruas — ruas.dev.br'
+      'Desenvolvido por Irving Ruas — ruas.dev.br',
   });
 }
 
@@ -41,66 +43,66 @@ function createMenu({ restartBot, stopBot, openSettings, openPrivacy, checkForUp
       submenu: [
         {
           label: 'Reiniciar Bot',
-          click: () => restartBot?.()
+          click: () => restartBot?.(),
         },
         {
           label: 'Parar Bot',
-          click: () => stopBot?.()
+          click: () => stopBot?.(),
         },
         { type: 'separator' },
         {
           label: 'Sair',
           accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit()
-        }
-      ]
+          click: () => app.quit(),
+        },
+      ],
     },
     {
       label: 'Configurações',
       submenu: [
         {
           label: 'Abrir Configurações',
-          click: () => openSettings?.()
+          click: () => openSettings?.(),
         },
         {
           label: 'Privacidade',
-          click: () => openPrivacy?.()
-        }
-      ]
+          click: () => openPrivacy?.(),
+        },
+      ],
     },
     {
       label: 'Ajuda',
       submenu: [
         {
           label: 'Verificar Atualizações',
-          click: () => checkForUpdates?.()
+          click: () => checkForUpdates?.(),
         },
         { type: 'separator' },
         {
           label: 'Repositório (GitHub)',
           click: () => {
             shell.openExternal('https://github.com/N1ghthill/botassist-whatsapp');
-          }
+          },
         },
         {
           label: 'Reportar problema',
-          click: () => shell.openExternal('https://github.com/N1ghthill/botassist-whatsapp/issues')
+          click: () => shell.openExternal('https://github.com/N1ghthill/botassist-whatsapp/issues'),
         },
         {
           label: 'Site',
-          click: () => shell.openExternal('https://botassist.ruas.dev.br')
+          click: () => shell.openExternal('https://botassist.ruas.dev.br'),
         },
         {
           label: 'Doar (GitHub Sponsors)',
-          click: () => shell.openExternal('https://github.com/sponsors/N1ghthill')
+          click: () => shell.openExternal('https://github.com/sponsors/N1ghthill'),
         },
         { type: 'separator' },
         {
           label: 'Sobre',
-          click: () => showAbout()
-        }
-      ]
-    }
+          click: () => showAbout(),
+        },
+      ],
+    },
   ];
 
   const menu = Menu.buildFromTemplate(template);
@@ -108,7 +110,7 @@ function createMenu({ restartBot, stopBot, openSettings, openPrivacy, checkForUp
 }
 
 function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning, getBotStatus }) {
-  const trayIconPath = getTrayIconPath(getBotStatus?.(), getIsBotRunning?.());
+  const trayIconPath = getTrayIconPath();
   if (!trayIconPath) return;
 
   const icon = nativeImage.createFromPath(trayIconPath);
@@ -130,22 +132,22 @@ function createTray({ getMainWindow, createWindow, restartBot, getIsBotRunning, 
           createWindow?.();
         }
         updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotStatus });
-      }
+      },
     },
     {
       label: meta.label,
-      enabled: false
+      enabled: false,
     },
     { type: 'separator' },
     {
       label: 'Reiniciar Bot',
-      click: () => restartBot?.()
+      click: () => restartBot?.(),
     },
     { type: 'separator' },
     {
       label: 'Sair',
-      click: () => app.quit()
-    }
+      click: () => app.quit(),
+    },
   ]);
 
   tray.setToolTip(`BotAssist WhatsApp • ${meta.tooltip}`);
@@ -185,26 +187,26 @@ function updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotSt
       click: () => {
         const window = getMainWindow?.();
         if (window) window.isVisible() ? window.hide() : window.show();
-      }
+      },
     },
     {
       label: meta.label,
-      enabled: false
+      enabled: false,
     },
     { type: 'separator' },
     {
       label: 'Reiniciar Bot',
-      click: () => restartBot?.()
+      click: () => restartBot?.(),
     },
     { type: 'separator' },
     {
       label: 'Sair',
-      click: () => app.quit()
-    }
+      click: () => app.quit(),
+    },
   ]);
   tray.setContextMenu(contextMenu);
 
-  const nextPath = getTrayIconPath(statusValue, getIsBotRunning?.());
+  const nextPath = getTrayIconPath();
   if (nextPath) tray.setImage(nativeImage.createFromPath(nextPath));
 
   tray.setToolTip(`BotAssist WhatsApp • ${meta.tooltip}`);
@@ -213,5 +215,5 @@ function updateTrayStatus({ getMainWindow, restartBot, getIsBotRunning, getBotSt
 module.exports = {
   createMenu,
   createTray,
-  updateTrayStatus
+  updateTrayStatus,
 };

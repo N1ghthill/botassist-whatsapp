@@ -16,5 +16,5 @@ function fileExists(filePath) {
 
 module.exports = {
   getAssetPath,
-  fileExists
+  fileExists,
 };

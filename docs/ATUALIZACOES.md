@@ -42,3 +42,8 @@ Para evitar alertas e melhorar confiança:
 - Este projeto define `build.electronDist` para usar o Electron já instalado em `node_modules/electron/dist` (evita downloads durante o build).
 - O workflow de release usa o `GITHUB_TOKEN` do próprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`. Para usuários finais, recomende `.deb` (Ubuntu/Debian) ou `.rpm` (Fedora/openSUSE). O `.rpm` é gerado via build dedicado.
+
+## Registro recente (docs)
+- Adicionado indice de documentacao (`docs/INDEX.md`)
+- Adicionados guias: rapido, ferramentas, seguranca, troubleshooting, arquitetura e contribuicao
+- Incluidas imagens reais no guia rapido, tools e troubleshooting

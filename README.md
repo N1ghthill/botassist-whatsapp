@@ -44,8 +44,18 @@ Este projeto é **software livre** e está licenciado sob a **MIT License**.
 - **Sem garantias**: você usa por sua conta e risco (o texto completo está em `LICENSE`).
 
 ## Docs
+- `docs/INDEX.md`
+- `docs/GUIA-RAPIDO.md`
 - `docs/CONFIGURACAO.md`
 - `docs/ATUALIZACOES.md`
+- `docs/FAQ.md`
+- `docs/MODULOS.md`
+- `docs/TOOLS.md`
+- `docs/SEGURANCA.md`
+- `docs/ARQUITETURA.md`
+- `docs/RECURSOS.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/CONTRIBUICAO-DOCS.md`
 
 <a id="funcionalidades"></a>
 ## ✨ Funcionalidades
@@ -57,6 +67,7 @@ Este projeto é **software livre** e está licenciado sob a **MIT License**.
   - Só responde em **grupos allowlistados**
   - Cooldown por chat (DM/grupo) e limite de tamanho da resposta
 - Respostas com IA via Groq (opcional; sem API Key ele avisa como configurar)
+- Ferramentas (tools) opt-in com aprovacao do owner
 
 <a id="arquitetura-electron"></a>
 ## 🏗️ Arquitetura (Electron)
@@ -78,6 +89,17 @@ O bot roda separado em:
 ```bash
 npm ci
 ```
+
+## ⚡ Comece em 5 minutos
+1. Abra o app e cole sua API Key da Groq.
+2. Clique em "Salvar Configuracoes".
+3. Inicie o bot e escaneie o QR Code.
+
+Criar chave: https://groq.com/
+
+![Configurar API Key](docs/assets/quickstart-configs.png)
+
+![Conectar via QR Code](docs/assets/quickstart-dashboard.png)
 
 ### Dependência nativa (keytar)
 O app usa `keytar` para armazenar a API Key da Groq de forma segura no sistema (Keychain/Secret Service/Credential Manager).
@@ -101,8 +123,8 @@ Principais campos:
 - `profiles`: lista de perfis (agentes). Cada perfil possui:
   - `id`: identificador interno
   - `name`: nome do agente
-  - `provider`: `groq` | `openai` | `openaiCompatible`
-  - `model`: ex. `llama-3.3-70b-versatile`
+  - `provider`: `groq` (único)
+  - `model`: ex. `llama-3.3-70b-versatile` (há um menu com modelos gratuitos na UI)
   - `systemPrompt`: instrucao principal do agente
   - `botTag`: prefixo nas respostas (ex.: `[Meu Bot]`)
 - `activeProfileId`: id do perfil ativo
@@ -122,6 +144,7 @@ Principais campos:
 ### API Key (Groq)
 - Configure pela UI. A chave não fica exposta no `settings.json` quando `keytar` está disponível.
 - Alternativa: defina `GROQ_API_KEY` no ambiente.
+- Link rapido: https://groq.com/ (crie a API Key e cole na tela de Configuracoes).
 
 ### Como pegar o JID do grupo (para allowlist)
 No grupo, mencione o bot e envie:

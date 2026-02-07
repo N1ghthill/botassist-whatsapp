@@ -1,682 +1,1345 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
+    />
     <title>BotAssist WhatsApp</title>
-    <script>
-        (() => {
-            try {
-                const saved = localStorage.getItem('theme');
-                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const theme = saved || (prefersDark ? 'dark' : 'light');
-                document.documentElement.dataset.theme = theme;
-            } catch {}
-        })();
-    </script>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="../../node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-</head>
-<body>
+    <script src="theme-init.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="../../node_modules/@fortawesome/fontawesome-free/css/all.min.css"
+    />
+  </head>
+  <body>
     <div class="container">
-        <!-- Rail (Discord-like) -->
-        <div class="sidebar-rail" aria-label="Acesso rápido">
-            <div class="rail-brand" title="BotAssist">
-                <img src="../../assets/icon.png" alt="BotAssist">
-            </div>
-            <div class="rail-list">
-                <a href="#" class="rail-item active" data-page="dashboard" title="Dashboard">
-                    <i class="fas fa-home"></i>
-                </a>
-                <a href="#" class="rail-item" data-page="logs" title="Logs">
-                    <i class="fas fa-terminal"></i>
-                </a>
-                <a href="#" class="rail-item" data-page="settings" title="Configurações">
-                    <i class="fas fa-sliders"></i>
-                </a>
-                <a href="#" class="rail-item" data-page="database" title="Manutenção">
-                    <i class="fas fa-database"></i>
-                </a>
-                <a href="#" class="rail-item" data-page="about" title="Sobre">
-                    <i class="fas fa-info-circle"></i>
-                </a>
-                <a href="#" class="rail-item" data-page="privacy" title="Privacidade">
-                    <i class="fas fa-shield-alt"></i>
-                </a>
-            </div>
+      <!-- Rail (Discord-like) -->
+      <div class="sidebar-rail" aria-label="Acesso rápido">
+        <div class="rail-brand" title="BotAssist">
+          <img src="../../assets/icon.png" alt="BotAssist" />
+        </div>
+        <div class="rail-list">
+          <a href="#" class="rail-item active" data-page="dashboard" title="Dashboard">
+            <i class="fas fa-home"></i>
+          </a>
+          <a href="#" class="rail-item" data-page="logs" title="Logs">
+            <i class="fas fa-terminal"></i>
+          </a>
+          <a href="#" class="rail-item" data-page="settings" title="Configurações">
+            <i class="fas fa-sliders"></i>
+          </a>
+          <a href="#" class="rail-item" data-page="database" title="Manutenção">
+            <i class="fas fa-database"></i>
+          </a>
+          <a href="#" class="rail-item" data-page="about" title="Sobre">
+            <i class="fas fa-info-circle"></i>
+          </a>
+          <a href="#" class="rail-item" data-page="privacy" title="Privacidade">
+            <i class="fas fa-shield-alt"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="logo">
+          <img class="logo-image" src="../../assets/botassist_logo.png" alt="BotAssist logo" />
+          <h1>BotAssist</h1>
         </div>
 
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="logo">
-                <img class="logo-image" src="../../assets/botassist_logo.png" alt="BotAssist logo">
-                <h1>BotAssist</h1>
-            </div>
-            
-            <nav class="nav-menu">
-                <div class="nav-section">
-                    <div class="nav-section-title">Principal</div>
-                    <a href="#" class="nav-item active" data-page="dashboard" data-badge="HOME">
-                        <i class="fas fa-home"></i>
-                        <span>Dashboard</span>
-                        <span class="nav-badge">HOME</span>
-                    </a>
-                </div>
+        <nav class="nav-menu">
+          <div class="nav-section">
+            <div class="nav-section-title">Principal</div>
+            <a href="#" class="nav-item active" data-page="dashboard" data-badge="HOME">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+              <span class="nav-badge">HOME</span>
+            </a>
+          </div>
 
-                <div class="nav-divider" role="presentation"></div>
+          <div class="nav-divider" role="presentation"></div>
 
-                <div class="nav-section">
-                    <div class="nav-section-title">Operação</div>
-                    <a href="#" class="nav-item" data-page="logs" data-badge="LIVE">
-                        <i class="fas fa-terminal"></i>
-                        <span>Logs</span>
-                        <span class="nav-badge">LIVE</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="settings" data-badge="SET">
-                        <i class="fas fa-cog"></i>
-                        <span>Configurações</span>
-                        <span class="nav-badge">SET</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="database" data-badge="TOOLS">
-                        <i class="fas fa-database"></i>
-                        <span>Manutenção</span>
-                        <span class="nav-badge">TOOLS</span>
-                    </a>
-                </div>
+          <div class="nav-section">
+            <div class="nav-section-title">Operação</div>
+            <a href="#" class="nav-item" data-page="logs" data-badge="LIVE">
+              <i class="fas fa-terminal"></i>
+              <span>Logs</span>
+              <span class="nav-badge">LIVE</span>
+            </a>
+            <a href="#" class="nav-item" data-page="settings" data-badge="SET">
+              <i class="fas fa-cog"></i>
+              <span>Configurações</span>
+              <span class="nav-badge">SET</span>
+            </a>
+            <a href="#" class="nav-item" data-page="database" data-badge="TOOLS">
+              <i class="fas fa-database"></i>
+              <span>Manutenção</span>
+              <span class="nav-badge">TOOLS</span>
+            </a>
+          </div>
 
-                <div class="nav-divider" role="presentation"></div>
+          <div class="nav-divider" role="presentation"></div>
 
-                <div class="nav-section">
-                    <div class="nav-section-title">Sistema</div>
-                    <a href="#" class="nav-item" data-page="about" data-badge="INFO">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Sobre</span>
-                        <span class="nav-badge">INFO</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="privacy" data-badge="LGPD">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Privacidade</span>
-                        <span class="nav-badge">LGPD</span>
-                    </a>
-                </div>
-            </nav>
-            
-            <div class="user-info">
-                <div class="status-indicator" id="statusIndicator"></div>
-                <span id="statusText">Desconectado</span>
-            </div>
+          <div class="nav-section">
+            <div class="nav-section-title">Sistema</div>
+            <a href="#" class="nav-item" data-page="about" data-badge="INFO">
+              <i class="fas fa-info-circle"></i>
+              <span>Sobre</span>
+              <span class="nav-badge">INFO</span>
+            </a>
+            <a href="#" class="nav-item" data-page="privacy" data-badge="LGPD">
+              <i class="fas fa-shield-alt"></i>
+              <span>Privacidade</span>
+              <span class="nav-badge">LGPD</span>
+            </a>
+          </div>
+        </nav>
+
+        <div class="user-info">
+          <div class="status-indicator" id="statusIndicator"></div>
+          <span id="statusText">Desconectado</span>
         </div>
-        
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-title">
-                    <h2 id="pageTitle">Dashboard</h2>
-                </div>
-                <div class="header-right">
-                    <div class="header-controls">
-                        <button id="startBtn" class="btn btn-success">
-                            <i class="fas fa-play"></i> Iniciar Bot
-                        </button>
-                        <button id="stopBtn" class="btn btn-danger" disabled>
-                            <i class="fas fa-stop"></i> Parar Bot
-                        </button>
-                        <button id="restartBtn" class="btn btn-warning">
-                            <i class="fas fa-redo"></i> Reiniciar
-                        </button>
-                        <div class="header-divider" aria-hidden="true"></div>
-                        <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Alternar tema">
-                            <i id="themeToggleIcon" class="fas fa-moon"></i>
-                        </button>
-                    </div>
-                    <div class="window-controls" aria-label="Controles da janela">
-                        <button class="window-btn minimize" id="windowMinBtn" aria-label="Minimizar">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button class="window-btn maximize" id="windowMaxBtn" aria-label="Maximizar">
-                            <i id="windowMaxIcon" class="far fa-window-maximize"></i>
-                        </button>
-                        <button class="window-btn close" id="windowCloseBtn" aria-label="Fechar">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </header>
-            
-            <!-- Pages -->
-            <div class="page active" id="dashboardPage">
-                <div class="stats-cards">
-                    <div class="card">
-                        <div class="card-icon" style="background: var(--primary-color);">
-                            <i class="fas fa-signal"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Status</h3>
-                            <p id="botStatusText">Offline</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-icon" style="background: #0f766e;">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Conversas</h3>
-                            <p id="conversationsCount">0</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-icon" style="background: var(--accent-color); color: #1f2937;">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Mensagens Hoje</h3>
-                            <p id="messagesToday">0</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-icon" style="background: #0f172a;">
-                            <i class="fas fa-brain"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>IA Ativa</h3>
-                            <p id="aiStatus">Desconectada</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="qr-section">
-                    <h3>QR Code WhatsApp</h3>
-                    <div class="qr-container">
-                        <div id="qrCode"></div>
-                        <div id="qrMessage">
-                            <p>Inicie o bot para gerar o QR Code</p>
-                            <button id="showQRBtn" class="btn btn-primary" style="display: none;">
-                                <i class="fas fa-qrcode"></i> Mostrar QR Code
-                            </button>
-                        </div>
-                    </div>
-                    <p class="qr-instructions">
-                        <i class="fas fa-info-circle"></i>
-                        Escaneie este QR Code com o WhatsApp para conectar
-                    </p>
-                </div>
-                
-                <div class="recent-logs">
-                    <h3>Atividade Recente</h3>
-                    <div class="logs-container" id="recentLogs">
-                        <div class="log-entry">
-                            <span class="log-time">[00:00:00]</span>
-                            <span class="log-message">Sistema iniciado</span>
-                        </div>
-                    </div>
-                </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+          <div class="header-title">
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="header-right">
+            <div class="header-controls">
+              <button id="startBtn" class="btn btn-success">
+                <i class="fas fa-play"></i> Iniciar Bot
+              </button>
+              <button id="stopBtn" class="btn btn-danger" disabled>
+                <i class="fas fa-stop"></i> Parar Bot
+              </button>
+              <button id="restartBtn" class="btn btn-warning">
+                <i class="fas fa-redo"></i> Reiniciar
+              </button>
+              <div class="header-divider" aria-hidden="true"></div>
+              <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Alternar tema">
+                <i id="themeToggleIcon" class="fas fa-moon"></i>
+              </button>
             </div>
-            
-            <!-- Logs Page -->
-            <div class="page" id="logsPage">
-                <div class="logs-header">
-                    <h3>Logs do Sistema</h3>
-                    <div class="logs-actions">
-                        <div class="log-filters" aria-label="Filtros de log">
-                            <label class="filter-chip">
-                                <input type="checkbox" id="filterInfo" checked>
-                                <span>INFO</span>
-                            </label>
-                            <label class="filter-chip">
-                                <input type="checkbox" id="filterError" checked>
-                                <span>ERRO</span>
-                            </label>
-                            <label class="filter-chip">
-                                <input type="checkbox" id="filterQr" checked>
-                                <span>QR CODE</span>
-                            </label>
-                        </div>
-                        <button id="clearLogsBtn" class="btn btn-secondary">
-                            <i class="fas fa-trash"></i> Limpar
-                        </button>
-                        <button id="saveLogsBtn" class="btn btn-secondary">
-                            <i class="fas fa-save"></i> Salvar
-                        </button>
-                    </div>
-                </div>
-                <div class="full-logs-container">
-                    <pre id="fullLogs"></pre>
-                </div>
+            <div class="window-controls" aria-label="Controles da janela">
+              <button class="window-btn minimize" id="windowMinBtn" aria-label="Minimizar">
+                <i class="fas fa-minus"></i>
+              </button>
+              <button class="window-btn maximize" id="windowMaxBtn" aria-label="Maximizar">
+                <i id="windowMaxIcon" class="far fa-window-maximize"></i>
+              </button>
+              <button class="window-btn close" id="windowCloseBtn" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
-            
-            <!-- Settings Page -->
-            <div class="page" id="settingsPage">
-                <h3>Configurações do Bot</h3>
-                <div class="settings-form">
-                    <div class="settings-grid">
-                        <div class="form-section span-2">
-                            <h4>Perfis (agentes)</h4>
-                            <p>Crie e alterne agentes sem confusao. Cada perfil pode ter seu proprio modelo e instrucoes.</p>
-                        </div>
+          </div>
+        </header>
 
-                        <div class="profile-toolbar span-2">
-                            <div class="profile-select">
-                                <label for="profileSelect">Agente ativo</label>
-                                <select id="profileSelect" class="form-control"></select>
-                                <small class="hint">Dica: crie um perfil para cada area (ex.: vendas, suporte, financeiro).</small>
-                            </div>
-                            <div class="profile-actions">
-                                <button id="createProfileBtn" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Novo perfil
-                                </button>
-                                <button id="duplicateProfileBtn" class="btn btn-secondary">
-                                    <i class="far fa-clone"></i> Duplicar
-                                </button>
-                                <button id="deleteProfileBtn" class="btn btn-danger">
-                                    <i class="fas fa-trash"></i> Excluir
-                                </button>
-                                <button id="exportProfilesBtn" class="btn btn-secondary">
-                                    <i class="fas fa-file-export"></i> Exportar
-                                </button>
-                                <button id="importProfilesBtn" class="btn btn-secondary">
-                                    <i class="fas fa-file-import"></i> Importar
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="profileName">Nome do agente</label>
-                            <input type="text" id="profileName" class="form-control"
-                                   placeholder="Ex.: Atendimento, Vendas, Suporte">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="botTag">Tag de resposta</label>
-                            <input type="text" id="botTag" class="form-control"
-                                   placeholder="[Meu Bot]">
-                        </div>
-
-                        <div class="form-group span-2">
-                            <label for="profilePrompt">Instrucao principal do agente</label>
-                            <textarea id="profilePrompt" class="form-control" rows="5"
-                                      placeholder="Explique como ele deve atender, o tom de voz e o foco principal."></textarea>
-                            <small class="hint">
-                                Pense como se estivesse treinando um novo colaborador. Isso define o estilo do bot.
-                            </small>
-                        </div>
-
-                        <div class="form-section span-2">
-                            <h4>IA (modelo e provedor)</h4>
-                            <p>Escolha onde o agente roda e qual modelo ele usa.</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="providerSelect">Provedor de IA</label>
-                            <select id="providerSelect" class="form-control">
-                                <option value="groq">Groq</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="openaiCompatible">Compatível OpenAI (URL customizada)</option>
-                            </select>
-                            <small class="hint">
-                                O modo compatível funciona com APIs que seguem o formato OpenAI.
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="model">Modelo</label>
-                            <input type="text" id="model" class="form-control"
-                                   placeholder="Informe o modelo">
-                        </div>
-
-                        <div class="form-group">
-                            <label id="apiKeyLabel" for="apiKey">API Key</label>
-                            <input type="password" id="apiKey" class="form-control"
-                                   placeholder="Sua chave da Groq">
-                            <small id="apiKeyHint" class="hint"></small>
-                        </div>
-
-                        <div class="form-group" id="apiBaseUrlGroup" style="display: none;">
-                            <label for="apiBaseUrl">Base URL (compatível OpenAI)</label>
-                            <input type="text" id="apiBaseUrl" class="form-control"
-                                   placeholder="https://servidor.exemplo/v1">
-                            <small id="apiBaseUrlHint" class="hint"></small>
-                        </div>
-
-                        <div class="form-section span-2">
-                            <h4>Basico</h4>
-                            <p>O essencial para rodar o bot com seguranca.</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="ownerNumber">Seu Número (WhatsApp)</label>
-                            <input type="text" id="ownerNumber" class="form-control"
-                                   placeholder="5511999999999@s.whatsapp.net">
-                        </div>
-
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="autoStart">
-                                Iniciar bot automaticamente
-                            </label>
-                        </div>
-
-                        <details class="advanced-panel span-2">
-                            <summary>Configuracoes avancadas (opcional)</summary>
-                            <div class="advanced-grid">
-                                <div class="form-section span-2">
-                                    <h4>Acesso & Identidade</h4>
-                                    <p>Controle quem pode falar com o bot e personalize o nome.</p>
-                                </div>
-
-                                <div class="form-group span-2">
-                                    <label for="systemPrompt">Instrucoes adicionais (opcional)</label>
-                                    <textarea id="systemPrompt" class="form-control" rows="5"
-                                              placeholder="Regras extras, avisos ou detalhes especificos"></textarea>
-                                    <small class="hint">Isso complementa o objetivo do agente.</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="restrictToOwner">
-                                        Responder somente ao dono (owner)
-                                    </label>
-                                    <small class="hint">
-                                        Quando ativado, o bot ignora mensagens de outros contatos/grupos.
-                                    </small>
-                                </div>
-
-                                <div class="form-group span-2">
-                                    <label for="allowedUsers">Allowlist de usuários (opcional)</label>
-                                    <textarea id="allowedUsers" class="form-control" rows="4"
-                                              placeholder="Um por linha (telefone ou JID). Ex: 5511999999999 ou 5511999999999@s.whatsapp.net"></textarea>
-                                    <small class="hint">
-                                        Se preencher, o bot só responde a esses usuários (a menos que “somente owner” esteja ativo).
-                                    </small>
-                                </div>
-
-                                <div class="form-section span-2">
-                                    <h4>Grupos (anti-ban)</h4>
-                                    <p>Segurança reforçada para evitar bloqueios no WhatsApp.</p>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="respondToGroups">
-                                        Responder em grupos
-                                    </label>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="groupOnlyMention" disabled>
-                                        Em grupos, responder apenas quando mencionado
-                                    </label>
-                                    <small class="hint">
-                                        Recomendado (anti-ban). Para segurança, esta opção fica sempre ativa.
-                                    </small>
-                                </div>
-
-                                <div class="form-group span-2">
-                                    <label for="allowedGroups">Allowlist de grupos</label>
-                                    <textarea id="allowedGroups" class="form-control" rows="4"
-                                              placeholder="Um JID por linha. Ex: 1203630...@g.us"></textarea>
-                                    <small class="hint">
-                                        Para responder em grupos, adicione aqui os JIDs permitidos. Se estiver vazio, o bot não responde em nenhum grupo.
-                                    </small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="requireGroupAllowlist" disabled checked>
-                                        Em grupos, exigir allowlist (recomendado/anti-ban)
-                                    </label>
-                                    <small class="hint">
-                                        Para segurança, o bot só responde em grupos listados acima (e apenas quando mencionado).
-                                    </small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="groupRequireCommand">
-                                        Em grupos, responder somente a comandos (prefixo)
-                                    </label>
-                                </div>
-
-                                <div class="form-group span-2">
-                                    <label for="groupCommandPrefix">Prefixo de comando</label>
-                                    <input type="text" id="groupCommandPrefix" class="form-control" placeholder="!">
-                                    <small class="hint">
-                                        Ex.: “!ajuda”, “!vender ...”. (Também requer menção em grupos.)
-                                    </small>
-                                </div>
-
-                                <div class="form-section span-2">
-                                    <h4>Performance</h4>
-                                    <p>Controle cooldown e limite de resposta para reduzir riscos.</p>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="cooldownSecondsDm">Cooldown (DM) em segundos</label>
-                                    <input type="number" id="cooldownSecondsDm" class="form-control" min="0" step="1">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="cooldownSecondsGroup">Cooldown (grupo) em segundos</label>
-                                    <input type="number" id="cooldownSecondsGroup" class="form-control" min="0" step="1">
-                                </div>
-
-                                <div class="form-group span-2">
-                                    <label for="maxResponseChars">Tamanho máximo da resposta (caracteres)</label>
-                                    <input type="number" id="maxResponseChars" class="form-control" min="200" step="50">
-                                </div>
-                            </div>
-                        </details>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button id="saveSettingsBtn" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Salvar Configurações
-                        </button>
-                        <button id="resetSettingsBtn" class="btn btn-secondary">
-                            <i class="fas fa-undo"></i> Restaurar Padrão
-                        </button>
-                    </div>
-                </div>
+        <!-- Pages -->
+        <div class="page active" id="dashboardPage">
+          <div class="stats-cards">
+            <div class="card">
+              <div class="card-icon" style="background: var(--primary-color)">
+                <i class="fas fa-signal"></i>
+              </div>
+              <div class="card-content">
+                <h3>Status</h3>
+                <p id="botStatusText">Offline</p>
+              </div>
             </div>
-            
-            <!-- Maintenance Page -->
-            <div class="page" id="databasePage">
-                <h3>Manutenção</h3>
-                <p class="section-lead">
-                    Ferramentas para gerenciar os dados locais do app (sessão/QR e backups).
+            <div class="card">
+              <div class="card-icon" style="background: #0f766e">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="card-content">
+                <h3>Conversas</h3>
+                <p id="conversationsCount">0</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-icon" style="background: var(--accent-color); color: #1f2937">
+                <i class="fas fa-envelope"></i>
+              </div>
+              <div class="card-content">
+                <h3>Mensagens Hoje</h3>
+                <p id="messagesToday">0</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-icon" style="background: #0f172a">
+                <i class="fas fa-brain"></i>
+              </div>
+              <div class="card-content">
+                <h3>IA Ativa</h3>
+                <p id="aiStatus">Desconectada</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="qr-section">
+            <h3>QR Code WhatsApp</h3>
+            <div class="qr-container">
+              <div id="qrCode"></div>
+              <div id="qrMessage">
+                <p>Inicie o bot para gerar o QR Code</p>
+                <button id="showQRBtn" class="btn btn-primary" style="display: none">
+                  <i class="fas fa-qrcode"></i> Mostrar QR Code
+                </button>
+              </div>
+            </div>
+            <p class="qr-instructions">
+              <i class="fas fa-info-circle"></i>
+              Escaneie este QR Code com o WhatsApp para conectar
+            </p>
+          </div>
+
+          <div class="recent-logs">
+            <h3>Atividade Recente</h3>
+            <div class="logs-container" id="recentLogs">
+              <div class="log-entry">
+                <span class="log-time">[00:00:00]</span>
+                <span class="log-message">Sistema iniciado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Page -->
+        <div class="page" id="logsPage">
+          <div class="logs-header">
+            <h3>Logs do Sistema</h3>
+            <div class="logs-actions">
+              <div class="log-filters" aria-label="Filtros de log">
+                <label class="filter-chip">
+                  <input type="checkbox" id="filterInfo" checked />
+                  <span>INFO</span>
+                </label>
+                <label class="filter-chip">
+                  <input type="checkbox" id="filterError" checked />
+                  <span>ERRO</span>
+                </label>
+                <label class="filter-chip">
+                  <input type="checkbox" id="filterQr" checked />
+                  <span>QR CODE</span>
+                </label>
+              </div>
+              <button id="clearLogsBtn" class="btn btn-secondary">
+                <i class="fas fa-trash"></i> Limpar
+              </button>
+              <button id="saveLogsBtn" class="btn btn-secondary">
+                <i class="fas fa-save"></i> Salvar
+              </button>
+            </div>
+          </div>
+          <div class="full-logs-container">
+            <pre id="fullLogs"></pre>
+          </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page" id="settingsPage">
+          <h3>Configurações do Bot</h3>
+          <div class="settings-form">
+            <div class="settings-grid">
+              <div class="form-section span-2">
+                <h4>Perfis (agentes)</h4>
+                <p>
+                  Crie e alterne agentes sem confusao. Cada perfil pode ter seu proprio modelo e
+                  instrucoes.
                 </p>
-                <div class="db-actions">
-                    <button id="backupDbBtn" class="btn btn-success">
-                        <i class="fas fa-download"></i> Backup dos dados
-                    </button>
-                    <button id="restoreDbBtn" class="btn btn-warning">
-                        <i class="fas fa-folder-open"></i> Abrir pasta de dados
-                    </button>
-                    <button id="cleanDbBtn" class="btn btn-danger">
-                        <i class="fas fa-qrcode"></i> Resetar sessão (novo QR)
-                    </button>
+              </div>
+
+              <div class="profile-toolbar span-2">
+                <div class="profile-select">
+                  <label for="profileSelect">Agente ativo</label>
+                  <select id="profileSelect" class="form-control"></select>
+                  <small class="hint"
+                    >Dica: crie um perfil para cada area (ex.: vendas, suporte, financeiro).</small
+                  >
                 </div>
-                
-                <div class="db-stats">
-                    <h4>Estatísticas</h4>
-                    <p class="subtle-note">
-                        Pasta: <code id="userDataPath">-</code>
-                    </p>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-label">Tamanho dos dados:</span>
-                            <span class="stat-value" id="dbSize">0 MB</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Sessão (auth):</span>
-                            <span class="stat-value" id="dbConversations">-</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Configurações:</span>
-                            <span class="stat-value" id="dbMessages">-</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Último Backup:</span>
-                            <span class="stat-value" id="lastBackup">Nunca</span>
-                        </div>
+                <div class="profile-actions">
+                  <button id="createProfileBtn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Novo perfil
+                  </button>
+                  <button id="duplicateProfileBtn" class="btn btn-secondary">
+                    <i class="far fa-clone"></i> Duplicar
+                  </button>
+                  <button id="deleteProfileBtn" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Excluir
+                  </button>
+                  <button id="exportProfilesBtn" class="btn btn-secondary">
+                    <i class="fas fa-file-export"></i> Exportar
+                  </button>
+                  <button id="importProfilesBtn" class="btn btn-secondary">
+                    <i class="fas fa-file-import"></i> Importar
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="profileName">Nome do agente</label>
+                <input
+                  type="text"
+                  id="profileName"
+                  class="form-control"
+                  placeholder="Ex.: Atendimento, Vendas, Suporte"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="botTag">Tag de resposta</label>
+                <input type="text" id="botTag" class="form-control" placeholder="[Meu Bot]" />
+              </div>
+
+              <div class="form-group span-2">
+                <label for="profilePrompt">Instrucao principal do agente</label>
+                <textarea
+                  id="profilePrompt"
+                  class="form-control"
+                  rows="5"
+                  placeholder="Explique como ele deve atender, o tom de voz e o foco principal."
+                ></textarea>
+                <small class="hint">
+                  Pense como se estivesse treinando um novo colaborador. Isso define o estilo do
+                  bot.
+                </small>
+              </div>
+
+              <div class="form-section span-2">
+                <h4>IA (modelo e provedor)</h4>
+                <p>Escolha onde o agente roda e qual modelo ele usa.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="providerSelect">Provedor de IA</label>
+                <select id="providerSelect" class="form-control" disabled>
+                  <option value="groq">Groq (único)</option>
+                </select>
+                <small class="hint">
+                  Este build usa exclusivamente o Groq para simplificar a configuração.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="modelPreset">Modelos gratuitos (Groq)</label>
+                <select id="modelPreset" class="form-control"></select>
+                <small class="hint">
+                  Escolha um modelo gratuito para preencher automaticamente o campo abaixo.
+                </small>
+              </div>
+
+              <div class="form-group" id="modelCustomGroup" style="display: none">
+                <label for="model">Modelo</label>
+                <input
+                  type="text"
+                  id="model"
+                  class="form-control"
+                  placeholder="Ex.: llama-3.3-70b-versatile"
+                />
+              </div>
+
+              <div class="form-group">
+                <label id="apiKeyLabel" for="apiKey">API Key</label>
+                <input
+                  type="password"
+                  id="apiKey"
+                  class="form-control"
+                  placeholder="Sua chave da Groq"
+                />
+                <small id="apiKeyHint" class="hint"></small>
+                <small id="groqLinkHint" class="hint" style="display: none">
+                  Crie sua API Key gratuita em
+                  <a href="https://groq.com/" target="_blank" rel="noreferrer">groq.com</a>.
+                </small>
+              </div>
+
+              <div class="form-group" id="apiBaseUrlGroup" style="display: none">
+                <label for="apiBaseUrl">Base URL (compatível OpenAI)</label>
+                <input
+                  type="text"
+                  id="apiBaseUrl"
+                  class="form-control"
+                  placeholder="https://servidor.exemplo/v1"
+                />
+                <small id="apiBaseUrlHint" class="hint"></small>
+              </div>
+
+              <div class="form-section span-2">
+                <h4>Basico</h4>
+                <p>O essencial para rodar o bot com seguranca.</p>
+              </div>
+
+              <div class="form-group">
+                <label for="ownerNumber">Seu Número (WhatsApp)</label>
+                <input
+                  type="text"
+                  id="ownerNumber"
+                  class="form-control"
+                  placeholder="5511999999999@s.whatsapp.net"
+                />
+                <small class="hint">
+                  Recomendado definir o owner aqui (nao existe comando no WhatsApp para isso). Sem
+                  owner, ferramentas e aprovacoes podem ficar bloqueadas.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="autoStart" />
+                  Iniciar bot automaticamente
+                </label>
+                <small class="hint"> Ativa o bot assim que o app abrir. </small>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="launchOnStartup" />
+                  Abrir o BotAssist com o sistema
+                </label>
+                <small class="hint"> Opcional. Faz o app iniciar junto com o Windows/macOS. </small>
+              </div>
+
+              <details class="advanced-panel span-2">
+                <summary>Configuracoes avancadas (opcional)</summary>
+                <div class="advanced-grid">
+                  <div class="form-section span-2">
+                    <h4>Acesso & Identidade</h4>
+                    <p>Controle quem pode falar com o bot e personalize o nome.</p>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="ownerJid">Owner JID (opcional, avançado)</label>
+                    <input
+                      type="text"
+                      id="ownerJid"
+                      class="form-control"
+                      placeholder="ex.: 9021...@lid"
+                    />
+                    <small class="hint">
+                      Use apenas se o WhatsApp estiver entregando JIDs em formato <code>@lid</code>.
+                      Pegue seu JID com <code>!me</code> no DM e cole aqui.
+                    </small>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="systemPrompt">Instrucoes adicionais (opcional)</label>
+                    <textarea
+                      id="systemPrompt"
+                      class="form-control"
+                      rows="5"
+                      placeholder="Exemplo: Voce e um agente de suporte. Responda em portugues, direto, com passos curtos."
+                    ></textarea>
+                    <small class="hint">Isso complementa o objetivo do agente.</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="dmPolicy">Política de DM</label>
+                    <select id="dmPolicy" class="form-control">
+                      <option value="open">Aberto (qualquer um)</option>
+                      <option value="allowlist">Somente allowlist</option>
+                      <option value="owner">Somente owner</option>
+                      <option value="pairing">Pairing (código)</option>
+                    </select>
+                    <small class="hint">
+                      Pairing: quem chama recebe um código e precisa enviar para ser liberado.
+                    </small>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="allowedUsers">Allowlist de usuários (opcional)</label>
+                    <textarea
+                      id="allowedUsers"
+                      class="form-control"
+                      rows="4"
+                      placeholder="Um por linha (telefone ou JID). Ex: 5511999999999 ou 5511999999999@s.whatsapp.net"
+                    ></textarea>
+                    <small class="hint">
+                      Se preencher, o bot só responde a esses usuários (a menos que “somente owner”
+                      esteja ativo).
+                    </small>
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Roteamento por perfil</h4>
+                    <p>Direcione usuários ou grupos específicos para um perfil.</p>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="profileRoutingUsers">Usuários → perfil</label>
+                    <textarea
+                      id="profileRoutingUsers"
+                      class="form-control"
+                      rows="4"
+                      placeholder="5511999999999 = Vendas"
+                    ></textarea>
+                    <small class="hint">
+                      Um por linha. Use o nome do perfil ou o ID. Ex.: 5511999999999 = Suporte.
+                    </small>
+                    <div class="routing-preview" id="profileRoutingUsersPreview"></div>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="profileRoutingGroups">Grupos → perfil</label>
+                    <textarea
+                      id="profileRoutingGroups"
+                      class="form-control"
+                      rows="4"
+                      placeholder="1203630...@g.us = Atendimento"
+                    ></textarea>
+                    <small class="hint">
+                      Um por linha. Use o JID do grupo e o nome do perfil.
+                    </small>
+                    <div class="routing-preview" id="profileRoutingGroupsPreview"></div>
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Grupos (anti-ban)</h4>
+                    <p>Segurança reforçada para evitar bloqueios no WhatsApp.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="groupPolicy">Política de grupos</label>
+                    <select id="groupPolicy" class="form-control">
+                      <option value="disabled">Desativado</option>
+                      <option value="allowlist">Somente allowlist</option>
+                      <option value="open">Aberto (todos os grupos)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="groupOnlyMention" disabled />
+                      Em grupos, responder apenas quando mencionado
+                    </label>
+                    <small class="hint">
+                      Recomendado (anti-ban). Para segurança, esta opção fica sempre ativa.
+                    </small>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="allowedGroups">Allowlist de grupos</label>
+                    <textarea
+                      id="allowedGroups"
+                      class="form-control"
+                      rows="4"
+                      placeholder="Um JID por linha. Ex: 1203630...@g.us"
+                    ></textarea>
+                    <small class="hint">
+                      Para responder em grupos, adicione aqui os JIDs permitidos quando a política
+                      for allowlist.
+                    </small>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="groupAccessKey">Chave de acesso do grupo (opcional)</label>
+                    <div class="inline-field">
+                      <input
+                        type="password"
+                        id="groupAccessKey"
+                        class="form-control"
+                        placeholder="Use uma chave simples para liberar grupos"
+                      />
+                      <button id="clearGroupAccessKeyBtn" class="btn btn-secondary" type="button">
+                        Limpar
+                      </button>
                     </div>
+                    <small class="hint">
+                      Em um grupo, mencione o bot e envie “!autorizar &lt;chave&gt;” para liberar.
+                    </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="requireGroupAllowlist" disabled checked />
+                      Em grupos, exigir allowlist (recomendado/anti-ban)
+                    </label>
+                    <small class="hint">
+                      Para segurança, o bot só responde em grupos listados acima (e apenas quando
+                      mencionado).
+                    </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="groupRequireCommand" />
+                      Em grupos, responder somente a comandos (prefixo)
+                    </label>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="groupCommandPrefix">Prefixo de comando</label>
+                    <input
+                      type="text"
+                      id="groupCommandPrefix"
+                      class="form-control"
+                      placeholder="!"
+                    />
+                    <small class="hint">
+                      Ex.: “!ajuda”, “!vender ...”. (Também requer menção em grupos.)
+                    </small>
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Performance</h4>
+                    <p>Controle cooldown e limite de resposta para reduzir riscos.</p>
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Memória e sessões</h4>
+                    <p>Mantenha contexto entre mensagens e compacte quando necessário.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="historyEnabled" />
+                      Ativar memória da conversa
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="historyMaxMessages">Qtd. máxima de mensagens no histórico</label>
+                    <input
+                      type="number"
+                      id="historyMaxMessages"
+                      class="form-control"
+                      min="4"
+                      step="1"
+                    />
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label>
+                      <input type="checkbox" id="historySummaryEnabled" checked />
+                      Compactar automaticamente (resumo)
+                    </label>
+                    <small class="hint">
+                      Quando o histórico estourar o limite, um resumo é gerado para manter contexto.
+                    </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="cooldownSecondsDm">Cooldown (DM) em segundos</label>
+                    <input
+                      type="number"
+                      id="cooldownSecondsDm"
+                      class="form-control"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="cooldownSecondsGroup">Cooldown (grupo) em segundos</label>
+                    <input
+                      type="number"
+                      id="cooldownSecondsGroup"
+                      class="form-control"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="maxResponseChars">Tamanho máximo da resposta (caracteres)</label>
+                    <input
+                      type="number"
+                      id="maxResponseChars"
+                      class="form-control"
+                      min="200"
+                      step="50"
+                    />
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Ferramentas (Tools)</h4>
+                    <p>Recursos avancados. Ative apenas se souber o que esta fazendo.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="toolsEnabled" />
+                      Ativar ferramentas (opt-in)
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="toolsRequireOwner" />
+                      Somente owner pode usar ferramentas
+                    </label>
+                    <small class="hint"> Recomendado: evita uso indevido por terceiros. </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="toolsAllowInGroups" />
+                      Permitir ferramentas em grupos
+                    </label>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label>
+                      <input type="checkbox" id="toolsAdvancedToggle" />
+                      Mostrar opções avançadas
+                    </label>
+                    <small class="hint">
+                      O padrão usa sua pasta de usuário (ex.: ~/). Opções avançadas ajustam
+                      caminhos, domínios e limites.
+                    </small>
+                  </div>
+
+                  <div class="form-group span-2">
+                    <button id="toolsTestBtn" class="btn btn-secondary" type="button">
+                      <i class="fas fa-vial"></i> Testar ferramentas
+                    </button>
+                    <pre id="toolsTestResult" class="tools-test-result" style="display: none"></pre>
+                  </div>
+
+                  <div
+                    id="toolsAdvancedSection"
+                    class="tools-advanced-section span-2"
+                    style="display: none"
+                  >
+                    <div class="form-group">
+                      <label for="toolsMaxOutputChars">Limite de saída por ferramenta</label>
+                      <input
+                        type="number"
+                        id="toolsMaxOutputChars"
+                        class="form-control"
+                        min="200"
+                        step="100"
+                      />
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label>Ferramentas liberadas sem autorização</label>
+                      <div class="checkbox-grid">
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="web.search" /> Pesquisa
+                          web</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="web.open" /> Abrir
+                          URL</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.list" /> Listar
+                          arquivos</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.read" /> Ler
+                          arquivo</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="email.read" /> Ler
+                          email</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.write" /> Escrever
+                          arquivo</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.delete" /> Excluir
+                          arquivo</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.move" />
+                          Mover/renomear</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="fs.copy" /> Copiar
+                          arquivo</label
+                        >
+                        <label
+                          ><input type="checkbox" data-tool-auto-allow="shell.exec" /> Executar
+                          comando</label
+                        >
+                      </div>
+                      <small class="hint">
+                        As demais ferramentas pedem autorizacao via comando (!aprovar).
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsAllowedPaths">Pastas permitidas para leitura/listagem</label>
+                      <textarea
+                        id="toolsAllowedPaths"
+                        class="form-control"
+                        rows="3"
+                        placeholder="/caminho/seguro"
+                      ></textarea>
+                      <small class="hint">
+                        Um caminho por linha. Se vazio, usa automaticamente a pasta do usuário (ex.:
+                        ~/).
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsAllowedWritePaths"
+                        >Pastas permitidas para escrita/remoção</label
+                      >
+                      <textarea
+                        id="toolsAllowedWritePaths"
+                        class="form-control"
+                        rows="3"
+                        placeholder="/caminho/seguro"
+                      ></textarea>
+                      <small class="hint">
+                        Se vazio, usa a lista de leitura (padrão: pasta do usuário).
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsAllowedDomains">Domínios permitidos (web)</label>
+                      <textarea
+                        id="toolsAllowedDomains"
+                        class="form-control"
+                        rows="3"
+                        placeholder="exemplo.com"
+                      ></textarea>
+                      <small class="hint">
+                        Um por linha. Se vazio, permite qualquer domínio.
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsBlockedDomains">Domínios bloqueados (web)</label>
+                      <textarea
+                        id="toolsBlockedDomains"
+                        class="form-control"
+                        rows="3"
+                        placeholder="facebook.com"
+                      ></textarea>
+                      <small class="hint">
+                        Bloqueia mesmo quando estiver na lista de permitidos.
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsBlockedExtensions">Extensões bloqueadas (leitura)</label>
+                      <textarea
+                        id="toolsBlockedExtensions"
+                        class="form-control"
+                        rows="2"
+                        placeholder=".exe&#10;.dll"
+                      ></textarea>
+                      <small class="hint">
+                        Um por linha. Evita leitura de arquivos binários/sensíveis.
+                      </small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="toolsMaxFileSizeMb">Tamanho máximo de leitura (MB)</label>
+                      <input
+                        type="number"
+                        id="toolsMaxFileSizeMb"
+                        class="form-control"
+                        min="1"
+                        step="1"
+                      />
+                      <small class="hint">
+                        Limita o tamanho de arquivos lidos pelas ferramentas.
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsCommandAllowlist">Comandos permitidos (shell)</label>
+                      <textarea
+                        id="toolsCommandAllowlist"
+                        class="form-control"
+                        rows="3"
+                        placeholder="git&#10;ls&#10;node"
+                      ></textarea>
+                      <small class="hint">
+                        Opcional. Se preenchido, só comandos que começarem com estes termos.
+                      </small>
+                    </div>
+
+                    <div class="form-group span-2">
+                      <label for="toolsCommandDenylist">Comandos bloqueados (shell)</label>
+                      <textarea
+                        id="toolsCommandDenylist"
+                        class="form-control"
+                        rows="3"
+                        placeholder="rm&#10;sudo"
+                      ></textarea>
+                      <small class="hint"> Bloqueia mesmo com autorização. </small>
+                    </div>
+                  </div>
+
+                  <div class="form-section span-2">
+                    <h4>Email (IMAP)</h4>
+                    <p>Opcional. So ative se voce precisar.</p>
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="emailEnabled" />
+                      Ativar leitura de email
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emailImapHost">Servidor IMAP</label>
+                    <input
+                      type="text"
+                      id="emailImapHost"
+                      class="form-control"
+                      placeholder="imap.seudominio.com"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emailImapPort">Porta IMAP</label>
+                    <input
+                      type="number"
+                      id="emailImapPort"
+                      class="form-control"
+                      min="1"
+                      max="65535"
+                      step="1"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" id="emailImapSecure" checked />
+                      Usar TLS/SSL
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emailImapUser">Usuário IMAP</label>
+                    <input
+                      type="text"
+                      id="emailImapUser"
+                      class="form-control"
+                      placeholder="usuario@dominio.com"
+                    />
+                  </div>
+
+                  <div class="form-group span-2">
+                    <label for="emailImapPassword">Senha IMAP</label>
+                    <div class="inline-field">
+                      <input
+                        type="password"
+                        id="emailImapPassword"
+                        class="form-control"
+                        placeholder="Senha do email"
+                      />
+                      <button id="clearEmailPasswordBtn" class="btn btn-secondary" type="button">
+                        Limpar
+                      </button>
+                    </div>
+                    <small class="hint"> Salva localmente. Deixe vazio para manter. </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emailMailbox">Caixa postal</label>
+                    <input type="text" id="emailMailbox" class="form-control" placeholder="INBOX" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emailMaxMessages">Qtd. máxima de emails por leitura</label>
+                    <input
+                      type="number"
+                      id="emailMaxMessages"
+                      class="form-control"
+                      min="1"
+                      step="1"
+                    />
+                  </div>
                 </div>
+              </details>
             </div>
-            
-            <!-- About Page -->
-            <div class="page" id="aboutPage">
-                <div class="about-content">
-	                    <div class="about-logo">
-	                        <img class="about-logo-image" src="../../assets/botassist_logo.png" alt="BotAssist logo">
-	                        <h2>BotAssist WhatsApp</h2>
-	                        <p class="version">v<span id="uiVersion">-</span></p>
-	                    </div>
-                    
-	                    <div class="about-info">
-	                        <p>
-	                            <strong>Assistente de IA para WhatsApp com interface gráfica</strong>
-	                        </p>
 
-		                        <div class="credits">
-		                            <h4>Créditos</h4>
-		                            <div class="ruas-brand">
-		                                <img class="ruas-logo" src="../../assets/ruas_logo.png" alt="Ruas.dev">
-		                                <div class="ruas-meta">
-		                                    <p>Desenvolvimento: <strong>Irving Ruas</strong></p>
-		                                    <a href="https://ruas.dev.br" target="_blank" rel="noreferrer">ruas.dev.br</a>
-		                                </div>
-		                            </div>
-		                        </div>
-
-		                        <div class="credits">
-		                            <h4>Software livre</h4>
-		                            <p class="no-margin">
-		                                Licença: <strong>MIT</strong> • Sem garantias (“AS IS”).
-		                            </p>
-		                            <small class="hint">
-		                                Contribuições são bem-vindas — issues e PRs no GitHub.
-		                            </small>
-		                        </div>
-
-		                        <div class="updates">
-		                            <h4>Atualizações</h4>
-		                            <p>
-		                                Versão instalada: <span id="appVersion">-</span><br>
-	                                Status: <span id="updateStatus">-</span>
-	                            </p>
-	                            <div class="update-actions">
-	                                <button id="checkUpdatesBtn" class="btn btn-secondary">
-	                                    <i class="fas fa-sync"></i> Verificar
-	                                </button>
-	                                <button id="installUpdateBtn" class="btn btn-primary" style="display:none;">
-	                                    <i class="fas fa-download"></i> Instalar e Reiniciar
-	                                </button>
-	                            </div>
-	                            <div class="update-progress" id="updateProgress" style="display:none;">
-	                                <div class="update-progress-bar" id="updateProgressBar" style="width:0%"></div>
-	                            </div>
-	                            <small class="hint hint-lg">
-	                                Atualizações automáticas funcionam apenas no app instalado (build).
-	                            </small>
-	                        </div>
-	                        
-	                        <div class="features-list">
-	                            <h4>Funcionalidades:</h4>
-	                            <ul>
-	                                <li>Conector WhatsApp via Baileys</li>
-	                                <li>IA via Groq (Llama 3.3 70B)</li>
-	                                <li>Multi-perfis (agentes)</li>
-	                                <li>Banco de dados (em breve)</li>
-	                                <li>Interface gráfica Electron</li>
-	                                <li>Multiplataforma</li>
-	                            </ul>
-                        </div>
-                        
-		                        <div class="links">
-		                            <a href="https://github.com/N1ghthill/botassist-whatsapp"
-		                               class="btn btn-secondary" target="_blank">
-		                                <i class="fab fa-github"></i> Repositório
-		                            </a>
-		                            <a href="https://botassist.ruas.dev.br"
-		                               class="btn btn-primary" target="_blank">
-		                                <i class="fas fa-globe"></i> Site
-		                            </a>
-		                            <a href="https://github.com/sponsors/N1ghthill"
-		                               class="btn btn-secondary" target="_blank">
-		                                <i class="fas fa-heart"></i> Doar
-		                            </a>
-		                        </div>
-	                    </div>
-	                </div>
-	            </div>
-
-            <!-- Privacy Page -->
-            <div class="page" id="privacyPage">
-                <div class="privacy-content">
-                    <h2>Privacidade & Dados</h2>
-                    <p class="privacy-intro">
-                        O BotAssist roda localmente na sua máquina. Ele não envia conversas para servidores externos
-                        além do provedor de IA configurado (ex.: Groq) e do WhatsApp.
-                    </p>
-
-                    <div class="privacy-grid">
-                        <div class="privacy-card">
-                            <h4>O que é armazenado localmente</h4>
-                            <ul>
-                                <li>Sessão do WhatsApp (QR/credenciais do Baileys).</li>
-                                <li>Configurações do bot e preferências.</li>
-                                <li>Logs locais exibidos na interface.</li>
-                            </ul>
-                        </div>
-                        <div class="privacy-card">
-                            <h4>Chaves de API</h4>
-                            <p>
-                                Quando possível, a chave da Groq é salva com segurança via keytar (sistema operacional).
-                                Em ambientes sem keytar, ela fica no <code>settings.json</code> local.
-                            </p>
-                        </div>
-                        <div class="privacy-card">
-                            <h4>Uso de dados</h4>
-                            <p>
-                                Mensagens só são processadas quando o bot está ativo. Você pode limitar
-                                por usuário, grupos e cooldowns para reduzir risco e exposição.
-                            </p>
-                        </div>
-                        <div class="privacy-card">
-                            <h4>WhatsApp (não-oficial)</h4>
-                            <p>
-                                A conexão usa Baileys (não-oficial). Isso pode violar termos do WhatsApp e causar
-                                bloqueio da conta. Use por sua conta e risco.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="privacy-actions">
-                        <p>
-                            Recomendamos revisar as configurações antes de disponibilizar o bot para terceiros.
-                        </p>
-                        <div class="links">
-                            <a href="https://github.com/N1ghthill/botassist-whatsapp"
-                               class="btn btn-secondary" target="_blank">
-                                <i class="fab fa-github"></i> Repositório
-                            </a>
-                            <a href="https://botassist.ruas.dev.br"
-                               class="btn btn-primary" target="_blank">
-                                <i class="fas fa-globe"></i> Site
-                            </a>
-                        </div>
-                    </div>
-                </div>
+            <div class="form-actions">
+              <button id="saveSettingsBtn" class="btn btn-primary">
+                <i class="fas fa-save"></i> Salvar Configurações
+              </button>
+              <button id="resetSettingsBtn" class="btn btn-secondary">
+                <i class="fas fa-undo"></i> Restaurar Padrão
+              </button>
             </div>
+          </div>
         </div>
+
+        <!-- Maintenance Page -->
+        <div class="page" id="databasePage">
+          <h3>Manutenção</h3>
+          <p class="section-lead">
+            Ferramentas para gerenciar os dados locais do app (sessão/QR e backups).
+          </p>
+          <div class="db-actions">
+            <button id="backupDbBtn" class="btn btn-success">
+              <i class="fas fa-download"></i> Backup dos dados
+            </button>
+            <button id="restoreDbBtn" class="btn btn-warning">
+              <i class="fas fa-folder-open"></i> Abrir pasta de dados
+            </button>
+            <button id="clearHistoryBtn" class="btn btn-secondary">
+              <i class="fas fa-broom"></i> Limpar memória (histórico)
+            </button>
+            <button id="cleanDbBtn" class="btn btn-danger">
+              <i class="fas fa-qrcode"></i> Resetar sessão (novo QR)
+            </button>
+          </div>
+
+          <div class="db-stats">
+            <h4>Estatísticas</h4>
+            <p class="subtle-note">Pasta: <code id="userDataPath">-</code></p>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">Tamanho dos dados:</span>
+                <span class="stat-value" id="dbSize">0 MB</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Sessão (auth):</span>
+                <span class="stat-value" id="dbConversations">-</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Configurações:</span>
+                <span class="stat-value" id="dbMessages">-</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Último Backup:</span>
+                <span class="stat-value" id="lastBackup">Nunca</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Memória (sessões):</span>
+                <span class="stat-value" id="memorySessions">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Tamanho da memória:</span>
+                <span class="stat-value" id="memorySize">0 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- About Page -->
+        <div class="page" id="aboutPage">
+          <div class="about-content">
+            <div class="about-logo">
+              <img
+                class="about-logo-image"
+                src="../../assets/botassist_logo.png"
+                alt="BotAssist logo"
+              />
+              <h2>BotAssist WhatsApp</h2>
+              <p class="version">v<span id="uiVersion">-</span></p>
+            </div>
+
+            <div class="about-info">
+              <p>
+                <strong>Assistente de IA para WhatsApp com interface gráfica</strong>
+              </p>
+
+              <div class="credits">
+                <h4>Créditos</h4>
+                <div class="ruas-brand">
+                  <img class="ruas-logo" src="../../assets/ruas_logo.png" alt="Ruas.dev" />
+                  <div class="ruas-meta">
+                    <p>Desenvolvimento: <strong>Irving Ruas</strong></p>
+                    <a href="https://ruas.dev.br" target="_blank" rel="noreferrer">ruas.dev.br</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="credits">
+                <h4>Software livre</h4>
+                <p class="no-margin">Licença: <strong>MIT</strong> • Sem garantias (“AS IS”).</p>
+                <small class="hint"> Contribuições são bem-vindas — issues e PRs no GitHub. </small>
+              </div>
+
+              <div class="updates">
+                <h4>Atualizações</h4>
+                <p>
+                  Versão instalada: <span id="appVersion">-</span><br />
+                  Status: <span id="updateStatus">-</span>
+                </p>
+                <div class="update-actions">
+                  <button id="checkUpdatesBtn" class="btn btn-secondary">
+                    <i class="fas fa-sync"></i> Verificar
+                  </button>
+                  <button id="installUpdateBtn" class="btn btn-primary" style="display: none">
+                    <i class="fas fa-download"></i> Instalar e Reiniciar
+                  </button>
+                </div>
+                <div class="update-progress" id="updateProgress" style="display: none">
+                  <div class="update-progress-bar" id="updateProgressBar" style="width: 0%"></div>
+                </div>
+                <small class="hint hint-lg">
+                  Atualizações automáticas funcionam apenas no app instalado (build).
+                </small>
+              </div>
+
+              <div class="features-list">
+                <h4>Funcionalidades:</h4>
+                <ul>
+                  <li>Conector WhatsApp via Baileys</li>
+                  <li>IA via Groq (Llama 3.3 70B)</li>
+                  <li>Multi-perfis (agentes)</li>
+                  <li>Banco de dados (em breve)</li>
+                  <li>Interface gráfica Electron</li>
+                  <li>Multiplataforma</li>
+                </ul>
+              </div>
+
+              <div class="links">
+                <a
+                  href="https://github.com/N1ghthill/botassist-whatsapp"
+                  class="btn btn-secondary"
+                  target="_blank"
+                >
+                  <i class="fab fa-github"></i> Repositório
+                </a>
+                <a href="https://botassist.ruas.dev.br" class="btn btn-primary" target="_blank">
+                  <i class="fas fa-globe"></i> Site
+                </a>
+                <a
+                  href="https://github.com/sponsors/N1ghthill"
+                  class="btn btn-secondary"
+                  target="_blank"
+                >
+                  <i class="fas fa-heart"></i> Doar
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy Page -->
+        <div class="page" id="privacyPage">
+          <div class="privacy-content">
+            <h2>Privacidade & Dados</h2>
+            <p class="privacy-intro">
+              O BotAssist roda localmente na sua máquina. Ele não envia conversas para servidores
+              externos além do provedor de IA configurado (ex.: Groq) e do WhatsApp.
+            </p>
+
+            <div class="privacy-grid">
+              <div class="privacy-card">
+                <h4>O que é armazenado localmente</h4>
+                <ul>
+                  <li>Sessão do WhatsApp (QR/credenciais do Baileys).</li>
+                  <li>Configurações do bot e preferências.</li>
+                  <li>Logs locais exibidos na interface.</li>
+                </ul>
+              </div>
+              <div class="privacy-card">
+                <h4>Chaves de API</h4>
+                <p>
+                  Quando possível, a chave da Groq é salva com segurança via keytar (sistema
+                  operacional). Em ambientes sem keytar, ela fica no
+                  <code>settings.json</code> local.
+                </p>
+              </div>
+              <div class="privacy-card">
+                <h4>Uso de dados</h4>
+                <p>
+                  Mensagens só são processadas quando o bot está ativo. Você pode limitar por
+                  usuário, grupos e cooldowns para reduzir risco e exposição.
+                </p>
+              </div>
+              <div class="privacy-card">
+                <h4>WhatsApp (não-oficial)</h4>
+                <p>
+                  A conexão usa Baileys (não-oficial). Isso pode violar termos do WhatsApp e causar
+                  bloqueio da conta. Use por sua conta e risco.
+                </p>
+              </div>
+            </div>
+
+            <div class="privacy-actions">
+              <p>
+                Recomendamos revisar as configurações antes de disponibilizar o bot para terceiros.
+              </p>
+              <div class="links">
+                <a
+                  href="https://github.com/N1ghthill/botassist-whatsapp"
+                  class="btn btn-secondary"
+                  target="_blank"
+                >
+                  <i class="fab fa-github"></i> Repositório
+                </a>
+                <a href="https://botassist.ruas.dev.br" class="btn btn-primary" target="_blank">
+                  <i class="fas fa-globe"></i> Site
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    
+
+    <div id="setupOverlay" class="setup-overlay" style="display: none">
+      <div class="setup-card" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+        <div class="setup-header">
+          <div>
+            <span class="setup-kicker">Primeira vez</span>
+            <h2 id="setupTitle">Configuracao rapida do BotAssist</h2>
+            <p>Em 5 minutos voce conecta o WhatsApp e comeca a responder.</p>
+          </div>
+          <button id="setupSkipBtn" class="btn btn-secondary btn-sm" type="button">
+            Pular agora
+          </button>
+        </div>
+
+        <div class="setup-progress">
+          <div class="setup-progress-text">
+            <span id="setupStepText">Etapa 1 de 4</span>
+            <span id="setupStepCaption">Apresentacao</span>
+          </div>
+          <div class="setup-progress-bar">
+            <div id="setupProgressFill" class="setup-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="setup-body">
+          <section class="setup-step" data-step="1">
+            <div class="setup-intro">
+              <div>
+                <h3>Bem-vindo!</h3>
+                <p>Este assistente vai te guiar pelos passos essenciais.</p>
+              </div>
+              <div class="setup-pill-list">
+                <span>Sem telemetria</span>
+                <span>Configs seguras por padrao</span>
+                <span>Owner definido no app</span>
+              </div>
+            </div>
+            <div class="setup-panel">
+              <h4>O que vamos fazer</h4>
+              <ul class="setup-list">
+                <li>Configurar a API Key da Groq e escolher o modelo.</li>
+                <li>Conectar o WhatsApp via QR Code.</li>
+                <li>Testar com outro numero e definir o owner.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="setup-step" data-step="2" style="display: none">
+            <div class="setup-grid">
+              <div class="setup-panel">
+                <h4>API Key da Groq</h4>
+                <label for="setupApiKey">Cole sua chave</label>
+                <input
+                  type="password"
+                  id="setupApiKey"
+                  class="form-control"
+                  placeholder="gsk_..."
+                />
+                <small id="setupApiKeyHint" class="hint">
+                  Crie sua chave gratis em
+                  <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
+                    console.groq.com/keys
+                  </a>
+                  — crie sua chave gratis e use o BotAssist em 5 minutos!
+                </small>
+              </div>
+              <div class="setup-panel">
+                <h4>Modelo</h4>
+                <label for="setupModelPreset">Selecione um modelo</label>
+                <select id="setupModelPreset" class="form-control"></select>
+                <div id="setupModelCustomGroup" class="setup-inline" style="display: none">
+                  <label for="setupModelCustom">Modelo personalizado</label>
+                  <input
+                    type="text"
+                    id="setupModelCustom"
+                    class="form-control"
+                    placeholder="ex.: llama-3.3-70b-versatile"
+                  />
+                </div>
+              </div>
+              <div class="setup-panel">
+                <h4>Inicializacao</h4>
+                <label class="setup-check">
+                  <input type="checkbox" id="setupAutoStart" />
+                  Iniciar o bot automaticamente ao abrir o app
+                </label>
+                <label class="setup-check">
+                  <input type="checkbox" id="setupLaunchOnStartup" />
+                  Abrir o BotAssist junto com o sistema
+                </label>
+                <small class="hint">Opcional. Recomendado apenas se voce usa o bot todo dia.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="setup-step" data-step="3" style="display: none">
+            <h3>Conecte o WhatsApp</h3>
+            <p>Inicie o bot para gerar o QR Code e escaneie com o WhatsApp.</p>
+            <div class="setup-qr">
+              <div id="setupQrCode" class="setup-qr-box"></div>
+              <div class="setup-qr-meta">
+                <div id="setupConnectionStatus" class="setup-status">Status: aguardando</div>
+                <button id="setupStartBotBtn" class="btn btn-primary" type="button">
+                  <i class="fas fa-play"></i> Iniciar bot agora
+                </button>
+                <small class="hint">Se o QR nao aparecer, aguarde alguns segundos.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="setup-step" data-step="4" style="display: none">
+            <h3>Teste e defina o owner</h3>
+            <p>Para liberar comandos e ferramentas, defina o owner na interface.</p>
+            <ol class="setup-list">
+              <li>Com outro numero, envie uma mensagem para o bot.</li>
+              <li>Digite <code>!me</code> no DM e copie seu numero/JID.</li>
+              <li>Cole abaixo para definir o owner.</li>
+            </ol>
+            <div class="setup-grid">
+              <div class="setup-panel">
+                <label for="setupOwnerNumber">Owner numero (WhatsApp)</label>
+                <input
+                  type="text"
+                  id="setupOwnerNumber"
+                  class="form-control"
+                  placeholder="5511999999999@s.whatsapp.net"
+                />
+                <small class="hint"
+                  >Se o WhatsApp usar <code>@lid</code>, preencha o campo abaixo.</small
+                >
+              </div>
+              <div class="setup-panel">
+                <label for="setupOwnerJid">Owner JID (opcional)</label>
+                <input
+                  type="text"
+                  id="setupOwnerJid"
+                  class="form-control"
+                  placeholder="ex.: 9021...@lid"
+                />
+                <small class="hint">
+                  Comandos e ferramentas so funcionam com owner ou grupos pre-configurados.
+                </small>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="setup-actions">
+          <button id="setupBackBtn" class="btn btn-secondary" type="button">Voltar</button>
+          <div class="setup-actions-right">
+            <button id="setupNextBtn" class="btn btn-primary" type="button">Continuar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="headerContextMenu" class="context-menu" role="menu" aria-hidden="true">
-        <button id="quitAppBtn" class="context-menu-item" role="menuitem">
-            <i class="fas fa-power-off"></i> Sair do BotAssist
-        </button>
+      <button id="quitAppBtn" class="context-menu-item" role="menuitem">
+        <i class="fas fa-power-off"></i> Sair do BotAssist
+      </button>
     </div>
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
