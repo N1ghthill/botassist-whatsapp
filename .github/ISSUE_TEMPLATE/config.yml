@@ -1,8 +1,5 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: 🌐 Problemas do site (botassist-site)
-    url: https://github.com/N1ghthill/botassist-site/issues
-    about: Para bugs/ideias do site/landing page.
-  - name: ✉️ Contato privado (segurança/sensível)
-    url: mailto:irving@ruas.dev.br
-    about: Para assuntos sensíveis (ex.: segurança, dados pessoais).
+  - name: Segurança
+    url: https://github.com/N1ghthill
+    about: Para temas sensíveis de segurança, entre em contato em canal privado.
