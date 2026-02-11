@@ -4,32 +4,39 @@
 Nao. O projeto nao inclui analytics, rastreamento ou coleta de dados por padrao.
 
 ## O que preciso para usar?
-Somente:
-- Uma API Key da Groq
+- API Key da Groq
 - Ler o QR Code e conectar o WhatsApp
+- Definir owner no app (`ownerNumber` ou `ownerJid`) para liberar comandos sensiveis/tools
 
 ## Onde crio a API Key?
-Crie sua API Key gratuita em https://groq.com/ e cole na tela de Configuracoes.
+https://groq.com/
 
 ## O bot funciona sem API Key?
-Ele inicia, mas nao responde com IA. A UI avisa que falta a chave.
+Ele inicia, mas nao responde com IA. A UI avisa que falta chave.
 
 ## Ferramentas (tools) sao obrigatorias?
-Nao. Elas sao opt-in e ficam desativadas por padrao. Para usar, ative em Configuracoes.
+Nao. Sao opt-in e desativadas por padrao.
 
 ## Ferramentas podem executar coisas perigosas?
-Podem, por isso exigem aprovacao do owner. Acoes sensiveis nunca rodam automaticamente para terceiros.
+Sim. Por isso escrita/remocao/comandos exigem aprovacao do owner.
+
+## O bot sabe data/hora sem pesquisar?
+Sim. O prompt recebe contexto situacional local (data/hora, fuso, SO e diretorio).
+
+## Como melhorar busca web para perguntas factuais?
+Ative tools, mantenha `web.search` no auto-allow e revise `allowedDomains`/`blockedDomains`.
 
 ## Posso usar em grupos?
-Sim, mas por seguranca o bot so responde quando for mencionado e o grupo estiver allowlistado.
+Sim, mas por seguranca ele so responde quando mencionado e conforme politica de grupos.
 
 ## O bot usa meus dados?
-As conversas e configuracoes ficam localmente no seu computador (pasta userData do Electron).
+Conversas/configuracoes ficam locais no `userData` do Electron.
 
 ## Como apago memoria/historico?
-Use o botao "Limpar memoria (historico)" na aba Manutencao ou o comando !limparmemoria (owner).
+- Botao `Limpar memoria (historico)` na aba Manutencao
+- Comando `!limparmemoria` (owner)
 
 ## Glossario rapido
-- Owner: numero configurado em `ownerNumber` (dono do bot). Se o WhatsApp usar `@lid`, copie o JID com `!me` e preencha `ownerJid` na UI.
+- Owner: dono do bot (definido na UI)
 - Allowlist: lista de usuarios/grupos permitidos
-- Ferramentas (tools): recursos avancados (web/arquivos/terminal/email)
+- Tools: recursos avancados (web/arquivos/terminal/email)

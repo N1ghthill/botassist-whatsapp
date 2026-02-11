@@ -1,0 +1,39 @@
+{
+  "latestVersion": "4.1.10",
+  "updatedAt": "2026-02-11",
+  "releases": [
+    {
+      "version": "4.1.10",
+      "date": "2026-02-10",
+      "title": "Estabilidade de configuracao e seguranca operacional",
+      "summary": "Release focada em operacao diaria com perfis, politicas de acesso e tools com defaults conservadores.",
+      "highlights": [
+        "Contexto situacional nativo no prompt (hora, SO, Node e diretorio).",
+        "Fluxo de perfis (agentes) com roteamento por usuario e grupo.",
+        "Tools com aprovacao do owner e auditoria local."
+      ],
+      "technical": [
+        "Normalizacao de dmPolicy/groupPolicy com compatibilidade legada.",
+        "Persistencia de API Key via keytar com fallback seguro.",
+        "Validacao de caminhos e dominios nas tools."
+      ],
+      "fixes": [
+        "Melhorias de robustez no envio de mensagens ao provedor.",
+        "Fallback mais previsivel quando o modelo nao suporta tools."
+      ],
+      "upgradeNotes": [
+        "Defina ownerNumber/ownerJid antes de liberar tools.",
+        "Revise allowedPaths/allowedWritePaths e filtros de dominio."
+      ]
+    }
+  ],
+  "roadmap": {
+    "next": {
+      "focus": [
+        "Onboarding em 4 etapas com owner no setup.",
+        "Fallback de build Linux para AppImage quando faltar libcrypt.so.1.",
+        "CI com lint + test antes dos checks de sintaxe."
+      ]
+    }
+  }
+}

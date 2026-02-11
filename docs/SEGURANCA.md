@@ -1,35 +1,43 @@
 # Seguranca
 
-Este documento descreve as praticas recomendadas para manter o BotAssist seguro.
+Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 
 ## Defaults seguros
-- Ferramentas (tools) desativadas por padrao
-- Aprovacao de ferramentas somente pelo owner
-- Em grupos, o bot responde apenas quando mencionado
-- Responde em grupos apenas com allowlist
-- Owner e definido somente pela UI (nao ha comando no WhatsApp)
+
+- Tools desativadas por padrao
+- Aprovacao de tools pelo owner
+- Em grupos, resposta apenas com mencao
+- Politica de grupos recomendada: allowlist
+- Owner definido no app (`ownerNumber` e opcional `ownerJid`)
 
 ## Recomendacoes de uso
-- Use um usuario dedicado do sistema (sem sudo) para rodar o bot
-- Restrinja caminhos de leitura/escrita nas ferramentas
-- Evite expor variaveis sensiveis em prompts
-- Nao ative ferramentas em grupos sem necessidade
-- Configure o owner antes de habilitar tools (sem owner, aprovacao fica bloqueada)
 
-## Grupos (anti-ban)
-Para reduzir riscos:
-- Mencao obrigatoria em grupos
-- Allowlist de grupos
-- Opcional: comandos com prefixo
+- Rode com usuario dedicado (sem sudo)
+- Restrinja caminhos de leitura/escrita das tools
+- Deixe `allowedWritePaths` vazio para bloquear escrita/remocao por padrao
+- Paths sao validados por caminho real (symlink-safe)
+- Nao exponha segredos em prompts
+- Nao habilite tools em grupos sem necessidade
+- Configure owner antes de habilitar tools
 
-## Ferramentas (tools)
-Ferramentas podem executar acoes perigosas.
-Por isso:
-- Mantenha auto-allow apenas para leitura
-- Use allowlist/denylist de comandos
-- Exija aprovacao do owner para escrita/delecao/execucao
-- Use comandos de diagnostico (`!fslist`, `!fsread`) apenas no DM do owner
+## Busca web segura
+
+- Revise `tools.allowedDomains` e `tools.blockedDomains`
+- Use `web.search` apenas com filtros de dominio adequados ao seu contexto
+
+## Ferramentas sensiveis
+
+Sempre exigem aprovacao explicita:
+- `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
+- `shell.exec`
+
+Boas praticas:
+- use allowlist/denylist de comandos
+- mantenha `tools.mode = auto` somente com auto-allow de leitura
+- audite `userData/logs/tools_audit.log`
 
 ## Dados locais
-As configuracoes e sessoes ficam no `userData` do Electron.
-Recomenda-se backup periodico pela aba Manutencao.
+
+- Configuracoes e sessoes ficam no `userData` do Electron
+- API key usa `keytar` quando disponivel
+- Recomendado backup periodico via aba Manutencao

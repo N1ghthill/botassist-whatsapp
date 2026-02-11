@@ -4,13 +4,15 @@ Checklist para visualizar o que e Core, Avancado e Experimental.
 
 ## Core (padrao)
 - [x] API Groq
-- [x] Prompt do agente (perfil padrao)
+- [x] Prompt por perfil (agente)
 - [x] Conexao via QR Code
 - [x] Interface grafica (start/stop/logs)
-- [x] Status/Help
+- [x] Contexto situacional de runtime (hora/SO/diretorio)
+- [x] Atualizacao automatica em build instalado
 
 ## Avancado (opt-in)
 - [x] Ferramentas (web/arquivos/terminal/email)
+- [x] Busca web via DuckDuckGo (`web.search`)
 - [x] Memoria de conversa (historico + resumo)
 - [x] Roteamento por perfil
 - [x] Politicas de DM (allowlist/owner/pairing)

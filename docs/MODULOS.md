@@ -1,19 +1,21 @@
 # Modulos e Recursos
 
-Este documento descreve os modulos do BotAssist, separados por nivel de prioridade.
+Este documento descreve os modulos do BotAssist por nivel de prioridade.
 
 ## Core (padrao)
-Esses recursos devem funcionar logo apos a instalacao:
+Recursos que devem funcionar logo apos instalar:
 
 - API Groq (provedor padrao)
-- Prompt base do agente (perfil padrao)
+- Prompt por perfil (agente)
 - Conexao via QR Code (WhatsApp)
-- Interface grafica para iniciar/parar e ver logs
+- Interface grafica para operar o bot
+- Contexto situacional de runtime (hora, SO, diretorio)
 
 ## Avancado (opt-in)
-Recursos poderosos que exigem configuracao extra:
+Recursos poderosos com configuracao extra:
 
-- Ferramentas (tools): web, arquivos, comandos, email
+- Tools: web, arquivos, comandos, email
+- Busca web com `web.search` (DuckDuckGo)
 - Memoria da conversa (historico + resumo)
 - Roteamento por perfil (usuarios/grupos -> agente)
 - Politicas de grupo (allowlist, comando, mention-only)
@@ -21,18 +23,18 @@ Recursos poderosos que exigem configuracao extra:
 - Email IMAP (leitura de mensagens recentes)
 
 ## Experimental (avaliar)
-Recursos que devem ser ativados apenas quando estiverem bem testados:
+Ativar apenas quando estiver bem testado:
 
 - Integracoes externas adicionais
 - Automatizacoes com alto risco de mudanca no sistema
 
 ## Regras de seguranca (default)
-- Ferramentas desativadas por padrao
-- Aprovacao de ferramentas somente pelo owner
-- Em grupos, o bot responde apenas quando mencionado
-- Grupos por allowlist
+- Tools desativadas por padrao
+- Aprovacao de tools pelo owner
+- Em grupos: mencao obrigatoria
+- Grupos por politica configurada (recomendado: allowlist)
 
 ## Filosofia do projeto
-- Software livre, gratuito e sem telemetria
-- Qualidade high-end com onboarding simples
+- Software livre, gratuito e sem telemetria por padrao
+- Onboarding simples com trilha de seguranca
 - Recursos avancados sao opt-in, nunca obrigatorios

@@ -45,6 +45,18 @@ RPMS="$TOPDIR/RPMS"
 
 mkdir -p "$STAGE_DIR/opt/$PRODUCT_DIR" "$STAGE_DIR/usr/share/applications" "$SOURCES" "$SPECS" "$RPMS"
 
+if ! command -v rpmbuild >/dev/null 2>&1; then
+  echo "rpmbuild not found." >&2
+  if command -v dnf >/dev/null 2>&1; then
+    echo "Install it with: sudo dnf install -y rpm-build" >&2
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "Install it with: sudo apt-get update && sudo apt-get install -y rpm" >&2
+  else
+    echo "Install package: rpm-build (or your distro equivalent)." >&2
+  fi
+  exit 1
+fi
+
 cp -a "$LINUX_UNPACKED/." "$STAGE_DIR/opt/$PRODUCT_DIR/"
 
 # Ensure package-type indicates rpm for auto-update detection.

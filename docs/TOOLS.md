@@ -1,90 +1,105 @@
 # Ferramentas (tools)
 
-As ferramentas permitem que o bot interaja com web, arquivos, terminal e email.
-Elas sao **opt-in** e ficam desativadas por padrao.
+As tools permitem que o bot interaja com web, arquivos, terminal e email.
+Elas sao opt-in e ficam desativadas por padrao.
 
 ## Como ativar
-1. Abra Configuracoes > Ferramentas (Tools).
-2. Marque "Ativar ferramentas".
-3. Ajuste as regras de seguranca (auto-allow, caminhos permitidos, comandos).
-4. Clique em "Salvar".
+
+1. Abra `Configuracoes > Ferramentas (Tools)`.
+2. Marque `Ativar ferramentas`.
+3. Ajuste seguranca (owner, auto-allow, caminhos, dominios e comandos).
+4. Clique em `Salvar`.
 
 ![Configurar ferramentas](assets/tools-configs.png)
 
 ## Diagnostico rapido
-- `!tools` (DM): mostra se tools estao ativas e o motivo de bloqueio.
-- `!fslist <caminho>` (DM, owner): lista arquivos (ex.: `!fslist Documentos`).
-- `!fsread <arquivo>` (DM, owner): le arquivo (ex.: `!fsread ~/Documentos/relatorio.txt`).
-- Se o WhatsApp usar `@lid`, pegue seu JID com `!me` e preencha "Owner JID" na UI.
+
+- `!tools` (DM): mostra status e motivo de bloqueio.
+- `!fslist <caminho>` (DM, owner): lista arquivos.
+- `!fsread <arquivo>` (DM, owner): le arquivo.
+- Se tools estiver bloqueada por owner, configure `ownerNumber`/`ownerJid` no app.
 
 ## Fluxo de aprovacao
-Quando o bot precisa executar uma ferramenta nao liberada automaticamente:
-1. Ele envia um ID de aprovacao.
-2. O owner responde com:
-   - `!aprovar <id>` para permitir
-   - `!negar <id>` para cancelar
 
-Somente o **owner** pode aprovar ou negar.
+Quando uma tool nao esta liberada automaticamente:
+
+1. O bot envia solicitacao de aprovacao.
+2. O owner responde:
+   - `!aprovar`
+   - `!negar`
+3. Para varias pendencias:
+   - `!aprovacoes`
+   - `!aprovar <n>` / `!negar <n>`
+
+Somente o owner pode aprovar/negar.
 
 ![Logs e aprovacao](assets/tools-logs.png)
 
-## Auto-allow (ferramentas liberadas sem aprovacao)
-Por padrao, apenas ferramentas seguras ficam em auto-allow:
+## Auto-allow (sem aprovacao)
+
+Por padrao, apenas tools de leitura:
 - `web.search`, `web.open`
 - `fs.list`, `fs.read`
-- `email.read` (se habilitado)
+- `email.read` (se email estiver ativo)
 
-Ferramentas destrutivas ou sensiveis devem exigir aprovacao:
+Sempre exigem aprovacao explicita:
 - `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
 - `shell.exec`
 
+Se quiser aprovacao para tudo: `tools.mode = manual`.
+
+## Busca web
+
+- `web.search` usa DuckDuckGo Instant API.
+- `web.open` abre URL e extrai texto.
+- `tools.allowedDomains` e `tools.blockedDomains` controlam quais dominios podem ser usados.
+
+Se vier "sem resultados relevantes", revise filtros de dominio e refine a pergunta.
+
 ## Caminhos permitidos (arquivos)
-Para limitar acesso:
+
 - `tools.allowedPaths`: leitura/listagem
 - `tools.allowedWritePaths`: escrita/remocao
 
-Dica: use uma pasta dedicada para o bot (ex.: `/home/botassist/`). Se vazio, usa `~/`.
+Validacao usa caminho real (symlink-safe) para evitar escape de allowlist.
+
+Se `allowedPaths` vazio: leitura/listagem usam `~/`.
+Se `allowedWritePaths` vazio: escrita/remocao usam os caminhos de leitura.
 
 ## Dominios permitidos (web)
-Para restringir a navegacao:
-- `tools.allowedDomains`: allowlist de dominios (um por linha).
-- `tools.blockedDomains`: bloqueia dominios mesmo que estejam na allowlist.
 
-Se `tools.allowedDomains` estiver vazio, o bot pode acessar qualquer dominio (nao recomendado).
+- `tools.allowedDomains`: allowlist de dominios
+- `tools.blockedDomains`: bloqueio explicito
 
-## Extensoes bloqueadas e tamanho maximo
-Para evitar arquivos perigosos ou muito grandes:
-- `tools.blockedExtensions`: extensoes proibidas na leitura (ex.: `.exe`, `.dll`).
-- `tools.maxFileSizeMb`: limite de tamanho para leitura de arquivos.
+Se `allowedDomains` vazio, qualquer dominio pode ser usado (menos bloqueados).
 
-## Comandos permitidos (terminal)
-Use allowlist/denylist:
-- `tools.commandAllowlist`: se preenchido, so comandos que comecam com esses termos
+## Extensoes e tamanho maximo
+
+- `tools.blockedExtensions`: extensoes proibidas na leitura (ex.: `.exe`, `.dll`)
+- `tools.maxFileSizeMb`: limite de tamanho para leitura
+- `tools.maxOutputChars`: limite de saida por tool
+
+## Comandos de terminal
+
+- `tools.commandAllowlist`: se preenchido, so executa prefixos permitidos
 - `tools.commandDenylist`: bloqueia termos perigosos
 
-Exemplo:
-```
-commandAllowlist:
-- git
-- ls
-- node
-```
-
 ## Email (IMAP)
-Para leitura de email:
-1. Ative "Email (IMAP)" nas Configuracoes.
-2. Configure host, porta, usuario e senha.
-3. Defina `mailbox` (ex.: INBOX) e limite de mensagens.
 
-O bot **apenas le** emails (nao envia).
+1. Ative Email (IMAP).
+2. Configure host/porta/usuario/senha.
+3. Defina mailbox (ex.: `INBOX`) e limite.
+
+O bot apenas le emails.
 
 ## Auditoria
-Cada execucao de ferramenta gera um registro em:
+
+Cada execucao de tool gera registro em:
 - `userData/logs/tools_audit.log`
 
-Esse log ajuda a rastrear comandos e acessos feitos pelas tools.
+## Boas praticas
 
-## Limites e boas praticas
-- Sempre teste com um ambiente controlado antes de liberar para terceiros.
-- Mantenha o bot com user sem sudo.
-- Evite expor caminhos sensiveis do sistema.
+- Teste em ambiente controlado antes de liberar para terceiros.
+- Rode com usuario sem sudo.
+- Evite liberar caminhos sensiveis.
+- Configure owner antes de habilitar tools.

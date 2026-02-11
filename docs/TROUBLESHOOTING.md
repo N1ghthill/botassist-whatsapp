@@ -7,35 +7,84 @@
 
 ![Manutencao e sessao](assets/troubleshooting-maintenance.png)
 
+## Setup inicial nao aparece
+Sintoma:
+- O app inicia normalmente, mas o assistente de setup nao abre.
+
+Causas comuns:
+- API Key e owner ja estao definidos, entao o setup nao e obrigatorio.
+- O setup foi marcado como concluido no armazenamento local do app.
+
+Como resolver:
+- Configure os campos manualmente em `Configuracoes` (API Key + owner).
+- Para um reset completo de ambiente, faca backup e limpe a pasta de dados (`auth` e `settings.json`).
+
 ## Bot conecta mas nao responde
-- Confirme se a API Key esta configurada.
-- Veja se o owner/allowlist bloqueou a conversa.
-- Em grupos, o bot so responde quando mencionado.
+- Confirme API Key da Groq.
+- Verifique bloqueio por owner/allowlist.
+- Em grupos: o bot precisa de mencao.
 
 ## Erro de API Key
 - Cole a chave novamente e salve.
-- Se estiver usando keytar, reinicie o app.
-- Alternativa: use a variavel `GROQ_API_KEY`.
+- Se usar keytar, reinicie o app.
+- Alternativa: `GROQ_API_KEY` no ambiente.
 
 ## Nao responde em grupos
-- Adicione o JID do grupo na allowlist.
+- Adicione o JID em `allowedGroups`.
 - Mencione o bot na mensagem.
-- Se "somente comandos" estiver ativo, use o prefixo.
+- Se `groupRequireCommand` estiver ativo, use prefixo.
 
 ## Ferramentas nao executam
-- Verifique se as ferramentas estao ativadas.
-- Apenas o owner pode aprovar `!aprovar <id>`.
-- Ajuste `allowedPaths`/`allowedWritePaths` e allowlist de comandos (se vazio, usa `~/`).
-- Se o WhatsApp estiver usando `@lid`, pegue seu JID com `!me` e preencha "Owner JID" na UI.
-- Se o owner receber aviso de modelo sem suporte a tools, troque o modelo nas Configuracoes.
+- Verifique `tools.enabled`.
+- Verifique owner configurado.
+- Ajuste `allowedPaths`/`allowedWritePaths`.
+- Ajuste allowlist/denylist de comandos.
+- Teste com o botao `Testar ferramentas`.
+
+## Busca web ruim ou sem relevancia
+- Use uma pergunta mais objetiva.
+- Verifique se `web.search` esta liberada.
+- Revise `tools.allowedDomains`/`tools.blockedDomains`.
+
+## Erro 429 (rate limit)
+Sintoma:
+- mensagem de limite temporario do modelo/provedor.
+
+Acao:
+- aguarde a janela de retry do provedor
+- troque para modelo com mais capacidade, se disponivel
+- reduza volume de mensagens por segundo
 
 ## Email (IMAP) nao funciona
 - Confirme host, porta, usuario e senha.
 - Verifique se o provedor exige senha de app.
 - Teste com `mailbox=INBOX`.
 
+## Build Linux falha no `.deb` com `libcrypt.so.1`
+Sintoma comum no Fedora 40+:
+- erro no `fpm` com `ruby: error while loading shared libraries: libcrypt.so.1`
+
+Como resolver:
+- instale `libxcrypt-compat` no host
+- rode o build novamente
+
+Comportamento atual do script:
+- `npm run build:linux` tenta gerar `AppImage + .deb`
+- se detectar esse erro no host, faz fallback automatico para `AppImage`
+
+Alternativa:
+- gerar apenas `AppImage`
+
+## Build Linux `.rpm` falha com `rpmbuild: command not found`
+Sintoma:
+- erro ao executar `npm run build:linux:rpm`
+
+Como resolver:
+- Fedora/RHEL: `sudo dnf install -y rpm-build`
+- Debian/Ubuntu (host de build): `sudo apt-get update && sudo apt-get install -y rpm`
+
 ## Reiniciar o bot
-- Use o botao "Reiniciar".
+- Use o botao `Reiniciar`.
 - Se travar, pare e inicie novamente.
 
 ![Atualizacoes e status](assets/troubleshooting-update.png)

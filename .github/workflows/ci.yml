@@ -32,6 +32,12 @@ jobs:
       - name: Rebuild native deps for Electron
         run: npx electron-builder install-app-deps
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
       - name: Syntax checks
         run: |
           node --check src/main.js

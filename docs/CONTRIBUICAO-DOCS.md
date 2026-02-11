@@ -30,6 +30,7 @@ Atualize a documentacao quando:
 - Um recurso novo for adicionado
 - Um fluxo de uso mudar
 - Um comportamento de seguranca for alterado
+- Uma release for publicada (atualizar `docs/NOTAS-DA-VERSAO.md` e `docs/notas-da-versao.json`)
 
 ## Revisao rapida
 Antes do PR:

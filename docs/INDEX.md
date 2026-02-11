@@ -15,6 +15,8 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 ## Referencia
 - `docs/FAQ.md` — Perguntas frequentes
 - `docs/ATUALIZACOES.md` — Processo de release e atualizacoes
+- `docs/NOTAS-DA-VERSAO.md` — Changelog editorial pronto para site/blog
+- `docs/notas-da-versao.json` — Fonte estruturada para app/site
 - `docs/ARQUITETURA.md` — Visao tecnica do app (Electron + bot)
 - `docs/TROUBLESHOOTING.md` — Problemas comuns e como resolver
 - `docs/CONTRIBUICAO-DOCS.md` — Guia para contribuir com a documentacao
