@@ -15,4 +15,7 @@
    - Tools (ex.: `!fslist Documentos`)
    - Atualizacao (se aplicavel)
    - Tela `Sobre` com versao e status de update
-7. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.
+7. Valide higiene do pacote:
+   - Artefato nao deve conter `docs/`, `scripts/` ou metadados (`.github/`, `README.md` etc.).
+   - Conferir que apenas runtime necessario foi empacotado.
+8. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.

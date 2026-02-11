@@ -27,12 +27,29 @@
       ]
     }
   ],
+  "patchesSinceLatest": [
+    {
+      "date": "2026-02-11",
+      "title": "Organizacao de setup/CI/build Linux e pacote mais enxuto",
+      "summary": "Patch de manutencao com onboarding em 4 etapas, fallback de build Linux e exclusao de docs/scripts do pacote final.",
+      "commits": [
+        "12681b7",
+        "a1c28fc"
+      ],
+      "highlights": [
+        "Setup inicial com owner integrado ao fluxo guiado.",
+        "CI reforcado com lint e test antes dos checks de sintaxe.",
+        "Build Linux com fallback automatico para AppImage.",
+        "Empacotamento sem docs/scripts/metadados do repositorio."
+      ]
+    }
+  ],
   "roadmap": {
     "next": {
       "focus": [
-        "Onboarding em 4 etapas com owner no setup.",
-        "Fallback de build Linux para AppImage quando faltar libcrypt.so.1.",
-        "CI com lint + test antes dos checks de sintaxe."
+        "Consolidar os patches de manutencao em uma versao de patch formal.",
+        "Expandir smoke tests para setup inicial e build Linux.",
+        "Seguir reduzindo o tamanho do pacote final mantendo apenas runtime necessario."
       ]
     }
   }

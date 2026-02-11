@@ -56,6 +56,7 @@ Para evitar alertas e melhorar confianca:
 - Setup inicial atualizado para 4 etapas, incluindo definicao de owner no proprio app.
 - Build Linux com fallback automatico para AppImage quando o host nao possui `libcrypt.so.1` para gerar `.deb`.
 - CI reforcado com `npm run lint` e `npm test` antes dos checks de sintaxe.
+- Pacote de release otimizado para nao incluir `docs/`, `scripts/` e metadados de repositorio no app final.
 
 ## Registro recente (2026-02-10)
 - Contexto situacional nativo no prompt (hora, SO, diretorio).

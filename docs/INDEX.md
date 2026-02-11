@@ -13,10 +13,12 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 - `docs/RECURSOS.md` — Checklist de recursos por modulo
 
 ## Referencia
+- `docs/ORGANIZACAO-REPO.md` — Mapa de pastas e responsabilidades
 - `docs/FAQ.md` — Perguntas frequentes
 - `docs/ATUALIZACOES.md` — Processo de release e atualizacoes
 - `docs/NOTAS-DA-VERSAO.md` — Changelog editorial pronto para site/blog
 - `docs/notas-da-versao.json` — Fonte estruturada para app/site
 - `docs/ARQUITETURA.md` — Visao tecnica do app (Electron + bot)
+- `docs/RELEASE-CHECKLIST.md` — Checklist operacional de publicacao
 - `docs/TROUBLESHOOTING.md` — Problemas comuns e como resolver
 - `docs/CONTRIBUICAO-DOCS.md` — Guia para contribuir com a documentacao

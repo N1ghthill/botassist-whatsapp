@@ -53,11 +53,13 @@ Este projeto é **software livre** e está licenciado sob a **MIT License**.
 - `docs/ATUALIZACOES.md`
 - `docs/NOTAS-DA-VERSAO.md`
 - `docs/notas-da-versao.json`
+- `docs/ORGANIZACAO-REPO.md`
 - `docs/FAQ.md`
 - `docs/MODULOS.md`
 - `docs/TOOLS.md`
 - `docs/SEGURANCA.md`
 - `docs/ARQUITETURA.md`
+- `docs/RELEASE-CHECKLIST.md`
 - `docs/RECURSOS.md`
 - `docs/TROUBLESHOOTING.md`
 - `docs/CONTRIBUICAO-DOCS.md`
