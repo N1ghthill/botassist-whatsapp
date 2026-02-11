@@ -16,13 +16,13 @@ Voce precisa:
 2. Ter token com permissao de release (ex.: `GH_TOKEN`) quando publicar fora do Actions.
 
 ### Passo a passo (exemplo)
-1. Atualize a versao no `package.json` (ex.: `4.1.12`).
+1. Atualize a versao no `package.json` (ex.: `4.1.13`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
 3. Rode validacoes (`npm test`, `npm run lint`).
-4. Commit e crie a tag `v4.1.12` no commit final.
-5. Push da tag: `git push origin v4.1.12`.
+4. Commit e crie a tag `v4.1.13` no commit final.
+5. Push da tag: `git push origin v4.1.13`.
 6. O workflow `.github/workflows/release.yml` publica os artefatos no GitHub Release.
 
 ## Garantia de builds no deploy
@@ -51,6 +51,11 @@ Para evitar alertas e melhorar confianca:
 - Este projeto define `build.electronDist` para usar o Electron ja instalado em `node_modules/electron/dist` (evita downloads durante o build).
 - O workflow de release usa o `GITHUB_TOKEN` do proprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
+
+## Registro recente (2026-02-11)
+- Release formal `4.1.13` para corrigir auto-update em instalacoes RPM no Linux.
+- Workflow Linux agora inclui RPM no `latest-linux.yml` antes de finalizar a publicacao.
+- Feed Linux passa a expor `AppImage`, `.deb` e `.rpm` de forma consistente para o updater.
 
 ## Registro recente (2026-02-11)
 - Release formal `4.1.12` com foco em alinhamento entre docs e comportamento real.

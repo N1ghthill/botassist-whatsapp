@@ -21,10 +21,10 @@ Este documento define o mapa de pastas e o intuito de cada area do projeto.
 - Documentacao oficial fica centralizada em `docs/`.
 - Artefatos gerados (`dist/`, `backups/`, `node_modules/`) nao entram no controle de versao.
 
-## Release atual (4.1.12 - 2026-02-11)
-- Corrige exibicao do setup inicial quando falta API Key/owner e adiciona reabertura manual.
-- Alinha comportamento de `tools.mode = manual` e aprovacao explicita para tools sensiveis.
-- Atualiza docs para refletir comandos e fluxos reais de operacao.
+## Release atual (4.1.13 - 2026-02-11)
+- Corrige o feed Linux para incluir artefato RPM no auto-update.
+- Ajusta workflow de release para republicar `latest-linux.yml` com entrada `.rpm`.
+- Mantem coerencia de atualizacao para instalacoes via `dnf`/`yum`/`rpm`.
 
 ## Referencias relacionadas
 - `docs/ARQUITETURA.md`

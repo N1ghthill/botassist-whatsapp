@@ -1,7 +1,31 @@
 {
-  "latestVersion": "4.1.12",
+  "latestVersion": "4.1.13",
   "updatedAt": "2026-02-11",
   "releases": [
+    {
+      "version": "4.1.13",
+      "date": "2026-02-11",
+      "title": "Correcao de auto-update para instalacoes RPM no Linux",
+      "summary": "Patch de release para garantir que o feed Linux inclua RPM e permita atualizacao automatica correta em ambientes Fedora/openSUSE/RHEL.",
+      "highlights": [
+        "Feed latest-linux.yml com entrada .rpm (url, sha512 e size).",
+        "Workflow Linux atualiza e republica o feed apos build do RPM.",
+        "Compatibilidade de update alinhada para instalacoes via RPM."
+      ],
+      "technical": [
+        "Novo script scripts/patch-linux-feed-with-rpm.js.",
+        "Release workflow sobrescrevendo latest-linux.yml com --clobber.",
+        "Fluxo Linux mantendo AppImage/.deb/.rpm no mesmo ciclo de publicacao."
+      ],
+      "fixes": [
+        "Resolvido feed Linux sem RPM.",
+        "Corrigido caso de nao atualizacao em instalacoes RPM."
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria.",
+        "Recomendado atualizar para esta versao em hosts Linux que usam RPM."
+      ]
+    },
     {
       "version": "4.1.12",
       "date": "2026-02-11",

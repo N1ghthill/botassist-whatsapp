@@ -61,6 +61,14 @@ jobs:
         if: runner.os == 'Linux'
         run: gh release upload "${{ github.ref_name }}" dist/*.rpm --clobber
 
+      - name: Patch latest-linux.yml with RPM entry
+        if: runner.os == 'Linux'
+        run: node scripts/patch-linux-feed-with-rpm.js dist
+
+      - name: Upload latest-linux.yml (Linux)
+        if: runner.os == 'Linux'
+        run: gh release upload "${{ github.ref_name }}" dist/latest-linux.yml --clobber
+
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: npm run build:win -- --publish always

@@ -3,6 +3,30 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.1.13 - 2026-02-11
+
+### Resumo
+Patch de release para corrigir auto-update de instalacoes RPM no Linux (Fedora/openSUSE/RHEL).
+
+### Highlights
+- Feed Linux (`latest-linux.yml`) agora inclui artefato `.rpm` publicado na release.
+- Pipeline de release Linux passa a sobrescrever o feed com entrada RPM.
+- Atualizacao automatica fica coerente para instalacoes via `dnf`/`yum`/`rpm`.
+
+### Tecnico
+- Novo script `scripts/patch-linux-feed-with-rpm.js` para inserir `url/sha512/size` do RPM no feed.
+- Ajuste em `.github/workflows/release.yml` para:
+  - patch do `latest-linux.yml` apos build RPM
+  - upload do feed corrigido com `--clobber`
+
+### Correcoes
+- Resolve caso em que releases Linux listavam apenas `AppImage` e `.deb` no feed.
+- Elimina falha silenciosa de update em instalacoes RPM.
+
+### Upgrade notes
+- Nenhuma migracao obrigatoria.
+- Usuarios Linux com instalacao RPM devem atualizar para esta versao para receber os proximos updates automaticamente.
+
 ## 4.1.12 - 2026-02-11
 
 ### Resumo
