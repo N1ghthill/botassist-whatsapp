@@ -16,13 +16,13 @@ Voce precisa:
 2. Ter token com permissao de release (ex.: `GH_TOKEN`) quando publicar fora do Actions.
 
 ### Passo a passo (exemplo)
-1. Atualize a versao no `package.json` (ex.: `4.1.10`).
+1. Atualize a versao no `package.json` (ex.: `4.1.11`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
 3. Rode validacoes (`npm test`, `npm run lint`).
-4. Commit e crie a tag `v4.1.10` no commit final.
-5. Push da tag: `git push origin v4.1.10`.
+4. Commit e crie a tag `v4.1.11` no commit final.
+5. Push da tag: `git push origin v4.1.11`.
 6. O workflow `.github/workflows/release.yml` publica os artefatos no GitHub Release.
 
 ## Garantia de builds no deploy
@@ -53,6 +53,7 @@ Para evitar alertas e melhorar confianca:
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
 
 ## Registro recente (2026-02-11)
+- Release formal `4.1.11` consolidando os patches de manutencao.
 - Setup inicial atualizado para 4 etapas, incluindo definicao de owner no proprio app.
 - Build Linux com fallback automatico para AppImage quando o host nao possui `libcrypt.so.1` para gerar `.deb`.
 - CI reforcado com `npm run lint` e `npm test` antes dos checks de sintaxe.

@@ -21,9 +21,10 @@ Este documento define o mapa de pastas e o intuito de cada area do projeto.
 - Documentacao oficial fica centralizada em `docs/`.
 - Artefatos gerados (`dist/`, `backups/`, `node_modules/`) nao entram no controle de versao.
 
-## Patch atual (2026-02-11)
-- `12681b7`: setup inicial em 4 etapas com owner, CI com `lint` + `test`, ajuste do build Linux com fallback para AppImage.
-- `a1c28fc`: otimizacao de release para nao empacotar docs/scripts/metadados do repositorio no app final.
+## Release atual (4.1.11 - 2026-02-11)
+- Consolida os commits `12681b7` e `a1c28fc` em uma release de manutencao.
+- Setup inicial em 4 etapas com owner, CI com `lint` + `test` e build Linux com fallback para AppImage.
+- Empacotamento otimizado para nao incluir docs/scripts/metadados do repositorio no app final.
 
 ## Referencias relacionadas
 - `docs/ARQUITETURA.md`

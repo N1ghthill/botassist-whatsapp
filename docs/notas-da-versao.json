@@ -1,7 +1,32 @@
 {
-  "latestVersion": "4.1.10",
+  "latestVersion": "4.1.11",
   "updatedAt": "2026-02-11",
   "releases": [
+    {
+      "version": "4.1.11",
+      "date": "2026-02-11",
+      "title": "Consolidacao de setup, CI/build Linux e empacotamento",
+      "summary": "Release de manutencao que formaliza os patches de onboarding com owner, CI mais estrito e pacote final mais enxuto.",
+      "highlights": [
+        "Setup inicial em 4 etapas com definicao de owner no proprio app.",
+        "CI com lint e test antes dos checks de sintaxe.",
+        "Build Linux com fallback para AppImage quando faltar libcrypt.so.1.",
+        "Empacotamento sem docs/scripts/metadados do repositorio."
+      ],
+      "technical": [
+        "Novo script scripts/build-linux.sh para orquestrar fallback de build Linux.",
+        "Ajustes em .github/workflows/ci.yml para elevar o gate de qualidade.",
+        "Regras de build.files em package.json para excluir itens nao essenciais do artefato."
+      ],
+      "fixes": [
+        "Reducao do tamanho do pacote final.",
+        "Fluxo de release Linux mais previsivel em hosts com restricoes de compatibilidade."
+      ],
+      "upgradeNotes": [
+        "Nenhuma migracao obrigatoria.",
+        "Recomendado validar higiene do pacote na release checklist."
+      ]
+    },
     {
       "version": "4.1.10",
       "date": "2026-02-10",
@@ -27,29 +52,13 @@
       ]
     }
   ],
-  "patchesSinceLatest": [
-    {
-      "date": "2026-02-11",
-      "title": "Organizacao de setup/CI/build Linux e pacote mais enxuto",
-      "summary": "Patch de manutencao com onboarding em 4 etapas, fallback de build Linux e exclusao de docs/scripts do pacote final.",
-      "commits": [
-        "12681b7",
-        "a1c28fc"
-      ],
-      "highlights": [
-        "Setup inicial com owner integrado ao fluxo guiado.",
-        "CI reforcado com lint e test antes dos checks de sintaxe.",
-        "Build Linux com fallback automatico para AppImage.",
-        "Empacotamento sem docs/scripts/metadados do repositorio."
-      ]
-    }
-  ],
+  "patchesSinceLatest": [],
   "roadmap": {
     "next": {
       "focus": [
-        "Consolidar os patches de manutencao em uma versao de patch formal.",
         "Expandir smoke tests para setup inicial e build Linux.",
-        "Seguir reduzindo o tamanho do pacote final mantendo apenas runtime necessario."
+        "Seguir reduzindo o tamanho do pacote final mantendo apenas runtime necessario.",
+        "Evoluir o onboarding com mensagens de erro mais acionaveis em cada etapa."
       ]
     }
   }
