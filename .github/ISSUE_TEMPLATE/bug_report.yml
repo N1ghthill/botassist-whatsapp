@@ -1,59 +1,52 @@
-name: 🐛 Bug (app)
-description: Reporte um problema no BotAssist WhatsApp (aplicativo).
-title: "[Bug]: "
+name: "Bug report"
+description: Reportar falha/comportamento incorreto
+labels: ["type: bug", "status: ready", "priority: medium"]
+title: "[BUG] "
 body:
-  - type: markdown
+  - type: textarea
+    id: resumo
     attributes:
-      value: |
-        Obrigado por ajudar a melhorar o projeto.
+      label: Resumo do problema
+      description: O que está falhando?
+      placeholder: Descreva em 2-3 linhas.
+    validations:
+      required: true
 
-        Se o problema for do **site**, use: https://github.com/N1ghthill/botassist-site/issues
-  - type: input
-    id: version
-    attributes:
-      label: Versão do app
-      placeholder: "Ex.: 4.1.0"
-    validations:
-      required: true
-  - type: dropdown
-    id: os
-    attributes:
-      label: Sistema operacional
-      options:
-        - Windows
-        - macOS
-        - Linux
-    validations:
-      required: true
   - type: textarea
-    id: steps
+    id: passos
     attributes:
-      label: Passo a passo para reproduzir
+      label: Passos para reproduzir
+      description: Lista objetiva para reproduzir o erro.
       placeholder: |
-        1. ...
-        2. ...
-        3. ...
+        1. Ir para ...
+        2. Clicar em ...
+        3. Ver erro ...
     validations:
       required: true
+
   - type: textarea
-    id: expected
+    id: esperado
     attributes:
-      label: Resultado esperado
-      placeholder: "O que deveria acontecer?"
+      label: Comportamento esperado
     validations:
       required: true
+
   - type: textarea
-    id: actual
+    id: atual
     attributes:
-      label: Resultado atual
-      placeholder: "O que está acontecendo?"
+      label: Comportamento atual
     validations:
       required: true
-  - type: textarea
-    id: logs
+
+  - type: input
+    id: ambiente
     attributes:
-      label: Logs / prints (opcional)
-      description: Se puder, inclua logs da aba “Logs” (remova dados sensíveis).
-      render: text
-    validations:
-      required: false
+      label: Ambiente
+      description: SO, navegador/versão, Node, etc.
+      placeholder: Fedora 41, Chrome 131, Node 20
+
+  - type: textarea
+    id: evidencias
+    attributes:
+      label: Evidências
+      description: Logs, screenshots, links, stacktrace.
