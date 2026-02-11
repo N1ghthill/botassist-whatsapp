@@ -20,5 +20,6 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 - `docs/notas-da-versao.json` — Fonte estruturada para app/site
 - `docs/ARQUITETURA.md` — Visao tecnica do app (Electron + bot)
 - `docs/RELEASE-CHECKLIST.md` — Checklist operacional de publicacao
+- `docs/POSTMORTEM-2026-02-11-RPM-AUTOUPDATE.md` — Registro da correcao de auto-update RPM
 - `docs/TROUBLESHOOTING.md` — Problemas comuns e como resolver
 - `docs/CONTRIBUICAO-DOCS.md` — Guia para contribuir com a documentacao

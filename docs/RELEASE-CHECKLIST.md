@@ -18,4 +18,7 @@
 7. Valide higiene do pacote:
    - Artefato nao deve conter `docs/`, `scripts/` ou metadados (`.github/`, `README.md` etc.).
    - Conferir que apenas runtime necessario foi empacotado.
-8. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.
+8. Em release Linux, valide o feed `latest-linux.yml`:
+   - Deve listar os formatos publicados (`AppImage`, `.deb` e `.rpm`, quando houver).
+   - Confirme `url`, `sha512` e `size` coerentes com os artefatos da release.
+9. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.
