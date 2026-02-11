@@ -3,6 +3,29 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.1.12 - 2026-02-11
+
+### Resumo
+Release de alinhamento entre comportamento real do app e documentacao operacional.
+
+### Highlights
+- Setup inicial voltou a abrir corretamente quando falta API Key ou owner.
+- Novo botao `Abrir Setup Inicial` em Configuracoes para reabrir o assistente.
+- Prompt do bot agora injeta contexto situacional de runtime (hora, SO e diretorio).
+
+### Tecnico
+- Regra de exibicao do setup reforcada no renderer para evitar bloqueio por estado antigo.
+- `tools.mode = manual` agora exige aprovacao para todas as tools.
+- Acoes sensiveis (`fs.write/delete/move/copy` e `shell.exec`) exigem aprovacao explicita.
+
+### Correcoes
+- Ajuste de consistencia entre docs e comandos reais de aprovacao (`!aprovar <id>` / `!negar <id>`).
+- Correcoes de exemplos de comando em grupos (`!help`) e prerequisitos de owner para `!groupid`.
+
+### Upgrade notes
+- Nenhuma migracao obrigatoria.
+- Recomendado validar o setup inicial no app instalado apos atualizar.
+
 ## 4.1.11 - 2026-02-11
 
 ### Resumo

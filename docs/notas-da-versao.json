@@ -1,7 +1,31 @@
 {
-  "latestVersion": "4.1.11",
+  "latestVersion": "4.1.12",
   "updatedAt": "2026-02-11",
   "releases": [
+    {
+      "version": "4.1.12",
+      "date": "2026-02-11",
+      "title": "Alinhamento de setup inicial, tools e documentacao",
+      "summary": "Release focada em coerencia entre comportamento real do app e os guias operacionais, com correcoes no setup inicial e nas regras de aprovacao de tools.",
+      "highlights": [
+        "Setup inicial volta a abrir quando falta API Key ou owner.",
+        "Botao 'Abrir Setup Inicial' em Configuracoes para reabrir o assistente.",
+        "Contexto situacional de runtime agora injetado no prompt do bot."
+      ],
+      "technical": [
+        "Regra do setup reforcada no renderer para nao depender apenas de estado local antigo.",
+        "Aplicacao efetiva de tools.mode=manual no core.",
+        "Acoes sensiveis exigindo aprovacao explicita por design."
+      ],
+      "fixes": [
+        "Documentacao de aprovacao alinhada com comandos reais por ID.",
+        "Exemplos de comandos e prerequisitos de owner ajustados nos docs."
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria.",
+        "Recomendado validar o setup inicial no app apos atualizar."
+      ]
+    },
     {
       "version": "4.1.11",
       "date": "2026-02-11",

@@ -16,13 +16,13 @@ Voce precisa:
 2. Ter token com permissao de release (ex.: `GH_TOKEN`) quando publicar fora do Actions.
 
 ### Passo a passo (exemplo)
-1. Atualize a versao no `package.json` (ex.: `4.1.11`).
+1. Atualize a versao no `package.json` (ex.: `4.1.12`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
 3. Rode validacoes (`npm test`, `npm run lint`).
-4. Commit e crie a tag `v4.1.11` no commit final.
-5. Push da tag: `git push origin v4.1.11`.
+4. Commit e crie a tag `v4.1.12` no commit final.
+5. Push da tag: `git push origin v4.1.12`.
 6. O workflow `.github/workflows/release.yml` publica os artefatos no GitHub Release.
 
 ## Garantia de builds no deploy
@@ -51,6 +51,12 @@ Para evitar alertas e melhorar confianca:
 - Este projeto define `build.electronDist` para usar o Electron ja instalado em `node_modules/electron/dist` (evita downloads durante o build).
 - O workflow de release usa o `GITHUB_TOKEN` do proprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
+
+## Registro recente (2026-02-11)
+- Release formal `4.1.12` com foco em alinhamento entre docs e comportamento real.
+- Setup inicial reforcado para abrir quando falta API Key/owner e botao para reabrir o assistente.
+- `tools.mode = manual` aplicado no core, com aprovacao explicita para tools sensiveis.
+- Prompt passou a incluir contexto situacional de runtime (hora, SO, Node e diretorio).
 
 ## Registro recente (2026-02-11)
 - Release formal `4.1.11` consolidando os patches de manutencao.
