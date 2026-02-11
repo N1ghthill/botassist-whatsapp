@@ -61,6 +61,13 @@
       "!dist/**",
       "!backups/**",
       "!.git/**",
+      "!.github/**",
+      "!docs/**",
+      "!scripts/**",
+      "!README.md",
+      "!CONTRIBUTING.md",
+      "!CODE_OF_CONDUCT.md",
+      "!SECURITY.md",
       "!**/.env",
       "!**/.env.*"
     ],
