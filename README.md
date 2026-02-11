@@ -1,7 +1,7 @@
 # BotAssist WhatsApp
 
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-success)](LICENSE)
-[![Releases](https://img.shields.io/github/v/release/N1ghthill/botassist-whatsapp)](https://github.com/N1ghthill/botassist-whatsapp/releases)
+[![Releases](https://img.shields.io/github/v/release/N1ghthill/botassist-whatsapp?display_name=tag&sort=semver&cacheSeconds=300)](https://github.com/N1ghthill/botassist-whatsapp/releases)
 [![Issues](https://img.shields.io/github/issues/N1ghthill/botassist-whatsapp)](https://github.com/N1ghthill/botassist-whatsapp/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/N1ghthill/botassist-whatsapp)](https://github.com/N1ghthill/botassist-whatsapp/pulls)
 [![Donate](https://img.shields.io/badge/donate-GitHub%20Sponsors-black)](https://github.com/sponsors/N1ghthill)
