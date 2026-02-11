@@ -1,15 +1,24 @@
-## O que mudou?
+## Contexto
 
-Descreva a mudança de forma objetiva.
+Descreva o problema/oportunidade e a motivação desta PR.
+
+## O que mudou
+
+- 
 
 ## Como testar
 
-Passo a passo para validar.
+1. 
+2. 
+3. 
 
 ## Checklist
 
-- [ ] `npm ci`
-- [ ] `npm run dev` (quando aplicável)
-- [ ] `node --check` nos arquivos relevantes
-- [ ] Prints/preview (se alterou UI)
-- [ ] Issue relacionada (se existir)
+- [ ] Li e validei o impacto da mudança
+- [ ] Atualizei docs (se aplicável)
+- [ ] Adicionei/ajustei testes (se aplicável)
+- [ ] Rodei validações locais (lint/test/build)
+
+## Evidências
+
+Inclua prints/logs/links relevantes.
