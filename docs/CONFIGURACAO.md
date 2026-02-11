@@ -5,15 +5,16 @@ As configuracoes sao gerenciadas pela UI e persistidas em `settings.json` dentro
 ## Fluxo rapido (core)
 
 1. Cole sua API Key da Groq na tela de Configuracoes.
-2. Defina o owner (`ownerNumber` e, se precisar, `ownerJid`).
-3. Clique em `Salvar`.
-4. Inicie o bot e escaneie o QR Code.
+2. Clique em `Salvar`.
+3. Inicie o bot e escaneie o QR Code.
+4. Gere token de owner no app e envie `!owner <token>` no DM do bot.
 
 Recursos avancados (tools, memoria, grupos, email) sao opt-in e ficam desativados por padrao.
 
 ## Comportamento situacional nativo
 
 Mesmo sem tool, o prompt do sistema recebe contexto local do host:
+
 - data/hora local
 - data/hora UTC
 - fuso horario
@@ -27,6 +28,7 @@ Isso melhora respostas operacionais (ex.: "que horas sao?") sem depender de pesq
 ### Perfis (agentes)
 
 Campos do perfil:
+
 - `id`: identificador interno
 - `name`: nome do agente
 - `provider`: `groq` (unico neste build)
@@ -35,6 +37,7 @@ Campos do perfil:
 - `botTag`: prefixo opcional das respostas
 
 Campos globais relacionados:
+
 - `profiles`: lista de perfis
 - `activeProfileId`: id do perfil ativo
 - `persona`: legado (compatibilidade)
@@ -48,9 +51,22 @@ Campos globais relacionados:
 
 ### Acesso
 
-- `ownerNumber` / `ownerJid`: owner definido na UI (setup ou configuracoes).
+- `ownerNumber` / `ownerJid`: owner efetivo (definido por token/comando no WhatsApp).
+- `ownerClaimTokenHash` / `ownerClaimTokenExpiresAt`: controle interno do token temporario.
 - `dmPolicy`: `open | allowlist | owner | pairing`
 - `allowedUsers`: allowlist de usuarios (telefone ou JID)
+
+### Definir owner (recomendado)
+
+1. Abra `Configuracoes > Basico`.
+2. Clique em `Gerar token`.
+3. No DM do bot, envie:
+
+```text
+!owner 123456
+```
+
+Substitua pelo token exibido na interface. Se expirar, gere um novo token.
 
 ### Inicializacao
 
@@ -60,10 +76,12 @@ Campos globais relacionados:
 ### Grupos (anti-ban)
 
 Regras fixas de seguranca:
+
 - em grupo, responde apenas quando mencionado
 - com politica allowlist, responde apenas em grupos permitidos
 
 Campos:
+
 - `groupPolicy`: `disabled | allowlist | open`
 - `allowedGroups`: lista de JIDs `...@g.us`
 - `groupRequireCommand`: exige prefixo de comando no grupo
@@ -94,6 +112,7 @@ As chaves sao preservadas como texto e validadas contra IDs de perfil existentes
 As tools sao opt-in e sensiveis exigem aprovacao explicita do owner.
 
 Campos principais:
+
 - `tools.enabled`: ativa tools
 - `tools.mode`: `auto | manual`
 - `tools.autoAllow`: lista de tools liberadas sem aprovacao
@@ -101,10 +120,12 @@ Campos principais:
 - `tools.allowInGroups`: permite tools em grupos
 
 Busca web atual:
+
 - `web.search` usa DuckDuckGo Instant API
 - `web.open` abre URL com filtros por dominio
 
 Campos de seguranca de arquivo/web:
+
 - `tools.allowedPaths`: leitura/listagem
 - `tools.allowedWritePaths`: escrita/remocao
 - `tools.allowedDomains` / `tools.blockedDomains`

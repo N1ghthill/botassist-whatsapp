@@ -74,6 +74,7 @@ function createBotManager({
           : [];
         if (!allowedGroups.includes(groupJid)) {
           updateSettings({ allowedGroups: [...allowedGroups, groupJid] });
+          sendToRenderer?.('settings-updated', { reason: action, groupJid });
         }
         return;
       }
@@ -86,8 +87,46 @@ function createBotManager({
           : [];
         if (!allowedUsers.includes(userRef)) {
           updateSettings({ allowedUsers: [...allowedUsers, userRef] });
+          sendToRenderer?.('settings-updated', { reason: action, userRef });
         }
         return;
+      }
+
+      if (action === 'set-owner') {
+        const ownerNumber = String(payload.ownerNumber || '').trim();
+        const ownerJid = String(payload.ownerJid || '').trim();
+        if (!ownerNumber && !ownerJid) return;
+
+        const currentOwnerNumber = String(current.ownerNumber || '').trim();
+        const currentOwnerJid = String(current.ownerJid || '').trim();
+        const changed = currentOwnerNumber !== ownerNumber || currentOwnerJid !== ownerJid;
+        if (!changed) return;
+
+        updateSettings({
+          ownerNumber,
+          ownerJid,
+          ownerClaimTokenHash: '',
+          ownerClaimTokenExpiresAt: '',
+        });
+        sendToRenderer?.('settings-updated', {
+          reason: action,
+          ownerNumber,
+          ownerJid,
+        });
+        return;
+      }
+
+      if (action === 'clear-owner-token') {
+        const hasToken = Boolean(
+          String(current.ownerClaimTokenHash || '').trim() ||
+          String(current.ownerClaimTokenExpiresAt || '').trim()
+        );
+        if (!hasToken) return;
+        updateSettings({
+          ownerClaimTokenHash: '',
+          ownerClaimTokenExpiresAt: '',
+        });
+        sendToRenderer?.('settings-updated', { reason: action });
       }
     }
   }

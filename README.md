@@ -76,7 +76,7 @@ Este projeto é **software livre** e está licenciado sob a **MIT License**.
   - Só responde em **grupos allowlistados**
   - Cooldown por chat (DM/grupo) e limite de tamanho da resposta
 - Respostas com IA via Groq (opcional; sem API Key ele avisa como configurar)
-- Ferramentas (tools) opt-in com aprovacao do owner
+- Ferramentas (tools) opt-in com aprovacao do owner (definido por token no WhatsApp)
 - Contexto situacional nativo no prompt (data/hora, SO e diretorio de trabalho)
 - Busca web via `web.search` (DuckDuckGo Instant API)
 - Leitura de paginas via `web.open` com filtros de dominio
@@ -120,6 +120,8 @@ npm ci
 1. Abra o app e cole sua API Key da Groq.
 2. Clique em "Salvar Configuracoes".
 3. Inicie o bot e escaneie o QR Code.
+4. Gere um token de owner em `Configuracoes > Basico`.
+5. No DM do bot, envie `!owner <token>`.
 
 Criar chave: https://groq.com/
 
@@ -167,6 +169,8 @@ Principais campos:
   - `keytar:groq_apiKey` (recomendado; a chave fica no sistema via `keytar`)
   - `settings.json` (fallback; a chave pode ser persistida no arquivo se o keychain não estiver disponível)
 - `systemPrompt`: instrucoes adicionais (extras) do sistema
+- `ownerNumber` / `ownerJid`: owner efetivo (preenchido automaticamente após `!owner <token>`)
+- `ownerClaimTokenHash` / `ownerClaimTokenExpiresAt`: controle interno do token temporário de owner
 - `restrictToOwner`: so responde ao owner
 - `allowedUsers`: allowlist de usuários (um por linha; telefone ou JID)
 - `respondToGroups`: habilita respostas em grupos
@@ -180,6 +184,18 @@ Principais campos:
 - Configure pela UI. A chave não fica exposta no `settings.json` quando `keytar` está disponível.
 - Alternativa: defina `GROQ_API_KEY` no ambiente.
 - Link rapido: https://groq.com/ (crie a API Key e cole na tela de Configuracoes).
+
+### Definir owner (metodo recomendado)
+
+1. Em `Configuracoes > Basico`, clique em `Gerar token`.
+2. Com o bot online, abra o DM do bot no WhatsApp.
+3. Envie:
+
+```text
+!owner 123456
+```
+
+Use o token exibido na UI (exemplo acima). O token expira em poucos minutos; se expirar, gere outro.
 
 ### Como pegar o JID do grupo (para allowlist)
 
@@ -244,7 +260,7 @@ Para publicar builds e habilitar auto-update, use o workflow do GitHub Actions:
 ## Troubleshooting
 
 - Se o QR não aparecer: verifique os logs e se o bot está iniciando.
-- Se o setup inicial não abrir: conclua API Key/owner em `Configurações`.
+- Se o setup inicial não abrir: conclua API Key e owner por token em `Configurações`.
 - Se precisar gerar novo QR/sessão: apague a pasta `auth` dentro do `userData`.
 - Se a IA não responder: configure a API Key pela UI (armazenada via `keytar`) ou defina `GROQ_API_KEY`.
 

@@ -93,6 +93,8 @@ const DEFAULT_SETTINGS = {
   apiKey: '',
   ownerNumber: '',
   ownerJid: '',
+  ownerClaimTokenHash: '',
+  ownerClaimTokenExpiresAt: '',
   botTag: '[Meu Bot]',
   autoStart: true,
   launchOnStartup: false,
@@ -539,6 +541,8 @@ function loadSettingsFromDisk() {
     'apiKey',
     'ownerNumber',
     'ownerJid',
+    'ownerClaimTokenHash',
+    'ownerClaimTokenExpiresAt',
     'botTag',
     'model',
     'systemPrompt',
@@ -912,6 +916,52 @@ function applyProfileOverride(settings, profile) {
     botTag: String(profile.botTag || settings.botTag || ''),
     profilePrompt: String(profile.systemPrompt || ''),
   };
+}
+
+function getOwnerClaimTokenStatus(settings) {
+  const hash = String(settings?.ownerClaimTokenHash || '').trim();
+  const expiresAtRaw = String(settings?.ownerClaimTokenExpiresAt || '').trim();
+  if (!hash || !expiresAtRaw) {
+    return { active: false, hash: '', expiresAt: '', reason: 'missing' };
+  }
+  const expiresAtTs = Date.parse(expiresAtRaw);
+  if (!Number.isFinite(expiresAtTs)) {
+    return { active: false, hash: '', expiresAt: '', reason: 'missing' };
+  }
+  if (expiresAtTs <= Date.now()) {
+    return { active: false, hash: '', expiresAt: '', reason: 'expired' };
+  }
+  return {
+    active: true,
+    hash,
+    expiresAt: new Date(expiresAtTs).toISOString(),
+    reason: 'ok',
+  };
+}
+
+function normalizeOwnerClaimToken(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '');
+}
+
+function verifyOwnerClaimToken(settings, providedToken) {
+  const status = getOwnerClaimTokenStatus(settings);
+  if (!status.active) {
+    return { ok: false, reason: status.reason };
+  }
+  const token = normalizeOwnerClaimToken(providedToken);
+  if (!token) return { ok: false, reason: 'empty' };
+
+  const providedHash = nodeCrypto.createHash('sha256').update(token).digest('hex');
+  const expected = Buffer.from(status.hash, 'hex');
+  const received = Buffer.from(providedHash, 'hex');
+  const valid =
+    expected.length > 0 &&
+    expected.length === received.length &&
+    nodeCrypto.timingSafeEqual(expected, received);
+
+  return valid ? { ok: true } : { ok: false, reason: 'invalid' };
 }
 
 function generatePairingCode() {
@@ -2451,6 +2501,87 @@ async function main() {
           if (handled) continue;
         }
 
+        if (
+          !isGroup &&
+          command.isCommand &&
+          (command.command === 'owner' || command.command === 'setowner')
+        ) {
+          const providedToken = normalizeOwnerClaimToken(command.rawArgs);
+          if (!providedToken) {
+            await sock.sendMessage(
+              remoteJid,
+              {
+                text:
+                  (botTag ? `${botTag} ` : '') +
+                  `Use: ${prefix}owner <token>\nGere o token no app em Configuracoes > Basico.`,
+              },
+              { quoted: message }
+            );
+            continue;
+          }
+
+          if (!senderJid && !senderPhone) {
+            await sock.sendMessage(
+              remoteJid,
+              {
+                text:
+                  (botTag ? `${botTag} ` : '') +
+                  'Nao consegui identificar seu usuario. Tente novamente em alguns segundos.',
+              },
+              { quoted: message }
+            );
+            continue;
+          }
+
+          if (isOwner) {
+            await sock.sendMessage(
+              remoteJid,
+              { text: (botTag ? `${botTag} ` : '') + 'Voce ja esta configurado como owner.' },
+              { quoted: message }
+            );
+            continue;
+          }
+
+          const tokenCheck = verifyOwnerClaimToken(settings, providedToken);
+          if (!tokenCheck.ok) {
+            if (tokenCheck.reason === 'expired') {
+              requestSettingsUpdate('clear-owner-token');
+            }
+            const errorText =
+              tokenCheck.reason === 'expired'
+                ? 'Token expirado. Gere um novo token no app e tente novamente.'
+                : tokenCheck.reason === 'missing'
+                  ? 'Nenhum token ativo encontrado. Gere um token no app em Configuracoes > Basico.'
+                  : 'Token invalido. Confira o codigo e tente novamente.';
+            await sock.sendMessage(
+              remoteJid,
+              { text: (botTag ? `${botTag} ` : '') + errorText },
+              { quoted: message }
+            );
+            continue;
+          }
+
+          requestSettingsUpdate('set-owner', {
+            ownerNumber: senderPhone || '',
+            ownerJid: senderJid || '',
+          });
+          requestSettingsUpdate('clear-owner-token');
+
+          const phoneLabel = senderPhone ? senderPhone : 'n/a';
+          const replyLines = [
+            'Owner configurado com sucesso!',
+            `Numero: ${phoneLabel}`,
+            `JID: ${senderJid || 'n/a'}`,
+            'Agora comandos administrativos e aprovacoes de ferramentas estao liberados.',
+          ];
+          await sock.sendMessage(
+            remoteJid,
+            { text: (botTag ? `${botTag} ` : '') + replyLines.join('\n') },
+            { quoted: message }
+          );
+          continue;
+        }
+
         if (!isGroup && dmPolicy === 'pairing' && !isOwner) {
           const allowedUsers = Array.isArray(settings.allowedUsers)
             ? settings.allowedUsers.map((v) => String(v).trim()).filter(Boolean)
@@ -2657,7 +2788,9 @@ async function main() {
           lines.push(
             'JID e o identificador interno do WhatsApp. Se terminar com @lid, copie e cole em Configuracoes > Avancado > Owner JID.'
           );
-          lines.push('O owner e definido somente no app (Configuracoes).');
+          lines.push(
+            `Metodo recomendado: gere um token no app e envie ${prefix}owner <token> neste DM.`
+          );
           await sock.sendMessage(
             remoteJid,
             { text: (botTag ? `${botTag} ` : '') + lines.join('\n') },
@@ -2695,7 +2828,9 @@ async function main() {
             lines.push(`Require owner: ${access.tools?.requireOwner ? 'sim' : 'não'}`);
           }
           if (!isOwner && access.tools?.requireOwner) {
-            lines.push('Dica: defina o owner no app (Configuracoes > Basico).');
+            lines.push(
+              `Dica: gere um token no app e envie ${prefix}owner <token> no DM para virar owner.`
+            );
           }
           await sock.sendMessage(
             remoteJid,
@@ -2814,6 +2949,7 @@ async function main() {
           if (!isGroup) {
             lines.push(`${prefix}me — mostra seu JID/numero`);
             lines.push(`${prefix}tools — status das ferramentas`);
+            lines.push(`${prefix}owner <token> — definir owner com token do app`);
           }
           if (isOwner) {
             lines.push(`${prefix}status — status (owner)`);

@@ -17,7 +17,7 @@ Elas sao opt-in e ficam desativadas por padrao.
 - `!tools` (DM): mostra status e motivo de bloqueio.
 - `!fslist <caminho>` (DM, owner): lista arquivos.
 - `!fsread <arquivo>` (DM, owner): le arquivo.
-- Se tools estiver bloqueada por owner, configure `ownerNumber`/`ownerJid` no app.
+- Se tools estiver bloqueada por owner, gere token no app e envie `!owner <token>` no DM.
 
 ## Fluxo de aprovacao
 
@@ -36,11 +36,13 @@ Somente o owner pode aprovar/negar.
 ## Auto-allow (sem aprovacao)
 
 Por padrao, apenas tools de leitura:
+
 - `web.search`, `web.open`
 - `fs.list`, `fs.read`
 - `email.read` (se email estiver ativo)
 
 Sempre exigem aprovacao explicita:
+
 - `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
 - `shell.exec`
 
@@ -93,6 +95,7 @@ O bot apenas le emails.
 ## Auditoria
 
 Cada execucao de tool gera registro em:
+
 - `userData/logs/tools_audit.log`
 
 ## Boas praticas
@@ -100,4 +103,4 @@ Cada execucao de tool gera registro em:
 - Teste em ambiente controlado antes de liberar para terceiros.
 - Rode com usuario sem sudo.
 - Evite liberar caminhos sensiveis.
-- Configure owner antes de habilitar tools.
+- Configure owner por token (`!owner <token>`) antes de habilitar tools.

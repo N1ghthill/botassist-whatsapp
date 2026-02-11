@@ -1,7 +1,34 @@
 {
-  "latestVersion": "4.1.13",
+  "latestVersion": "4.1.14",
   "updatedAt": "2026-02-11",
   "releases": [
+    {
+      "version": "4.1.14",
+      "date": "2026-02-11",
+      "title": "Owner por token, setup alinhado e sincronizacao bot -> UI",
+      "summary": "Release focada em coerencia do onboarding com owner por token/comando, sincronizacao de configuracoes em tempo real e atualizacao dos guias operacionais.",
+      "highlights": [
+        "Definicao de owner por token/comando no WhatsApp (!owner <token>).",
+        "Setup inicial atualizado para usar o fluxo novo de owner por token.",
+        "Botao de gerar token de owner na tela de configuracoes.",
+        "Sincronizacao de settings do bot para a UI sem reinicio manual."
+      ],
+      "technical": [
+        "Novo estado de token de owner em settings (hash + expiracao).",
+        "Novos handlers IPC para gerar/limpar token no processo principal.",
+        "Bot com validacao de token e comandos !owner/!setowner.",
+        "Evento settings-updated para manter renderer sincronizado."
+      ],
+      "fixes": [
+        "Removida divergencia entre setup/UI e metodo real de definicao de owner.",
+        "Melhorada consistencia visual apos mudancas de configuracao aplicadas pelo bot.",
+        "Documentacao operacional unificada para o novo onboarding."
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria.",
+        "Recomendado validar o fluxo: gerar token no app e enviar !owner <token> no DM."
+      ]
+    },
     {
       "version": "4.1.13",
       "date": "2026-02-11",
@@ -104,9 +131,9 @@
   "roadmap": {
     "next": {
       "focus": [
-        "Expandir smoke tests para setup inicial e build Linux.",
-        "Seguir reduzindo o tamanho do pacote final mantendo apenas runtime necessario.",
-        "Evoluir o onboarding com mensagens de erro mais acionaveis em cada etapa."
+        "Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.",
+        "Reforcar validacoes de release para confirmar mudancas visuais no renderer apos update.",
+        "Seguir reduzindo regressao entre documentacao e comportamento real."
       ]
     }
   }

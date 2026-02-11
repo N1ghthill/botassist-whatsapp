@@ -179,6 +179,14 @@ ipcMain.handle('set-settings', async (event, partial) => {
   return settings.getSettingsForRenderer();
 });
 
+ipcMain.handle('generate-owner-token', () => {
+  return settings.generateOwnerClaimToken();
+});
+
+ipcMain.handle('clear-owner-token', () => {
+  return settings.clearOwnerClaimToken();
+});
+
 ipcMain.handle('export-profiles', async (event, payload) => {
   try {
     const snapshot = settings.getSettingsSnapshot?.() || {};

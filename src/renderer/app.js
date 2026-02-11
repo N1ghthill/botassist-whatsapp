@@ -27,6 +27,8 @@ const groqLinkHintEl = document.getElementById('groqLinkHint');
 const apiBaseUrlGroup = document.getElementById('apiBaseUrlGroup');
 const apiBaseUrlHint = document.getElementById('apiBaseUrlHint');
 const ownerJidInput = document.getElementById('ownerJid');
+const generateOwnerTokenBtn = document.getElementById('generateOwnerTokenBtn');
+const ownerTokenHintEl = document.getElementById('ownerTokenHint');
 const launchOnStartupInput = document.getElementById('launchOnStartup');
 const profileSelect = document.getElementById('profileSelect');
 const profileNameInput = document.getElementById('profileName');
@@ -113,8 +115,12 @@ const setupLaunchOnStartupInput = document.getElementById('setupLaunchOnStartup'
 const setupQrContainer = document.getElementById('setupQrCode');
 const setupConnectionStatus = document.getElementById('setupConnectionStatus');
 const setupStartBotBtn = document.getElementById('setupStartBotBtn');
-const setupOwnerNumberInput = document.getElementById('setupOwnerNumber');
-const setupOwnerJidInput = document.getElementById('setupOwnerJid');
+const setupGenerateOwnerTokenBtn = document.getElementById('setupGenerateOwnerTokenBtn');
+const setupOwnerTokenValue = document.getElementById('setupOwnerTokenValue');
+const setupOwnerTokenCommand = document.getElementById('setupOwnerTokenCommand');
+const setupOwnerTokenExpires = document.getElementById('setupOwnerTokenExpires');
+const setupOwnerStatus = document.getElementById('setupOwnerStatus');
+const setupOwnerCommandPreview = document.getElementById('setupOwnerCommandPreview');
 
 // Updates
 const appVersionEl = document.getElementById('appVersion');
@@ -217,6 +223,7 @@ const setupState = {
   active: false,
   step: 1,
   connected: false,
+  ownerToken: null,
 };
 
 const DEFAULT_PROFILE_PROMPT =
@@ -834,6 +841,8 @@ function disableElectronDependentUI(reason) {
     checkUpdatesBtn,
     installUpdateBtn,
     toolsTestBtn,
+    generateOwnerTokenBtn,
+    setupGenerateOwnerTokenBtn,
   ];
   targets.forEach((btn) => {
     if (btn) btn.disabled = true;
@@ -1534,13 +1543,78 @@ function markSetupComplete() {
   }
 }
 
+function hasOwnerConfigured(settings = appState.settings) {
+  return Boolean(
+    String(settings?.ownerNumber || '').trim() || String(settings?.ownerJid || '').trim()
+  );
+}
+
+function getOwnerIdentityLabel(settings = appState.settings) {
+  const ownerNumber = String(settings?.ownerNumber || '').trim();
+  const ownerJid = String(settings?.ownerJid || '').trim();
+  if (ownerNumber) return ownerNumber;
+  if (ownerJid) return ownerJid;
+  return 'nao definido';
+}
+
+function formatDateTime(value) {
+  const ts = Date.parse(String(value || '').trim());
+  if (!Number.isFinite(ts)) return '-';
+  return new Date(ts).toLocaleString('pt-BR');
+}
+
+function renderOwnerClaimUI() {
+  const hasOwner = hasOwnerConfigured();
+  if (hasOwner) {
+    setupState.ownerToken = null;
+  }
+  const ownerLabel = getOwnerIdentityLabel();
+  const localToken = String(setupState.ownerToken?.token || '').trim();
+  const localExpiresAt = String(setupState.ownerToken?.expiresAt || '').trim();
+  const backendToken = appState.settings?.ownerClaimToken || {};
+  const commandText = localToken ? `!owner ${localToken}` : '!owner TOKEN';
+
+  if (ownerTokenHintEl) {
+    if (hasOwner) {
+      ownerTokenHintEl.textContent = `Owner atual: ${ownerLabel}`;
+    } else if (localToken) {
+      ownerTokenHintEl.textContent = `Token ativo ate ${formatDateTime(localExpiresAt)}. Envie: ${commandText}`;
+    } else if (backendToken?.active) {
+      ownerTokenHintEl.textContent = `Ja existe um token ativo ate ${formatDateTime(backendToken.expiresAt)}. Gere outro se precisar.`;
+    } else {
+      ownerTokenHintEl.textContent = 'Nenhum token ativo no momento.';
+    }
+  }
+
+  if (setupOwnerStatus) {
+    setupOwnerStatus.textContent = hasOwner
+      ? `Owner configurado: ${ownerLabel}`
+      : 'Aguardando definicao do owner.';
+  }
+  if (setupOwnerTokenValue) {
+    setupOwnerTokenValue.textContent = localToken || '-';
+  }
+  if (setupOwnerTokenCommand) {
+    setupOwnerTokenCommand.textContent = commandText;
+  }
+  if (setupOwnerCommandPreview) {
+    setupOwnerCommandPreview.textContent = commandText;
+  }
+  if (setupOwnerTokenExpires) {
+    if (localExpiresAt) {
+      setupOwnerTokenExpires.textContent = formatDateTime(localExpiresAt);
+    } else if (backendToken?.active) {
+      setupOwnerTokenExpires.textContent = formatDateTime(backendToken.expiresAt);
+    } else {
+      setupOwnerTokenExpires.textContent = '-';
+    }
+  }
+}
+
 function shouldShowSetupWizard() {
   if (!setupOverlay) return false;
   const hasApiKey = Boolean(appState.settings.apiKeyStatus?.groq?.hasApiKey);
-  const hasOwner = Boolean(
-    String(appState.settings.ownerNumber || '').trim() ||
-    String(appState.settings.ownerJid || '').trim()
-  );
+  const hasOwner = hasOwnerConfigured();
   if (!hasApiKey || !hasOwner) return true;
   if (isSetupComplete()) return false;
   return false;
@@ -1563,7 +1637,7 @@ function updateSetupStepUI() {
           ? 'API Key e modelo'
           : step === 3
             ? 'Conectar WhatsApp'
-            : 'Definir owner';
+            : 'Owner por token';
     setupStepCaption.textContent = caption;
   }
   if (setupProgressFill) {
@@ -1578,7 +1652,9 @@ function updateSetupStepUI() {
           ? 'Salvar e continuar'
           : step === 3
             ? 'Conectado, continuar'
-            : 'Finalizar';
+            : hasOwnerConfigured()
+              ? 'Finalizar'
+              : 'Finalizar sem owner';
     setupNextBtn.textContent = label;
     if (step === 3) {
       setupNextBtn.disabled = !setupState.connected;
@@ -1723,23 +1799,10 @@ async function saveSetupCredentials() {
   await persistSettingsPartial(payload);
 }
 
-async function saveSetupOwner() {
-  const ownerNumber = String(setupOwnerNumberInput?.value || '').trim();
-  const ownerJid = String(setupOwnerJidInput?.value || '').trim();
-  const payload = {};
-  if (ownerNumber) payload.ownerNumber = ownerNumber;
-  if (ownerJid) payload.ownerJid = ownerJid;
-  if (Object.keys(payload).length > 0) {
-    await persistSettingsPartial(payload);
-  }
-}
-
 function syncSetupFieldsFromSettings() {
   if (setupAutoStartInput) setupAutoStartInput.checked = Boolean(appState.settings.autoStart);
   if (setupLaunchOnStartupInput)
     setupLaunchOnStartupInput.checked = Boolean(appState.settings.launchOnStartup);
-  if (setupOwnerNumberInput) setupOwnerNumberInput.value = appState.settings.ownerNumber ?? '';
-  if (setupOwnerJidInput) setupOwnerJidInput.value = appState.settings.ownerJid ?? '';
   const modelValue = getActiveProfile()?.model || appState.settings.model;
   syncSetupModelSelection(modelValue);
   if (setupApiKeyHint) {
@@ -1747,6 +1810,38 @@ function syncSetupFieldsFromSettings() {
     if (hasApiKey) {
       setupApiKeyHint.textContent = 'Chave ja configurada. Para trocar, cole uma nova e salve.';
     }
+  }
+  renderOwnerClaimUI();
+}
+
+async function generateOwnerToken() {
+  if (!window.electronAPI?.generateOwnerToken) {
+    showNotification('Geracao de token indisponivel neste ambiente.', 'warning');
+    return;
+  }
+
+  if (generateOwnerTokenBtn) generateOwnerTokenBtn.disabled = true;
+  if (setupGenerateOwnerTokenBtn) setupGenerateOwnerTokenBtn.disabled = true;
+
+  try {
+    const response = await window.electronAPI.generateOwnerToken();
+    const token = String(response?.token || '').trim();
+    const expiresAt = String(response?.expiresAt || '').trim();
+    if (!token) throw new Error('Token invalido retornado pelo app.');
+
+    setupState.ownerToken = { token, expiresAt };
+    await loadSettings();
+    renderOwnerClaimUI();
+
+    addLog(`Token de owner gerado. Comando: !owner ${token}`, 'success');
+    showNotification('Token de owner gerado. Envie o comando no WhatsApp.', 'success');
+  } catch (error) {
+    const message = error?.message || String(error);
+    addLog(`Falha ao gerar token de owner: ${message}`, 'error');
+    showNotification('Nao foi possivel gerar token de owner.', 'error');
+  } finally {
+    if (generateOwnerTokenBtn) generateOwnerTokenBtn.disabled = false;
+    if (setupGenerateOwnerTokenBtn) setupGenerateOwnerTokenBtn.disabled = false;
   }
 }
 
@@ -1756,6 +1851,7 @@ function initSetupWizard() {
   syncSetupFieldsFromSettings();
   updateSetupConnectionStatus(appState.botStatus);
   updateSetupStepUI();
+  renderOwnerClaimUI();
 
   setupModelPreset?.addEventListener('change', () => {
     const selected = String(setupModelPreset.value || '').trim();
@@ -1774,6 +1870,10 @@ function initSetupWizard() {
     if (setupState.step <= 1) return;
     setupState.step -= 1;
     updateSetupStepUI();
+  });
+
+  setupGenerateOwnerTokenBtn?.addEventListener('click', async () => {
+    await generateOwnerToken();
   });
 
   setupNextBtn?.addEventListener('click', async () => {
@@ -1809,18 +1909,21 @@ function initSetupWizard() {
       return;
     }
 
-    const ownerNumber = String(setupOwnerNumberInput?.value || '').trim();
-    const ownerJid = String(setupOwnerJidInput?.value || '').trim();
-    if (!ownerNumber && !ownerJid) {
+    const hasOwner = hasOwnerConfigured();
+    if (!hasOwner) {
       const ok = window.confirm(
         'Deseja finalizar sem definir o owner? Ferramentas e comandos podem ficar bloqueados.'
       );
       if (!ok) return;
     }
-    await saveSetupOwner();
     markSetupComplete();
     setSetupVisible(false);
-    showNotification('Setup concluido! Configure o restante quando quiser.', 'success');
+    showNotification(
+      hasOwner
+        ? 'Setup concluido! Owner configurado com sucesso.'
+        : 'Setup concluido sem owner. Voce pode gerar token depois em Configuracoes.',
+      hasOwner ? 'success' : 'warning'
+    );
   });
 
   setupSkipBtn?.addEventListener('click', () => {
@@ -2041,6 +2144,10 @@ async function loadSettings() {
   syncProfileForm(activeProfile);
   document.getElementById('ownerNumber').value = appState.settings.ownerNumber ?? '';
   if (ownerJidInput) ownerJidInput.value = appState.settings.ownerJid ?? '';
+  if (hasOwnerConfigured(appState.settings)) {
+    setupState.ownerToken = null;
+  }
+  renderOwnerClaimUI();
   document.getElementById('autoStart').checked = Boolean(appState.settings.autoStart);
   if (launchOnStartupInput) {
     launchOnStartupInput.checked = Boolean(appState.settings.launchOnStartup);
@@ -2212,6 +2319,10 @@ async function loadSettings() {
   if (setupState.active) {
     syncSetupFieldsFromSettings();
     updateSetupStepUI();
+    if (!shouldShowSetupWizard()) {
+      markSetupComplete();
+      setSetupVisible(false);
+    }
   }
 }
 
@@ -2252,6 +2363,10 @@ async function init() {
 
   openSetupWizardBtn?.addEventListener('click', () => {
     openSetupWizard(1);
+  });
+
+  generateOwnerTokenBtn?.addEventListener('click', async () => {
+    await generateOwnerToken();
   });
 
   createProfileBtn?.addEventListener('click', () => {
@@ -2583,6 +2698,15 @@ async function init() {
 
     window.electronAPI?.onOpenPrivacy?.(() => {
       activatePage('privacy');
+    });
+
+    window.electronAPI?.onSettingsUpdated?.(async (_payload) => {
+      try {
+        await loadSettings();
+        addLog('Configuracoes sincronizadas pelo bot.', 'info');
+      } catch (error) {
+        addLog(`Falha ao sincronizar configuracoes: ${error?.message || String(error)}`, 'error');
+      }
     });
 
     // Updates

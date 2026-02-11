@@ -377,17 +377,23 @@
               </div>
 
               <div class="form-group">
-                <label for="ownerNumber">Seu Número (WhatsApp)</label>
-                <input
-                  type="text"
-                  id="ownerNumber"
-                  class="form-control"
-                  placeholder="5511999999999@s.whatsapp.net"
-                />
+                <label for="ownerNumber">Owner (WhatsApp)</label>
+                <div class="inline-field">
+                  <input
+                    type="text"
+                    id="ownerNumber"
+                    class="form-control"
+                    placeholder="Preenchido automaticamente apos !owner <token>"
+                  />
+                  <button id="generateOwnerTokenBtn" class="btn btn-secondary" type="button">
+                    <i class="fas fa-key"></i> Gerar token
+                  </button>
+                </div>
                 <small class="hint">
-                  Recomendado definir o owner aqui (nao existe comando no WhatsApp para isso). Sem
-                  owner, ferramentas e aprovacoes podem ficar bloqueadas.
+                  Metodo recomendado: gere um token e envie <code>!owner TOKEN</code> no DM do bot.
+                  Sem owner, ferramentas e aprovacoes podem ficar bloqueadas.
                 </small>
+                <small id="ownerTokenHint" class="hint"></small>
               </div>
 
               <div class="form-group">
@@ -1229,7 +1235,7 @@
               <div class="setup-pill-list">
                 <span>Sem telemetria</span>
                 <span>Configs seguras por padrao</span>
-                <span>Owner definido no app</span>
+                <span>Owner por token no WhatsApp</span>
               </div>
             </div>
             <div class="setup-panel">
@@ -1237,7 +1243,7 @@
               <ul class="setup-list">
                 <li>Configurar a API Key da Groq e escolher o modelo.</li>
                 <li>Conectar o WhatsApp via QR Code.</li>
-                <li>Testar com outro numero e definir o owner.</li>
+                <li>Gerar token no app e definir owner pelo WhatsApp.</li>
               </ul>
             </div>
           </section>
@@ -1306,37 +1312,37 @@
           </section>
 
           <section class="setup-step" data-step="4" style="display: none">
-            <h3>Teste e defina o owner</h3>
-            <p>Para liberar comandos e ferramentas, defina o owner na interface.</p>
+            <h3>Defina o owner com token</h3>
+            <p>Para liberar comandos e ferramentas, use o metodo recomendado via WhatsApp.</p>
             <ol class="setup-list">
-              <li>Com outro numero, envie uma mensagem para o bot.</li>
-              <li>Digite <code>!me</code> no DM e copie seu numero/JID.</li>
-              <li>Cole abaixo para definir o owner.</li>
+              <li>Clique em <strong>Gerar token</strong>.</li>
+              <li>
+                No DM do bot, envie o comando
+                <code id="setupOwnerCommandPreview">!owner TOKEN</code>.
+              </li>
+              <li>Aguarde a confirmacao e volte para finalizar o setup.</li>
             </ol>
             <div class="setup-grid">
               <div class="setup-panel">
-                <label for="setupOwnerNumber">Owner numero (WhatsApp)</label>
-                <input
-                  type="text"
-                  id="setupOwnerNumber"
-                  class="form-control"
-                  placeholder="5511999999999@s.whatsapp.net"
-                />
-                <small class="hint"
-                  >Se o WhatsApp usar <code>@lid</code>, preencha o campo abaixo.</small
-                >
+                <h4>Token de owner</h4>
+                <button id="setupGenerateOwnerTokenBtn" class="btn btn-primary" type="button">
+                  <i class="fas fa-key"></i> Gerar token agora
+                </button>
+                <div class="owner-token-box">
+                  <p><strong>Token:</strong> <code id="setupOwnerTokenValue">-</code></p>
+                  <p>
+                    <strong>Comando:</strong> <code id="setupOwnerTokenCommand">!owner TOKEN</code>
+                  </p>
+                  <p><strong>Expira em:</strong> <span id="setupOwnerTokenExpires">-</span></p>
+                </div>
+                <small class="hint">Se expirar, gere um novo token.</small>
               </div>
               <div class="setup-panel">
-                <label for="setupOwnerJid">Owner JID (opcional)</label>
-                <input
-                  type="text"
-                  id="setupOwnerJid"
-                  class="form-control"
-                  placeholder="ex.: 9021...@lid"
-                />
-                <small class="hint">
-                  Comandos e ferramentas so funcionam com owner ou grupos pre-configurados.
-                </small>
+                <h4>Status do owner</h4>
+                <div id="setupOwnerStatus" class="setup-status">Aguardando definicao do owner.</div>
+                <small class="hint"
+                  >Quando o comando for aceito, o owner aparece automaticamente.</small
+                >
               </div>
             </div>
           </section>

@@ -130,6 +130,36 @@ test('normalize profileRouting drops unknown profile ids', () => {
   });
 });
 
+test('generateOwnerClaimToken stores active token state', () => {
+  withTempDir((dir) => {
+    const settings = loadSettingsModule(dir);
+    settings.loadSettings();
+
+    const generated = settings.generateOwnerClaimToken();
+    assert.ok(/^\d{6}$/.test(generated.token));
+
+    const snapshot = settings.getSettingsSnapshot();
+    assert.ok(String(snapshot.ownerClaimTokenHash || '').trim().length > 0);
+    assert.ok(String(snapshot.ownerClaimTokenExpiresAt || '').trim().length > 0);
+
+    const status = settings.getOwnerClaimTokenStatus(snapshot);
+    assert.strictEqual(status.active, true);
+  });
+});
+
+test('saving owner clears pending owner claim token', () => {
+  withTempDir((dir) => {
+    const settings = loadSettingsModule(dir);
+    settings.loadSettings();
+    settings.generateOwnerClaimToken();
+
+    settings.saveSettings({ ownerNumber: '5511999999999' });
+    const snapshot = settings.getSettingsSnapshot();
+    assert.strictEqual(String(snapshot.ownerClaimTokenHash || '').trim(), '');
+    assert.strictEqual(String(snapshot.ownerClaimTokenExpiresAt || '').trim(), '');
+  });
+});
+
 if (failed > 0) {
   process.exitCode = 1;
 }

@@ -8,7 +8,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Aprovacao de tools pelo owner
 - Em grupos, resposta apenas com mencao
 - Politica de grupos recomendada: allowlist
-- Owner definido no app (`ownerNumber` e opcional `ownerJid`)
+- Owner definido por token/comando no WhatsApp (`!owner <token>`)
 
 ## Recomendacoes de uso
 
@@ -18,7 +18,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Paths sao validados por caminho real (symlink-safe)
 - Nao exponha segredos em prompts
 - Nao habilite tools em grupos sem necessidade
-- Configure owner antes de habilitar tools
+- Configure owner por token antes de habilitar tools
 
 ## Busca web segura
 
@@ -28,10 +28,12 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 ## Ferramentas sensiveis
 
 Sempre exigem aprovacao explicita:
+
 - `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
 - `shell.exec`
 
 Boas praticas:
+
 - use allowlist/denylist de comandos
 - mantenha `tools.mode = auto` somente com auto-allow de leitura
 - audite `userData/logs/tools_audit.log`

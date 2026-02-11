@@ -26,6 +26,8 @@ const electronAPI = {
   // Settings
   getSettings: () => ipcRenderer?.invoke('get-settings'),
   setSettings: (settings) => ipcRenderer?.invoke('set-settings', settings),
+  generateOwnerToken: () => ipcRenderer?.invoke('generate-owner-token'),
+  clearOwnerToken: () => ipcRenderer?.invoke('clear-owner-token'),
   exportProfiles: (payload) => ipcRenderer?.invoke('export-profiles', payload),
   importProfiles: () => ipcRenderer?.invoke('import-profiles'),
 
@@ -60,6 +62,8 @@ const electronAPI = {
   onOpenSettings: (callback) => ipcRenderer?.on('open-settings', () => callback()),
   onOpenPrivacy: (callback) => ipcRenderer?.on('open-privacy', () => callback()),
   onUpdateEvent: (callback) => ipcRenderer?.on('update-event', (event, data) => callback(data)),
+  onSettingsUpdated: (callback) =>
+    ipcRenderer?.on('settings-updated', (event, data) => callback(data)),
 
   // QR helpers (render in renderer without nodeIntegration)
   qrToDataURL: (text, options) => {

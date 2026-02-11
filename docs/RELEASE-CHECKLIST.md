@@ -10,11 +10,13 @@
 6. Abra o app instalado e valide:
    - Start/Stop/Restart do bot
    - QR Code
-   - Setup inicial (incluindo etapa de owner)
+   - Setup inicial (incluindo etapa de owner por token/comando)
+   - Fluxo de owner por token (`Gerar token` + `!owner <token>` no DM)
    - Salvar configuracoes
    - Tools (ex.: `!fslist Documentos`)
    - Atualizacao (se aplicavel)
    - Tela `Sobre` com versao e status de update
+   - Pelo menos uma mudanca visual da release confirmada no renderer (evitar falso-positivo de update)
 7. Valide higiene do pacote:
    - Artefato nao deve conter `docs/`, `scripts/` ou metadados (`.github/`, `README.md` etc.).
    - Conferir que apenas runtime necessario foi empacotado.

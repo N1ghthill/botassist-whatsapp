@@ -1,6 +1,6 @@
 {
   "name": "botassist-whatsapp",
-  "version": "4.1.13",
+  "version": "4.1.14",
   "description": "BotAssist - Assistente WhatsApp IA com Interface Gráfica",
   "private": true,
   "main": "src/main.js",

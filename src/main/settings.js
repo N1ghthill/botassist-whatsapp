@@ -1,4 +1,5 @@
 const { app } = require('electron');
+const nodeCrypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -16,6 +17,7 @@ const KEYTAR_ACCOUNT_GROQ = 'groq_apiKey';
 const PROVIDERS = ['groq'];
 const DM_POLICIES = ['open', 'allowlist', 'owner', 'pairing'];
 const GROUP_POLICIES = ['disabled', 'allowlist', 'open'];
+const OWNER_CLAIM_TOKEN_TTL_MS = 10 * 60 * 1000;
 const TOOL_KEYS = [
   'web.search',
   'web.open',
@@ -91,6 +93,8 @@ const DEFAULT_SETTINGS = {
   apiKeyRef: '',
   ownerNumber: '',
   ownerJid: '',
+  ownerClaimTokenHash: '',
+  ownerClaimTokenExpiresAt: '',
   botTag: '[Meu Bot]',
   autoStart: true,
   launchOnStartup: false,
@@ -117,6 +121,33 @@ const DEFAULT_SETTINGS = {
 };
 
 let settings = null;
+
+function hashOwnerClaimToken(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return nodeCrypto.createHash('sha256').update(raw).digest('hex');
+}
+
+function parseDateValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const ts = Date.parse(raw);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+function getOwnerClaimTokenStatus(base = settings || loadSettings()) {
+  const tokenHash = String(base?.ownerClaimTokenHash || '').trim();
+  const expiresAt = String(base?.ownerClaimTokenExpiresAt || '').trim();
+  const expiresAtTs = parseDateValue(expiresAt);
+  if (!tokenHash || !expiresAtTs) {
+    return { active: false, expiresAt: '', expiresInMs: 0 };
+  }
+  const expiresInMs = Math.max(0, expiresAtTs - Date.now());
+  if (expiresInMs <= 0) {
+    return { active: false, expiresAt: '', expiresInMs: 0 };
+  }
+  return { active: true, expiresAt: new Date(expiresAtTs).toISOString(), expiresInMs };
+}
 
 function normalizeProvider(_value) {
   return 'groq';
@@ -431,6 +462,13 @@ function loadSettings() {
   );
   settings.tools = normalizeToolsSettings(settings.tools, DEFAULT_SETTINGS.tools);
   settings.email = normalizeEmailSettings(settings.email, DEFAULT_SETTINGS.email);
+  settings.ownerClaimTokenHash = String(settings.ownerClaimTokenHash || '').trim();
+  settings.ownerClaimTokenExpiresAt = String(settings.ownerClaimTokenExpiresAt || '').trim();
+  const tokenStatus = getOwnerClaimTokenStatus(settings);
+  if (!tokenStatus.active) {
+    settings.ownerClaimTokenHash = '';
+    settings.ownerClaimTokenExpiresAt = '';
+  }
   if (!hasDmPolicy && settings.dmPolicy === 'owner') settings.restrictToOwner = true;
   if (!hasGroupPolicy) {
     if (settings.groupPolicy === 'disabled') {
@@ -483,6 +521,8 @@ function sanitizeSettings(partial) {
     'apiKeyRef',
     'ownerNumber',
     'ownerJid',
+    'ownerClaimTokenHash',
+    'ownerClaimTokenExpiresAt',
     'botTag',
     'model',
     'systemPrompt',
@@ -560,6 +600,23 @@ function saveSettings(partial) {
   );
   next.tools = normalizeToolsSettings(next.tools, DEFAULT_SETTINGS.tools);
   next.email = normalizeEmailSettings(next.email, DEFAULT_SETTINGS.email);
+  next.ownerClaimTokenHash = String(next.ownerClaimTokenHash || '').trim();
+  next.ownerClaimTokenExpiresAt = String(next.ownerClaimTokenExpiresAt || '').trim();
+  const hasOwner = Boolean(
+    String(next.ownerNumber || '').trim() || String(next.ownerJid || '').trim()
+  );
+  if (hasOwner) {
+    next.ownerClaimTokenHash = '';
+    next.ownerClaimTokenExpiresAt = '';
+  } else {
+    const tokenStatus = getOwnerClaimTokenStatus(next);
+    if (!tokenStatus.active) {
+      next.ownerClaimTokenHash = '';
+      next.ownerClaimTokenExpiresAt = '';
+    } else {
+      next.ownerClaimTokenExpiresAt = tokenStatus.expiresAt;
+    }
+  }
   if (normalizeDmPolicy(next.dmPolicy)) {
     next.restrictToOwner = next.dmPolicy === 'owner';
   }
@@ -679,6 +736,34 @@ async function migrateLegacyApiKeyToKeytar() {
   }
 }
 
+function generateOwnerClaimToken({ ttlMs = OWNER_CLAIM_TOKEN_TTL_MS } = {}) {
+  const ttl = Math.max(
+    60_000,
+    Math.min(86_400_000, Math.floor(Number(ttlMs) || OWNER_CLAIM_TOKEN_TTL_MS))
+  );
+  const token = Math.floor(Math.random() * 1_000_000)
+    .toString()
+    .padStart(6, '0');
+  const expiresAt = new Date(Date.now() + ttl).toISOString();
+  saveSettings({
+    ownerClaimTokenHash: hashOwnerClaimToken(token),
+    ownerClaimTokenExpiresAt: expiresAt,
+  });
+  return {
+    token,
+    expiresAt,
+    expiresInMs: ttl,
+  };
+}
+
+function clearOwnerClaimToken() {
+  saveSettings({
+    ownerClaimTokenHash: '',
+    ownerClaimTokenExpiresAt: '',
+  });
+  return getOwnerClaimTokenStatus(settings);
+}
+
 async function getSettingsForRenderer() {
   const base = settings || loadSettings();
   const apiKeyStatus = {};
@@ -692,9 +777,12 @@ async function getSettingsForRenderer() {
   const tools = normalizeToolsSettings(base?.tools, DEFAULT_SETTINGS.tools);
   const email = normalizeEmailSettings(base?.email, DEFAULT_SETTINGS.email);
   const emailPasswordSet = Boolean(String(email.imapPassword || '').trim());
+  const ownerClaimToken = getOwnerClaimTokenStatus(base);
   return {
     ...base,
     apiKey: '',
+    ownerClaimTokenHash: '',
+    ownerClaimToken,
     tools,
     email: {
       ...email,
@@ -725,6 +813,10 @@ module.exports = {
   setGroqApiKey,
   hasGroqApiKey,
   migrateLegacyApiKeyToKeytar,
+  generateOwnerClaimToken,
+  clearOwnerClaimToken,
+  getOwnerClaimTokenStatus,
+  hashOwnerClaimToken,
   getSettingsSnapshot,
   getSettingsPath,
   getUserDataDir,
