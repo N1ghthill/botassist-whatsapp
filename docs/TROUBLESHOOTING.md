@@ -13,9 +13,10 @@ Sintoma:
 
 Causas comuns:
 - API Key e owner ja estao definidos, entao o setup nao e obrigatorio.
-- O setup foi marcado como concluido no armazenamento local do app.
+- O setup foi fechado anteriormente e voce quer reabrir o assistente.
 
 Como resolver:
+- Abra `Configuracoes` e clique em `Abrir Setup Inicial` para reabrir o assistente a qualquer momento.
 - Configure os campos manualmente em `Configuracoes` (API Key + owner).
 - Para um reset completo de ambiente, faca backup e limpe a pasta de dados (`auth` e `settings.json`).
 

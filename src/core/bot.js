@@ -627,13 +627,44 @@ function applyActiveProfile(settings) {
   };
 }
 
+function buildRuntimeContextPrompt() {
+  const now = new Date();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const localDateTime = (() => {
+    try {
+      return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'full',
+        timeStyle: 'long',
+        timeZone,
+      }).format(now);
+    } catch {
+      return now.toString();
+    }
+  })();
+  const utcDateTime = now.toISOString();
+  const system = `${os.platform()} ${os.release()} (${os.arch()})`;
+  const nodeVersion = process.version;
+  const referenceDir = process.cwd();
+
+  return (
+    'Contexto situacional de runtime:\n' +
+    `- Data/hora local: ${localDateTime}\n` +
+    `- Data/hora UTC: ${utcDateTime}\n` +
+    `- Fuso horario: ${timeZone}\n` +
+    `- Sistema: ${system}\n` +
+    `- Node: ${nodeVersion}\n` +
+    `- Diretorio de referencia: ${referenceDir}`
+  );
+}
+
 function buildSystemPrompt(settings, options = {}) {
   const profilePrompt = String(settings.profilePrompt || '').trim();
   const persona = PERSONAS[settings.persona] || PERSONAS.custom;
   const base = profilePrompt || persona.systemPrompt || '';
   const extra = (settings.systemPrompt || '').trim();
+  const runtimeContext = buildRuntimeContextPrompt();
   const toolHint = buildToolSystemPrompt(settings, options);
-  return [base, extra, toolHint].filter(Boolean).join('\n\n');
+  return [base, extra, runtimeContext, toolHint].filter(Boolean).join('\n\n');
 }
 
 function buildToolSystemPrompt(settings, options = {}) {
@@ -1676,14 +1707,16 @@ async function runSingleTool(call, context, { bypassApproval: _bypassApproval } 
   }
 }
 
-async function executeToolCalls(toolCalls, context, { requesterIsOwner } = {}) {
+async function executeToolCalls(toolCalls, context, { requesterIsOwner: _requesterIsOwner } = {}) {
   const toolMessages = [];
   const pending = [];
+  const manualMode = String(context?.tools?.mode || 'auto') === 'manual';
 
   for (const call of toolCalls) {
     const canonicalName = toCanonicalToolName(call.name);
-    const forceOwnerApproval = !requesterIsOwner && TOOL_OWNER_REQUIRED.has(canonicalName);
-    const isAutoAllowed = context.tools.autoAllow.includes(canonicalName) && !forceOwnerApproval;
+    const forceOwnerApproval = TOOL_OWNER_REQUIRED.has(canonicalName);
+    const isAutoAllowed =
+      !manualMode && context.tools.autoAllow.includes(canonicalName) && !forceOwnerApproval;
     if (!isAutoAllowed) {
       pending.push({ call, canonicalName });
       continue;

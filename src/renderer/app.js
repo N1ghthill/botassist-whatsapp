@@ -15,6 +15,7 @@ const botStatusText = document.getElementById('botStatusText');
 // Settings
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
 const resetSettingsBtn = document.getElementById('resetSettingsBtn');
+const openSetupWizardBtn = document.getElementById('openSetupWizardBtn');
 const providerSelect = document.getElementById('providerSelect');
 const modelPresetSelect = document.getElementById('modelPreset');
 const modelInput = document.getElementById('model');
@@ -211,7 +212,7 @@ let lastQrText = null;
 let clearGroupAccessKeyRequested = false;
 let clearEmailPasswordRequested = false;
 const SETUP_TOTAL_STEPS = 4;
-const SETUP_STORAGE_KEY = 'botassist.setup.complete.v1';
+const SETUP_STORAGE_KEY = 'botassist.setup.complete.v2';
 const setupState = {
   active: false,
   step: 1,
@@ -1535,13 +1536,14 @@ function markSetupComplete() {
 
 function shouldShowSetupWizard() {
   if (!setupOverlay) return false;
-  if (isSetupComplete()) return false;
   const hasApiKey = Boolean(appState.settings.apiKeyStatus?.groq?.hasApiKey);
   const hasOwner = Boolean(
     String(appState.settings.ownerNumber || '').trim() ||
     String(appState.settings.ownerJid || '').trim()
   );
-  return !hasApiKey || !hasOwner;
+  if (!hasApiKey || !hasOwner) return true;
+  if (isSetupComplete()) return false;
+  return false;
 }
 
 function updateSetupStepUI() {
@@ -1591,6 +1593,15 @@ function setSetupVisible(visible) {
   setupOverlay.style.display = visible ? 'flex' : 'none';
   setupState.active = visible;
   if (visible) updateSetupStepUI();
+}
+
+function openSetupWizard(startStep = 1) {
+  if (!setupOverlay) return;
+  const step = Number.isFinite(Number(startStep)) ? Math.floor(Number(startStep)) : 1;
+  setupState.step = Math.max(1, Math.min(SETUP_TOTAL_STEPS, step || 1));
+  syncSetupFieldsFromSettings();
+  updateSetupConnectionStatus(appState.botStatus);
+  setSetupVisible(true);
 }
 
 function updateSetupConnectionStatus(status) {
@@ -1827,8 +1838,7 @@ function initSetupWizard() {
   });
 
   if (shouldShowSetupWizard()) {
-    setupState.step = 1;
-    setSetupVisible(true);
+    openSetupWizard(1);
   }
 }
 
@@ -2238,6 +2248,10 @@ async function init() {
   profileSelect?.addEventListener('change', () => {
     stashActiveProfileEdits();
     setActiveProfileId(profileSelect.value);
+  });
+
+  openSetupWizardBtn?.addEventListener('click', () => {
+    openSetupWizard(1);
   });
 
   createProfileBtn?.addEventListener('click', () => {

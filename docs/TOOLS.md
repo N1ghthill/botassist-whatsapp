@@ -25,11 +25,9 @@ Quando uma tool nao esta liberada automaticamente:
 
 1. O bot envia solicitacao de aprovacao.
 2. O owner responde:
-   - `!aprovar`
-   - `!negar`
-3. Para varias pendencias:
-   - `!aprovacoes`
-   - `!aprovar <n>` / `!negar <n>`
+   - `!aprovar <id>`
+   - `!negar <id>`
+3. O ID vem na propria mensagem de aprovacao enviada pelo bot.
 
 Somente o owner pode aprovar/negar.
 

@@ -115,7 +115,7 @@ Campos de seguranca de arquivo/web:
 
 ## Como pegar JID do grupo
 
-No grupo (com bot conectado), mencione o bot e envie:
+No grupo (com bot conectado e owner configurado), mencione o bot e envie:
 
 ```text
 !groupid

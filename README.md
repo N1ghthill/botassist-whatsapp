@@ -183,7 +183,7 @@ Principais campos:
 
 ### Como pegar o JID do grupo (para allowlist)
 
-No grupo, mencione o bot e envie:
+No grupo, com owner configurado, mencione o bot e envie:
 
 ```text
 !groupid
@@ -200,7 +200,7 @@ Mesmo com “Responder em grupos” ativo, o bot:
 - **ignora mensagens em grupo sem menção**
 - **ignora grupos fora da allowlist**
 
-Opcionalmente você pode ativar “somente comandos” em grupos: `@bot !ajuda ...`.
+Opcionalmente você pode ativar “somente comandos” em grupos: `@bot !help ...`.
 
 <a id="manutencao-backupreset"></a>
 
