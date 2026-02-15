@@ -4,6 +4,7 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 
 ## Comece por aqui
 - `docs/GUIA-RAPIDO.md` — Primeiros passos com o bot
+- `docs/ONBOARDING-7-DIAS.md` — Plano de estudo para novos contribuidores
 - `docs/CONFIGURACAO.md` — Campos e exemplos de configuracao
 
 ## Recursos e modulos
