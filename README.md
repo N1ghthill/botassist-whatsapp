@@ -12,6 +12,8 @@ Bot de WhatsApp com interface gráfica (Electron), conexão via Baileys e respos
 
 Do MVP ao scale: o mesmo projeto pode iniciar como assistente pessoal e evoluir para operação de times com políticas de segurança e governança.
 
+Contexto de pagamentos: embora não seja o módulo financeiro principal, este projeto suporta fluxos comerciais conectados a APIs de billing/payments.
+
 ## Case Summary
 - Problema: atendimento em WhatsApp sem padrão operacional e com baixa escalabilidade.
 - Solução: desktop app com IA, controle de owner, allowlists e automações configuráveis.
