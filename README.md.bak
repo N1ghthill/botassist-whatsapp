@@ -8,37 +8,6 @@
 
 Bot de WhatsApp com interface gráfica (Electron), conexão via Baileys e respostas com IA (Groq).
 
-**Open-source focado em automação operacional e produtividade de atendimento.**
-
-Do MVP ao scale: o mesmo projeto pode iniciar como assistente pessoal e evoluir para operação de times com políticas de segurança e governança.
-
-## Case Summary
-- Problema: atendimento em WhatsApp sem padrão operacional e com baixa escalabilidade.
-- Solução: desktop app com IA, controle de owner, allowlists e automações configuráveis.
-- Impacto esperado: menor tempo de resposta, mais consistência no atendimento e operação sustentável 24/7.
-
-## Quem usa (preencher com métricas reais)
-- Usuários ativos por mês: `TODO`.
-- Ambientes em operação (pessoal, negócio local, equipe): `TODO`.
-- Taxa de resolução sem intervenção humana: `TODO`.
-
-## Instalação e Uso Rápido
-```bash
-npm ci
-npm run dev
-```
-
-## Contribuição
-- Issues e PRs são bem-vindos.
-- Guia: `CONTRIBUTING.md`
-- Roadmap técnico: `docs/`
-
-## Skills / Keywords (SEO)
-`automation`, `ML`, `open-source`, `API`, `Node.js`, `TypeScript`, `Electron`, `WhatsApp`, `AI assistant`
-
-## Disponibilidade
-Disponível para consultoria em automação conversacional, desenho de produto de IA e liderança técnica (CTO fractional).
-
 **Créditos**
 
 - Desenvolvido por Irving Ruas — `ruas.dev.br`
