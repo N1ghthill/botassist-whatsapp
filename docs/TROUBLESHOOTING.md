@@ -40,7 +40,7 @@ Como validar:
 Se persistir:
 
 - Reinstale usando o artefato da release correspondente ao seu SO.
-- No Linux RPM, confirme que a release publicada contem feed `latest-linux.yml` com `.rpm`.
+- No Linux, confirme que a release publicada contem o feed do canal correto (`latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`) com os artefatos esperados.
 
 ## Bot conecta mas nao responde
 

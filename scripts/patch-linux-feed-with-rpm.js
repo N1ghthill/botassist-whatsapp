@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { getReleaseChannelInfo } = require('../src/shared/releaseChannel');
 
 function pickLatestRpm(distDir) {
   const rpmFiles = fs
@@ -24,9 +25,36 @@ function sha512Base64(filePath) {
   return hash.digest('base64');
 }
 
+function resolveFeedPath(distDir, explicitFeedFile) {
+  const feedName = String(explicitFeedFile || '').trim();
+  if (feedName) {
+    return path.join(distDir, feedName);
+  }
+
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  const version = fs.existsSync(packageJsonPath)
+    ? JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).version
+    : '';
+  const inferred = getReleaseChannelInfo(version).feedFile;
+  const inferredPath = path.join(distDir, inferred);
+  if (fs.existsSync(inferredPath)) {
+    return inferredPath;
+  }
+
+  const candidates = fs
+    .readdirSync(distDir)
+    .filter((name) => name === 'latest-linux.yml' || /^[a-z]+-linux\.yml$/.test(name))
+    .sort();
+  if (candidates.length === 1) {
+    return path.join(distDir, candidates[0]);
+  }
+
+  throw new Error(`Feed Linux nao encontrado em ${distDir}. Informe o nome do arquivo explicitamente.`);
+}
+
 function main() {
   const distDir = path.resolve(process.argv[2] || path.join(process.cwd(), 'dist'));
-  const feedPath = path.join(distDir, 'latest-linux.yml');
+  const feedPath = resolveFeedPath(distDir, process.argv[3]);
 
   if (!fs.existsSync(feedPath)) {
     throw new Error(`Arquivo nao encontrado: ${feedPath}`);
@@ -55,7 +83,7 @@ function main() {
 
   const patched = content.replace('\npath:', `\n${rpmEntry}path:`);
   fs.writeFileSync(feedPath, patched, 'utf8');
-  console.log(`latest-linux.yml atualizado com ${rpm.name}`);
+  console.log(`${path.basename(feedPath)} atualizado com ${rpm.name}`);
 }
 
 try {

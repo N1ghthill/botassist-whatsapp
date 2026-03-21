@@ -1,237 +1,125 @@
 # BotAssist WhatsApp
 
-[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-success)](LICENSE)
+[![Licenca: MIT](https://img.shields.io/badge/licenca-MIT-success)](LICENSE)
 [![Releases](https://img.shields.io/github/v/release/N1ghthill/botassist-whatsapp?display_name=tag&sort=semver&cacheSeconds=300)](https://github.com/N1ghthill/botassist-whatsapp/releases)
 [![Issues](https://img.shields.io/github/issues/N1ghthill/botassist-whatsapp)](https://github.com/N1ghthill/botassist-whatsapp/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/N1ghthill/botassist-whatsapp)](https://github.com/N1ghthill/botassist-whatsapp/pulls)
-[![Donate](https://img.shields.io/badge/donate-GitHub%20Sponsors-black)](https://github.com/sponsors/N1ghthill)
 
-Bot de WhatsApp com interface gráfica (Electron), conexão via Baileys e respostas com IA (Groq).
+Aplicativo desktop em Electron para operar um bot de WhatsApp com IA, perfis, onboarding guiado e tools opt-in com politicas de seguranca.
 
-**Créditos**
+Desenvolvido por Irving Ruas em `ruas.dev.br`.
 
-- Desenvolvido por Irving Ruas — `ruas.dev.br`
+## Visao geral
 
-Links rápidos:
+O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara:
 
-- 🌐 Site: `https://botassist.ruas.dev.br` (landing page)
-- 📦 Downloads (Releases): `https://github.com/N1ghthill/botassist-whatsapp/releases/latest`
-- 🐛 Issues: `https://github.com/N1ghthill/botassist-whatsapp/issues`
-- 🤝 Contribuir: `CONTRIBUTING.md`
-- ☕ Doar: `https://github.com/sponsors/N1ghthill`
+- instalar e operar um bot de WhatsApp localmente, com interface grafica
+- configurar o bot sem editar JSON manualmente
+- trabalhar com perfis/agentes diferentes no mesmo app
+- controlar tools locais com owner, aprovacao e trilha de auditoria
+- publicar builds com auto-update e fluxo de release previsivel
 
-## 🧭 Índice
+## O que o app entrega
 
-- [✨ Funcionalidades](#funcionalidades)
-- [🏗️ Arquitetura (Electron)](#arquitetura-electron)
-- [✅ Requisitos](#requisitos)
-- [📦 Instalação](#instalacao)
-- [▶️ Executar em desenvolvimento](#executar-em-desenvolvimento)
-- [⚙️ Configuração](#configuracao)
-- [🛡️ Segurança (anti-ban)](#seguranca-anti-ban)
-- [🧰 Manutenção (backup/reset)](#manutencao-backupreset)
-- [📦 Build (empacotar)](#build-empacotar)
-- [🚀 Release (auto-update)](#release-auto-update)
-- [🤝 Contribuindo](#contribuindo)
-- [📜 Licença](#licenca)
-- [🛰️ Telemetria / rastreamento](#telemetria--rastreamento)
+- Dashboard com start/stop/restart, status do bot, logs e QR Code
+- Setup inicial guiado para API key, modelo, conexao e owner por token
+- Perfis com criar, duplicar, excluir, importar e exportar
+- Roteamento de perfis por usuario e por grupo
+- Ferramentas opt-in para web, arquivos, shell e email
+- Politicas de acesso para grupos, allowlists, cooldown e tamanho maximo de resposta
+- Persistencia de configuracao com `keytar` quando disponivel
+- Auto-update via GitHub Releases para `stable`, `beta` e `rc`
 
-<a id="licenca"></a>
+## Estado atual
 
-## Licença
+- Canal preparado no repo: `4.2.0-beta.1`
+- Estavel recomendado para usuarios finais: a release marcada como `latest` no GitHub
+- Beta recomendada para validar refatoracoes maiores antes de promover para stable
 
-Este projeto é **software livre** e está licenciado sob a **MIT License**.
+## Comece em 5 minutos
 
-- Você pode usar, modificar e redistribuir (inclusive comercialmente), desde que mantenha o aviso de copyright e a licença.
-- **Sem garantias**: você usa por sua conta e risco (o texto completo está em `LICENSE`).
+1. Instale as dependencias com `npm ci`.
+2. Rode o app com `npm run dev` para desenvolvimento ou use uma build empacotada.
+3. Cole sua API key da Groq em `Configuracoes`.
+4. Inicie o bot e escaneie o QR Code.
+5. Gere um token de owner no app.
+6. No DM do bot, envie `!owner <token>`.
 
-## Docs
+Criar chave: `https://groq.com/`
 
-- `docs/INDEX.md`
-- `docs/GUIA-RAPIDO.md`
-- `docs/CONFIGURACAO.md`
-- `docs/ATUALIZACOES.md`
-- `docs/NOTAS-DA-VERSAO.md`
-- `docs/notas-da-versao.json`
-- `docs/ORGANIZACAO-REPO.md`
-- `docs/FAQ.md`
-- `docs/MODULOS.md`
-- `docs/TOOLS.md`
-- `docs/SEGURANCA.md`
-- `docs/ARQUITETURA.md`
-- `docs/RELEASE-CHECKLIST.md`
-- `docs/RECURSOS.md`
-- `docs/TROUBLESHOOTING.md`
-- `docs/CONTRIBUICAO-DOCS.md`
+## Fluxo operacional
 
-<a id="funcionalidades"></a>
+1. O app Electron sobe a interface e gerencia `settings`, updates e ciclo do bot.
+2. O bot roda em processo separado com Baileys + provider de IA.
+3. O renderer conversa com o processo principal via `preload` seguro.
+4. Quando tools estao habilitadas, o provider pode pedir execucao de acoes dentro das politicas configuradas.
+5. A UI recebe logs, status, QR Code, updates e sincronizacao de configuracao em tempo real.
 
-## ✨ Funcionalidades
+## Ferramentas
 
-- Interface gráfica para iniciar/parar o bot, ver logs e QR Code
-- Configurações persistentes com **perfis (agentes)**, prompt principal e modelo
-- Perfis com **criar/duplicar/excluir** e **importar/exportar**
-- Modo anti-ban para grupos:
-  - Só responde **quando mencionado**
-  - Só responde em **grupos allowlistados**
-  - Cooldown por chat (DM/grupo) e limite de tamanho da resposta
-- Respostas com IA via Groq (opcional; sem API Key ele avisa como configurar)
-- Ferramentas (tools) opt-in com aprovacao do owner (definido por token no WhatsApp)
-- Contexto situacional nativo no prompt (data/hora, SO e diretorio de trabalho)
-- Busca web via `web.search` (DuckDuckGo Instant API)
-- Leitura de paginas via `web.open` com filtros de dominio
+As tools sao opt-in. O subsistema atual foi reorganizado para separar:
 
-## Novidades recentes
+- catalogo unico de tools
+- politicas de acesso e aprovacao
+- orquestracao do loop com o provider
+- executores por dominio
 
-- Veja `docs/NOTAS-DA-VERSAO.md` para resumo editorial da release.
-- Para automacao no site/app, use `docs/notas-da-versao.json`.
+Hoje o app suporta:
 
-<a id="arquitetura-electron"></a>
+- `web.search`
+- `web.open`
+- `fs.list`
+- `fs.read`
+- `fs.write`
+- `fs.delete`
+- `fs.move`
+- `fs.copy`
+- `shell.exec`
+- `email.read`
 
-## 🏗️ Arquitetura (Electron)
+Por padrao, operacoes mutaveis e `shell.exec` ficam no fluxo de aprovacao por owner.
 
-O app tem 3 camadas:
+## Seguranca
 
-- `src/main.js`: processo principal do Electron (cria janela, gerencia settings, sobe o bot como processo filho)
-- `src/preload.js`: ponte segura (expõe `window.electronAPI` para o renderer via `contextBridge`)
-- `src/renderer/*`: UI (HTML/CSS/JS)
+- Owner e definido pelo metodo recomendado de token via WhatsApp
+- Em grupos, o bot pode operar com mencao obrigatoria e allowlist
+- Tools usam validacao de path, dominio, extensao e limites de tamanho
+- Acoes de tools geram auditoria local em `userData/logs/tools_audit.log`
+- `keytar` e usado para segredos quando o ambiente permite
 
-O bot roda separado em:
+## Requisitos
 
-- `src/core/bot.js`: processo Node do bot (Baileys + Groq), emitindo eventos para a UI via **IPC** (`process.send`) com fallback via stdout (`BOTASSIST:{...}`).
+- Node.js LTS
+- npm
 
-<a id="requisitos"></a>
-
-## ✅ Requisitos
-
-- Node.js (recomendado: versão LTS)
-- NPM
-
-<a id="instalacao"></a>
-
-## 📦 Instalação
-
-```bash
-npm ci
-```
-
-## ⚡ Comece em 5 minutos
-
-1. Abra o app e cole sua API Key da Groq.
-2. Clique em "Salvar Configuracoes".
-3. Inicie o bot e escaneie o QR Code.
-4. Gere um token de owner em `Configuracoes > Basico`.
-5. No DM do bot, envie `!owner <token>`.
-
-Criar chave: https://groq.com/
-
-![Configurar API Key](docs/assets/quickstart-configs.png)
-
-![Conectar via QR Code](docs/assets/quickstart-dashboard.png)
-
-### Dependência nativa (keytar)
-
-O app usa `keytar` para armazenar a API Key da Groq de forma segura no sistema (Keychain/Secret Service/Credential Manager).
-
-Em alguns ambientes pode ser necessário rebuildar o módulo nativo para o Electron:
+Em alguns ambientes pode ser necessario rebuildar modulos nativos para o Electron:
 
 ```bash
 npx electron-builder install-app-deps
 ```
 
-<a id="executar-em-desenvolvimento"></a>
+## Desenvolvimento
 
-## ▶️ Executar em desenvolvimento
+Instalacao:
+
+```bash
+npm ci
+```
+
+Executar em desenvolvimento:
 
 ```bash
 npm run dev
 ```
 
-<a id="configuracao"></a>
+Validacoes locais:
 
-## ⚙️ Configuração
-
-As configurações são salvas em `settings.json` dentro do `userData` do Electron (`app.getPath('userData')`).
-
-Principais campos:
-
-- `profiles`: lista de perfis (agentes). Cada perfil possui:
-  - `id`: identificador interno
-  - `name`: nome do agente
-  - `provider`: `groq` (único)
-  - `model`: ex. `llama-3.3-70b-versatile` (há um menu com modelos gratuitos na UI)
-  - `systemPrompt`: instrucao principal do agente
-  - `botTag`: prefixo nas respostas (ex.: `[Meu Bot]`)
-- `activeProfileId`: id do perfil ativo
-- `persona` (legado): mantido por compatibilidade, mas a UI usa perfis
-- A UI permite **criar/duplicar/excluir** e **importar/exportar** perfis
-- `apiKeyRef`: referência de onde a API Key está armazenada:
-  - `keytar:groq_apiKey` (recomendado; a chave fica no sistema via `keytar`)
-  - `settings.json` (fallback; a chave pode ser persistida no arquivo se o keychain não estiver disponível)
-- `systemPrompt`: instrucoes adicionais (extras) do sistema
-- `ownerNumber` / `ownerJid`: owner efetivo (preenchido automaticamente após `!owner <token>`)
-- `ownerClaimTokenHash` / `ownerClaimTokenExpiresAt`: controle interno do token temporário de owner
-- `restrictToOwner`: so responde ao owner
-- `allowedUsers`: allowlist de usuários (um por linha; telefone ou JID)
-- `respondToGroups`: habilita respostas em grupos
-- `allowedGroups`: allowlist de grupos (JIDs `...@g.us`)
-- `profileRouting`: roteamento por perfil (usuarios/grupos normalizados automaticamente)
-- `cooldownSecondsDm` / `cooldownSecondsGroup`: cooldown por chat
-- `maxResponseChars`: limita o tamanho da resposta
-
-### API Key (Groq)
-
-- Configure pela UI. A chave não fica exposta no `settings.json` quando `keytar` está disponível.
-- Alternativa: defina `GROQ_API_KEY` no ambiente.
-- Link rapido: https://groq.com/ (crie a API Key e cole na tela de Configuracoes).
-
-### Definir owner (metodo recomendado)
-
-1. Em `Configuracoes > Basico`, clique em `Gerar token`.
-2. Com o bot online, abra o DM do bot no WhatsApp.
-3. Envie:
-
-```text
-!owner 123456
+```bash
+npm test
+npm run lint
 ```
 
-Use o token exibido na UI (exemplo acima). O token expira em poucos minutos; se expirar, gere outro.
-
-### Como pegar o JID do grupo (para allowlist)
-
-No grupo, com owner configurado, mencione o bot e envie:
-
-```text
-!groupid
-```
-
-Ele responde com o JID do grupo para você colar em “Allowlist de grupos”.
-
-<a id="seguranca-anti-ban"></a>
-
-## 🛡️ Segurança (anti-ban)
-
-Mesmo com “Responder em grupos” ativo, o bot:
-
-- **ignora mensagens em grupo sem menção**
-- **ignora grupos fora da allowlist**
-
-Opcionalmente você pode ativar “somente comandos” em grupos: `@bot !help ...`.
-
-<a id="manutencao-backupreset"></a>
-
-## 🧰 Manutenção (backup/reset)
-
-No app, a aba **Manutenção** permite:
-
-- Criar **backup** dos dados locais (`userData`)
-- Abrir a pasta de dados
-- Resetar sessão (forçar novo QR Code)
-- Limpar memória das conversas (histórico/summaries)
-
-<a id="build-empacotar"></a>
-
-## 📦 Build (empacotar)
+Builds:
 
 ```bash
 npm run build:win
@@ -241,41 +129,42 @@ npm run build:linux:appimage
 npm run build:linux:rpm
 ```
 
-### Observações
+## Releases
 
-- Windows: pode exigir executar no Windows, ou Linux com Wine configurado.
-- macOS: recomenda-se gerar no macOS (assinatura/notarização e DMG).
-- Linux: `build:linux` tenta gerar `AppImage` + `.deb`; `build:linux:rpm` gera `.rpm`. Para usuários finais, recomende `.deb` (Ubuntu/Debian) ou `.rpm` (Fedora/openSUSE); `AppImage` fica como alternativa portátil.
-- Linux (somente AppImage): use `build:linux:appimage` para um artefato portátil sem gerar `.deb`.
-- Fedora 40+ (host local): se o `.deb` falhar com `libcrypt.so.1`, o `build:linux` faz fallback automático para `AppImage`; para voltar a gerar `.deb`, instale `libxcrypt-compat`.
+O projeto agora separa canais:
 
-<a id="release-auto-update"></a>
+- `vX.Y.Z`: stable
+- `vX.Y.Z-beta.N`: beta
+- `vX.Y.Z-rc.N`: release candidate
 
-## Release (auto-update)
+O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md) e a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md).
 
-Para publicar builds e habilitar auto-update, use o workflow do GitHub Actions:
+## Documentacao
 
-- Suba a versao no `package.json`, crie uma tag `vX.Y.Z` e de push. Detalhes em `docs/ATUALIZACOES.md`.
+Comece por:
 
-## Troubleshooting
+- [docs/INDEX.md](docs/INDEX.md)
+- [docs/GUIA-RAPIDO.md](docs/GUIA-RAPIDO.md)
+- [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md)
+- [docs/ARQUITETURA.md](docs/ARQUITETURA.md)
+- [docs/NOTAS-DA-VERSAO.md](docs/NOTAS-DA-VERSAO.md)
 
-- Se o QR não aparecer: verifique os logs e se o bot está iniciando.
-- Se o setup inicial não abrir: conclua API Key e owner por token em `Configurações`.
-- Se precisar gerar novo QR/sessão: apague a pasta `auth` dentro do `userData`.
-- Se a IA não responder: configure a API Key pela UI (armazenada via `keytar`) ou defina `GROQ_API_KEY`.
+## Troubleshooting rapido
 
-<a id="contribuindo"></a>
+- Sem QR Code: confira logs e status do bot
+- Sem resposta da IA: verifique API key e modelo
+- Sem owner: gere novo token e envie `!owner <token>` no DM
+- Problemas com sessao: resete a sessao na aba de manutencao
+- Problemas de update: confirme o canal e o feed Linux correspondente
 
-## 🤝 Contribuindo
+## Contribuicao
 
-Contribuições são muito bem-vindas — o objetivo é colaborar com software livre, gratuito e de qualidade.
+As contribuicoes sao bem-vindas. O melhor ponto de partida e [CONTRIBUTING.md](CONTRIBUTING.md) e [docs/INDEX.md](docs/INDEX.md).
 
-Guia rápido: `CONTRIBUTING.md`.
+## Licenca
 
-<a id="telemetria--rastreamento"></a>
+MIT. Veja [LICENSE](LICENSE).
 
-## 🛰️ Telemetria / rastreamento
+## Telemetria
 
-Este app não inclui analytics/pixels/telemetria por padrão.
-
-- O que pode existir são **logs técnicos do provedor** no GitHub (ex.: downloads/requests) e logs locais do app para operação normal.
+O app nao inclui analytics ou rastreamento por padrao.

@@ -1,5 +1,6 @@
 const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const { getReleaseChannelInfo } = require('../shared/releaseChannel');
 
 let updateState = { status: 'idle' };
 let emitUpdate = () => {};
@@ -16,8 +17,11 @@ function sendUpdateEvent(payload) {
 function configureAutoUpdater() {
   if (!app.isPackaged) return;
 
+  const releaseChannel = getReleaseChannelInfo(app.getVersion());
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = releaseChannel.isPrerelease;
+  autoUpdater.channel = releaseChannel.channel;
 
   autoUpdater.on('checking-for-update', () => sendUpdateEvent({ status: 'checking' }));
   autoUpdater.on('update-available', (info) => sendUpdateEvent({ status: 'available', info }));

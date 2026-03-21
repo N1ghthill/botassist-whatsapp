@@ -1,6 +1,6 @@
 {
   "name": "botassist-whatsapp",
-  "version": "4.1.14",
+  "version": "4.2.0-beta.1",
   "description": "BotAssist - Assistente WhatsApp IA com Interface Gráfica",
   "private": true,
   "main": "src/main.js",
@@ -30,6 +30,7 @@
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
     "mailparser": "^3.9.3",
+    "pino": "^9.14.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

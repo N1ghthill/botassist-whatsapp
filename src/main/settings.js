@@ -3,6 +3,22 @@ const nodeCrypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const {
+  DEFAULT_SETTINGS,
+  PROVIDERS,
+  PROVIDER_META,
+  applyActiveProfile,
+  ensureProfiles,
+  normalizeDmPolicy,
+  normalizeEmailSettings: normalizeEmailSettingsBase,
+  normalizeGroupPolicy,
+  normalizeProfile,
+  normalizeProfileRouting,
+  normalizeProvider,
+  normalizeToolsSettings: normalizeToolsSettingsBase,
+  resolveDmPolicy,
+  resolveGroupPolicy,
+} = require('../shared/settingsSchema');
 
 let keytar = null;
 try {
@@ -13,114 +29,16 @@ try {
 }
 
 const KEYTAR_SERVICE = 'botassist-whatsapp';
-const KEYTAR_ACCOUNT_GROQ = 'groq_apiKey';
-const PROVIDERS = ['groq'];
-const DM_POLICIES = ['open', 'allowlist', 'owner', 'pairing'];
-const GROUP_POLICIES = ['disabled', 'allowlist', 'open'];
 const OWNER_CLAIM_TOKEN_TTL_MS = 10 * 60 * 1000;
-const TOOL_KEYS = [
-  'web.search',
-  'web.open',
-  'fs.list',
-  'fs.read',
-  'fs.write',
-  'fs.delete',
-  'fs.move',
-  'fs.copy',
-  'shell.exec',
-  'email.read',
-];
-const TOOL_KEY_SET = new Set(TOOL_KEYS);
-const PROVIDER_META = {
-  groq: {
-    label: 'Groq',
-    apiKeyField: 'apiKey',
-    apiKeyRefField: 'apiKeyRef',
-    keytarAccount: KEYTAR_ACCOUNT_GROQ,
-  },
-};
-
-const DEFAULT_PROFILE_PROMPT =
-  'Voce e um agente inteligente e cordial no WhatsApp. Responda de forma objetiva, ' +
-  'com linguagem simples e passos claros quando necessario. Se nao souber, diga que nao sabe.';
-
-const LEGACY_PERSONA_PROMPTS = {
-  ruasbot:
-    'Voce e o RuasBot, assistente pessoal do Irving Ruas no WhatsApp. ' +
-    'Seja direto, educado e pratico. Quando nao souber, diga que nao sabe.',
-};
-
-const DEFAULT_SETTINGS = {
-  dmPolicy: 'open',
-  groupPolicy: 'disabled',
-  groupAccessKey: '',
-  profileRouting: {
-    users: {},
-    groups: {},
-  },
-  historyEnabled: false,
-  historyMaxMessages: 12,
-  historySummaryEnabled: true,
-  tools: {
-    enabled: false,
-    mode: 'auto',
-    autoAllow: ['web.search', 'web.open', 'fs.list', 'fs.read', 'email.read'],
-    requireOwner: true,
-    allowInGroups: false,
-    allowedPaths: [],
-    allowedWritePaths: [],
-    allowedDomains: [],
-    blockedDomains: [],
-    blockedExtensions: ['.exe', '.dll', '.so', '.dylib'],
-    maxFileSizeMb: 10,
-    maxOutputChars: 6000,
-    commandAllowlist: [],
-    commandDenylist: ['rm ', 'sudo', 'shutdown', 'reboot', 'mkfs', 'dd ', ':(){'],
-  },
-  email: {
-    enabled: false,
-    imapHost: '',
-    imapPort: 993,
-    imapSecure: true,
-    imapUser: '',
-    imapPassword: '',
-    mailbox: 'INBOX',
-    maxMessages: 5,
-  },
-  persona: 'custom',
-  provider: 'groq',
-  apiKey: '',
-  apiKeyRef: '',
-  ownerNumber: '',
-  ownerJid: '',
-  ownerClaimTokenHash: '',
-  ownerClaimTokenExpiresAt: '',
-  botTag: '[Meu Bot]',
-  autoStart: true,
-  launchOnStartup: false,
-  model: 'llama-3.3-70b-versatile',
-  systemPrompt: '',
-  profiles: [],
-  activeProfileId: '',
-  lastBackupAt: '',
-
-  // Access control / routing
-  restrictToOwner: false,
-  allowedUsers: [],
-  respondToGroups: false,
-  allowedGroups: [],
-  groupOnlyMention: true,
-
-  // Anti-ban / throttling
-  requireGroupAllowlist: true,
-  groupRequireCommand: false,
-  groupCommandPrefix: '!',
-  cooldownSecondsDm: 2,
-  cooldownSecondsGroup: 12,
-  maxResponseChars: 1500,
-};
-
 let settings = null;
+
+function normalizeToolsSettings(value, fallback = DEFAULT_SETTINGS.tools) {
+  return normalizeToolsSettingsBase(value, fallback, { homeDir: os.homedir() });
+}
+
+function normalizeEmailSettings(value, fallback = DEFAULT_SETTINGS.email) {
+  return normalizeEmailSettingsBase(value, fallback);
+}
 
 function hashOwnerClaimToken(value) {
   const raw = String(value || '').trim();
@@ -149,169 +67,6 @@ function getOwnerClaimTokenStatus(base = settings || loadSettings()) {
   return { active: true, expiresAt: new Date(expiresAtTs).toISOString(), expiresInMs };
 }
 
-function normalizeProvider(_value) {
-  return 'groq';
-}
-
-function normalizeDmPolicy(value) {
-  const raw = String(value || '')
-    .trim()
-    .toLowerCase();
-  return DM_POLICIES.includes(raw) ? raw : '';
-}
-
-function normalizeGroupPolicy(value) {
-  const raw = String(value || '')
-    .trim()
-    .toLowerCase();
-  return GROUP_POLICIES.includes(raw) ? raw : '';
-}
-
-function resolveDmPolicy(base) {
-  const normalized = normalizeDmPolicy(base?.dmPolicy);
-  if (normalized) return normalized;
-  if (base?.restrictToOwner) return 'owner';
-  if (Array.isArray(base?.allowedUsers) && base.allowedUsers.length > 0) return 'allowlist';
-  return 'open';
-}
-
-function resolveGroupPolicy(base) {
-  const normalized = normalizeGroupPolicy(base?.groupPolicy);
-  if (normalized) return normalized;
-  if (!base?.respondToGroups) return 'disabled';
-  return base?.requireGroupAllowlist === false ? 'open' : 'allowlist';
-}
-
-function normalizeProfileRouting(value, profiles = []) {
-  const base = value && typeof value === 'object' ? value : {};
-  const users = base.users && typeof base.users === 'object' ? base.users : {};
-  const groups = base.groups && typeof base.groups === 'object' ? base.groups : {};
-  const profileIds = new Set(
-    Array.isArray(profiles) ? profiles.map((p) => String(p.id || '')) : []
-  );
-  const hasProfileIds = profileIds.size > 0;
-
-  const normalizeMap = (map) => {
-    const output = {};
-    for (const [rawKey, rawValue] of Object.entries(map || {})) {
-      const key = String(rawKey || '').trim();
-      const valueId = String(rawValue || '').trim();
-      if (!key || !valueId) continue;
-      if (hasProfileIds && !profileIds.has(valueId)) continue;
-      output[key] = valueId;
-    }
-    return output;
-  };
-
-  return {
-    users: normalizeMap(users),
-    groups: normalizeMap(groups),
-  };
-}
-
-function normalizeTextList(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map((entry) => String(entry || '').trim()).filter(Boolean);
-}
-
-function normalizeExtensionList(value) {
-  return normalizeTextList(value)
-    .map((entry) => {
-      const raw = String(entry || '')
-        .trim()
-        .toLowerCase();
-      if (!raw) return '';
-      return raw.startsWith('.') ? raw : `.${raw}`;
-    })
-    .filter(Boolean);
-}
-
-function normalizeDomainEntry(value) {
-  const raw = String(value || '')
-    .trim()
-    .toLowerCase();
-  if (!raw) return '';
-  const withoutProtocol = raw.replace(/^https?:\/\//, '');
-  const host = withoutProtocol.split('/')[0].trim();
-  return host.startsWith('.') ? host.slice(1) : host;
-}
-
-function normalizeDomainList(value) {
-  return normalizeTextList(value).map(normalizeDomainEntry).filter(Boolean);
-}
-
-function normalizePathList(value) {
-  return normalizeTextList(value);
-}
-
-function clampNumber(value, min, max, fallback) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
-function normalizeToolsSettings(value, fallback = DEFAULT_SETTINGS.tools) {
-  const base = value && typeof value === 'object' ? value : {};
-  const merged = { ...(fallback || {}), ...base };
-  const modeRaw = String(merged.mode || 'auto')
-    .trim()
-    .toLowerCase();
-  const mode = modeRaw === 'manual' ? 'manual' : 'auto';
-  const autoAllowRaw = normalizeTextList(merged.autoAllow);
-  const autoAllow = autoAllowRaw.filter((name) => TOOL_KEY_SET.has(name));
-  const commandDenylist = normalizeTextList(merged.commandDenylist);
-  const blockedExtensions = normalizeExtensionList(merged.blockedExtensions);
-  const enabled = merged.enabled !== false;
-  const allowedPathsRaw = normalizePathList(merged.allowedPaths);
-  const allowedPaths = enabled && allowedPathsRaw.length === 0 ? [os.homedir()] : allowedPathsRaw;
-
-  return {
-    enabled,
-    mode,
-    autoAllow,
-    requireOwner: merged.requireOwner !== false,
-    allowInGroups: Boolean(merged.allowInGroups),
-    allowedPaths,
-    allowedWritePaths: normalizePathList(merged.allowedWritePaths),
-    allowedDomains: normalizeDomainList(merged.allowedDomains),
-    blockedDomains: normalizeDomainList(merged.blockedDomains),
-    blockedExtensions: blockedExtensions.length
-      ? blockedExtensions
-      : [...(DEFAULT_SETTINGS.tools?.blockedExtensions || [])],
-    maxFileSizeMb: clampNumber(
-      merged.maxFileSizeMb,
-      1,
-      200,
-      DEFAULT_SETTINGS.tools?.maxFileSizeMb ?? 10
-    ),
-    maxOutputChars: clampNumber(
-      merged.maxOutputChars,
-      200,
-      20000,
-      DEFAULT_SETTINGS.tools?.maxOutputChars ?? 6000
-    ),
-    commandAllowlist: normalizeTextList(merged.commandAllowlist),
-    commandDenylist: commandDenylist.length
-      ? commandDenylist
-      : [...(DEFAULT_SETTINGS.tools?.commandDenylist || [])],
-  };
-}
-
-function normalizeEmailSettings(value, fallback = DEFAULT_SETTINGS.email) {
-  const base = value && typeof value === 'object' ? value : {};
-  const merged = { ...(fallback || {}), ...base };
-  return {
-    enabled: Boolean(merged.enabled),
-    imapHost: String(merged.imapHost || '').trim(),
-    imapPort: clampNumber(merged.imapPort, 1, 65535, DEFAULT_SETTINGS.email?.imapPort ?? 993),
-    imapSecure: merged.imapSecure !== false,
-    imapUser: String(merged.imapUser || '').trim(),
-    imapPassword: String(merged.imapPassword || ''),
-    mailbox: String(merged.mailbox || 'INBOX').trim() || 'INBOX',
-    maxMessages: clampNumber(merged.maxMessages, 1, 50, DEFAULT_SETTINGS.email?.maxMessages ?? 5),
-  };
-}
-
 function getProviderMeta(provider) {
   const normalized = normalizeProvider(provider);
   return PROVIDER_META[normalized] || PROVIDER_META.groq;
@@ -338,87 +93,6 @@ function getUserDataPath() {
 
 function getSettingsPath() {
   return path.join(getUserDataDir(), 'settings.json');
-}
-
-function createProfileId() {
-  return `profile_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function sanitizeProfileName(name) {
-  return String(name || '').trim() || 'Meu Bot';
-}
-
-function ensureBracketedTag(name, tag) {
-  const cleaned = String(tag || '').trim();
-  if (cleaned) return cleaned;
-  return `[${sanitizeProfileName(name)}]`;
-}
-
-function normalizeProfile(input = {}, fallback = {}) {
-  const name = sanitizeProfileName(input.name || fallback.name);
-  const promptValue =
-    input.systemPrompt != null
-      ? input.systemPrompt
-      : fallback.systemPrompt != null
-        ? fallback.systemPrompt
-        : DEFAULT_PROFILE_PROMPT;
-  return {
-    id: String(input.id || fallback.id || createProfileId()),
-    name,
-    persona: String(input.persona || fallback.persona || 'custom'),
-    provider: 'groq',
-    model: String(input.model || fallback.model || 'llama-3.3-70b-versatile'),
-    systemPrompt: String(promptValue),
-    botTag: ensureBracketedTag(name, input.botTag || fallback.botTag),
-  };
-}
-
-function buildProfileFromLegacy(base) {
-  const persona = String(base.persona || '').trim() || 'custom';
-  const basePrompt = LEGACY_PERSONA_PROMPTS[persona] || DEFAULT_PROFILE_PROMPT;
-  const nameFromTag = String(base.botTag || '')
-    .replace(/^\[/, '')
-    .replace(/\]$/, '')
-    .trim();
-  const name = nameFromTag || (persona === 'ruasbot' ? 'RuasBot' : 'Meu Bot');
-  return normalizeProfile(
-    {
-      name,
-      persona,
-      provider: base.provider,
-      model: base.model,
-      systemPrompt: basePrompt,
-      botTag: base.botTag,
-    },
-    { name }
-  );
-}
-
-function ensureProfiles(base) {
-  const rawProfiles = Array.isArray(base.profiles) ? base.profiles : [];
-  const profiles = rawProfiles.map((profile) => normalizeProfile(profile));
-  if (profiles.length === 0) profiles.push(buildProfileFromLegacy(base));
-
-  const activeId = String(base.activeProfileId || '').trim();
-  const hasActive = profiles.some((profile) => profile.id === activeId);
-  return {
-    profiles,
-    activeProfileId: hasActive ? activeId : profiles[0].id,
-  };
-}
-
-function applyActiveProfile(base) {
-  const profiles = Array.isArray(base.profiles) ? base.profiles : [];
-  const activeId = String(base.activeProfileId || '').trim();
-  const active = profiles.find((profile) => profile.id === activeId) || profiles[0];
-  if (!active) return base;
-  return {
-    ...base,
-    persona: active.persona || base.persona,
-    provider: 'groq',
-    model: active.model || base.model,
-    botTag: active.botTag || base.botTag,
-  };
 }
 
 function loadSettings() {

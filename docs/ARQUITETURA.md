@@ -7,7 +7,18 @@ Visao tecnica do BotAssist.
 - `src/main.js`: processo principal do Electron
 - `src/preload.js`: bridge segura (`contextBridge`)
 - `src/renderer/*`: UI (HTML/CSS/JS)
-- `src/core/bot.js`: processo Node do bot (Baileys + IA + tools)
+- `src/shared/settingsSchema.js`: schema/defaults compartilhados entre camadas
+- `src/shared/releaseChannel.js`: resolucao de canal de release (`latest`, `beta`, `rc`, etc.)
+- `src/core/bot.js`: entry point do processo Node do bot
+- `src/core/provider.js`: adaptador do provedor de IA
+- `src/core/tools.js`: facade publica do subsistema de tools
+- `src/core/tooling/registry.js`: catalogo unico de tools (schema, nome interno, risco e handler)
+- `src/core/tooling/policies.js`: acesso, contexto e regras de aprovacao
+- `src/core/tooling/orchestrator.js`: loop de tools e integracao com o provider
+- `src/core/tooling/executors/*`: implementacoes por dominio (`web`, `fs`, `shell`, `email`)
+- `src/core/sessionStore.js`: memoria persistente e compactacao
+- `src/core/messageUtils.js`: parsing de mensagens, comandos e politicas de contexto
+- `src/core/runtimeSettings.js`: leitura e hot-reload de settings no runtime do bot
 
 ## Fluxo geral
 
@@ -45,6 +56,26 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 
 - modelo sem suporte a tools -> resposta sem tools
 - erro de tool -> resposta textual com contexto do erro
+
+## Subsistema de tools
+
+- O contrato de cada tool fica centralizado no registry: nome canonico, nome interno, schema, nivel de aprovacao e resumo para auditoria.
+- As politicas de acesso e contexto nao ficam misturadas com os handlers.
+- O orquestrador decide `auto` vs `manual` sem duplicar metadados em varios mapas/sets paralelos.
+- Handlers de dominio nao sabem nada sobre provider, aprovacao ou IPC; eles so executam a operacao.
+
+## Contratos compartilhados
+
+- O schema de configuracao fica centralizado em `src/shared/settingsSchema.js`.
+- `main`, `core` e `renderer` usam o mesmo conjunto de defaults e normalizacao para reduzir drift.
+- O canal de release usado pelo updater e pelo workflow fica centralizado em `src/shared/releaseChannel.js`.
+
+## Renderer
+
+- `src/renderer/app.js` atua como orquestrador da UI e do IPC.
+- `src/renderer/profile-settings.js` concentra perfis, roteamento e serializacao do formulario.
+- `src/renderer/setup-wizard.js` concentra onboarding, owner token e fluxo guiado inicial.
+- `src/renderer/shell-ui.js` concentra tema, update UI, hints de provider e chrome da janela.
 
 ## Busca web
 

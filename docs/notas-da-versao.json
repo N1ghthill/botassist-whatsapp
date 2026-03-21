@@ -1,7 +1,34 @@
 {
-  "latestVersion": "4.1.14",
-  "updatedAt": "2026-02-11",
+  "latestVersion": "4.2.0-beta.1",
+  "updatedAt": "2026-03-21",
   "releases": [
+    {
+      "version": "4.2.0-beta.1",
+      "date": "2026-03-21",
+      "title": "Beta de reorganizacao do renderer, release channels e tools",
+      "summary": "Beta focada em maturidade estrutural do projeto, com renderer modular, canais de release separados e um subsistema de tools redesenhado para reduzir drift e regressao.",
+      "highlights": [
+        "Renderer dividido em modulos menores sem adicionar bundler ao projeto.",
+        "Canais de release separados entre stable, beta e rc.",
+        "Subsistema de tools reorganizado com registry unico, politicas isoladas e executores por dominio.",
+        "README e docs reposicionados para refletir o produto atual."
+      ],
+      "technical": [
+        "Novo contrato compartilhado de release em src/shared/releaseChannel.js.",
+        "src/renderer/app.js reduzido a papel de orquestrador.",
+        "src/core/tools.js convertido em facade sobre src/core/tooling/*.",
+        "Cobertura de testes ampliada para release channel, registry, politicas e fluxo de tools."
+      ],
+      "fixes": [
+        "Removida duplicacao de comportamento e metadados no renderer.",
+        "Reduzido drift entre definicao de tools, handlers e aprovacao.",
+        "Workflow de release passa a marcar pre-release e feed Linux de forma coerente com o canal."
+      ],
+      "upgradeNotes": [
+        "Trate esta versao como beta antes de promover para stable.",
+        "Recomendado validar onboarding, owner por token, tools e auto-update no app instalado."
+      ]
+    },
     {
       "version": "4.1.14",
       "date": "2026-02-11",
@@ -131,9 +158,9 @@
   "roadmap": {
     "next": {
       "focus": [
+        "Promover 4.2.0-beta.1 para stable apos smoke test no app instalado.",
         "Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.",
-        "Reforcar validacoes de release para confirmar mudancas visuais no renderer apos update.",
-        "Seguir reduzindo regressao entre documentacao e comportamento real."
+        "Endurecer shell.exec com politica ainda mais restritiva."
       ]
     }
   }

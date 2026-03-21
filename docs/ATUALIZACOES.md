@@ -28,20 +28,27 @@ Voce precisa:
 1. Ter o repositorio no GitHub (`repository.url` apontando para ele).
 2. Ter token com permissao de release (ex.: `GH_TOKEN`) quando publicar fora do Actions.
 
+### Canais de release
+
+- `vX.Y.Z` publica release estavel no canal `latest`.
+- `vX.Y.Z-beta.N` publica pre-release no canal `beta`.
+- `vX.Y.Z-rc.N` publica pre-release no canal `rc`.
+- O app instalado usa o mesmo canal da versao atual para procurar updates, evitando misturar `stable` com `beta/rc`.
+
 ### Passo a passo (exemplo)
 
-1. Atualize a versao no `package.json` (ex.: `4.1.14`).
+1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.0-beta.1`, `4.2.0-rc.1`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
 3. Rode validacoes (`npm test`, `npm run lint`).
-4. Commit e crie a tag `v4.1.14` no commit final.
-5. Push da tag: `git push origin v4.1.14`.
+4. Commit e crie a tag semver correspondente no commit final.
+5. Push da tag: `git push origin <tag>`.
 6. O workflow `.github/workflows/release.yml` publica os artefatos no GitHub Release.
 
 ## Garantia de builds no deploy
 
-As builds sao geradas no deploy de release (tags `vX.Y.Z` ou `workflow_dispatch`).
+As builds sao geradas no deploy de release (tags `vX.Y.Z`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N` ou `workflow_dispatch` executado a partir da propria tag).
 
 O workflow `release.yml` roda em Windows, macOS e Linux e publica os artefatos no GitHub Release.
 
@@ -72,6 +79,14 @@ Para evitar alertas e melhorar confianca:
 - Este projeto define `build.electronDist` para usar o Electron ja instalado em `node_modules/electron/dist` (evita downloads durante o build).
 - O workflow de release usa o `GITHUB_TOKEN` do proprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
+- O feed Linux publicado segue o canal da release: `latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`.
+
+## Registro recente (2026-03-21)
+
+- Linha de release preparada em `4.2.0-beta.1`.
+- Renderer reorganizado em modulos menores sem mudar a stack de build.
+- Subsistema de tools refeito com registry unico, politicas isoladas e executores por dominio.
+- Processo de release agora separa `stable`, `beta` e `rc` de forma coerente com o updater.
 
 ## Registro recente (2026-02-11)
 
@@ -91,6 +106,7 @@ Para evitar alertas e melhorar confianca:
 - Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.
 - Reforcar validacoes de release para confirmar mudancas visuais apos update.
 - Seguir reduzindo divergencia entre documentacao e comportamento real.
+- Manter `stable` e `beta/rc` com cadencia distinta, sem hotfix estavel em cadeia.
 
 ## Registro recente (2026-02-11)
 

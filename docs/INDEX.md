@@ -2,6 +2,12 @@
 
 Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 
+Estado atual do repositorio:
+
+- linha de release preparada: `4.2.0-beta.1`
+- canal estavel continua separado de `beta` e `rc`
+- `README.md` e o ponto de entrada recomendado para quem chega no projeto
+
 ## Comece por aqui
 - `docs/GUIA-RAPIDO.md` — Primeiros passos com o bot
 - `docs/ONBOARDING-7-DIAS.md` — Plano de estudo para novos contribuidores
