@@ -3,11 +3,11 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
-## 4.2.0-beta.2 - 2026-03-21
+## 4.2.0-beta.3 - 2026-03-21
 
 ### Resumo
 
-Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao corrigido para prereleases, RPM compativel com semver prerelease e a refatoracao maior do renderer/tools consolidada.
+Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao corrigido de ponta a ponta para prereleases, incluindo RPM compativel com semver prerelease e geracao correta do feed Linux por canal.
 
 ### Highlights
 
@@ -15,14 +15,16 @@ Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao co
 - Canais de release separados entre `stable`, `beta` e `rc`.
 - Subsistema de tools reorganizado com catalogo unico, politicas isoladas e executores por dominio.
 - Workflow de release ajustado para publicar prerelease real em vez de draft quebrada.
+- Feed Linux do canal (`beta-linux.yml` / `rc-linux.yml`) agora pode ser derivado do `latest-linux.yml` gerado no build.
 
 ### Tecnico
 
 - Novo contrato compartilhado de canal de release em `src/shared/releaseChannel.js`.
 - Mapeamento de versao para RPM seguro em prereleases (`Version` + `Release`).
+- Script `patch-linux-feed-with-rpm.js` agora resolve `source` e `target` separadamente para criar feeds por canal.
 - `src/renderer/app.js` virou orquestrador, com extracoes para `profile-settings.js`, `setup-wizard.js` e `shell-ui.js`.
 - `src/core/tools.js` virou facade; a implementacao real foi movida para `src/core/tooling/*`.
-- Novos testes para release channel, metadata RPM, registry de tools, politicas e fluxo automatico/manual de tools.
+- Novos testes para release channel, metadata RPM, patch de feed Linux, registry de tools, politicas e fluxo automatico/manual de tools.
 
 ### Correcoes
 
@@ -30,6 +32,7 @@ Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao co
 - Eliminado drift entre metadados de tools, handlers e regras de aprovacao.
 - Workflow de release agora prepara a release antes da matrix de builds e publica prerelease corretamente.
 - Build RPM passa a aceitar tags `beta/rc` sem falhar por causa do campo `Version`.
+- Publicacao Linux volta a concluir mesmo quando o build gera primeiro apenas `latest-linux.yml`.
 
 ### Upgrade notes
 
@@ -184,7 +187,7 @@ Versao focada em estabilidade de configuracao, operacao com perfis e seguranca n
 
 ### Foco
 
-- Promover `4.2.0-beta.2` para stable apos smoke test no app instalado.
+- Promover `4.2.0-beta.3` para stable apos smoke test no app instalado.
 - Expandir smoke tests E2E para onboarding + fluxo de update no app instalado.
 - Endurecer `shell.exec` com politica ainda mais restritiva.
 

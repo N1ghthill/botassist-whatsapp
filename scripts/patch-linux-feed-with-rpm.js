@@ -25,10 +25,18 @@ function sha512Base64(filePath) {
   return hash.digest('base64');
 }
 
-function resolveFeedPath(distDir, explicitFeedFile) {
+function resolveFeedPaths(distDir, explicitFeedFile) {
   const feedName = String(explicitFeedFile || '').trim();
+  const latestFeedPath = path.join(distDir, 'latest-linux.yml');
+
   if (feedName) {
-    return path.join(distDir, feedName);
+    const targetPath = path.join(distDir, feedName);
+    if (fs.existsSync(targetPath)) {
+      return { sourcePath: targetPath, targetPath };
+    }
+    if (fs.existsSync(latestFeedPath)) {
+      return { sourcePath: latestFeedPath, targetPath };
+    }
   }
 
   const packageJsonPath = path.join(process.cwd(), 'package.json');
@@ -36,9 +44,13 @@ function resolveFeedPath(distDir, explicitFeedFile) {
     ? JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).version
     : '';
   const inferred = getReleaseChannelInfo(version).feedFile;
-  const inferredPath = path.join(distDir, inferred);
-  if (fs.existsSync(inferredPath)) {
-    return inferredPath;
+  const targetPath = path.join(distDir, inferred);
+  if (fs.existsSync(targetPath)) {
+    return { sourcePath: targetPath, targetPath };
+  }
+
+  if (fs.existsSync(latestFeedPath)) {
+    return { sourcePath: latestFeedPath, targetPath };
   }
 
   const candidates = fs
@@ -46,18 +58,19 @@ function resolveFeedPath(distDir, explicitFeedFile) {
     .filter((name) => name === 'latest-linux.yml' || /^[a-z]+-linux\.yml$/.test(name))
     .sort();
   if (candidates.length === 1) {
-    return path.join(distDir, candidates[0]);
+    const sourcePath = path.join(distDir, candidates[0]);
+    return { sourcePath, targetPath: sourcePath };
   }
 
   throw new Error(`Feed Linux nao encontrado em ${distDir}. Informe o nome do arquivo explicitamente.`);
 }
 
-function main() {
-  const distDir = path.resolve(process.argv[2] || path.join(process.cwd(), 'dist'));
-  const feedPath = resolveFeedPath(distDir, process.argv[3]);
+function patchLinuxFeedWithRpm(distDirInput, explicitFeedFile) {
+  const distDir = path.resolve(distDirInput || path.join(process.cwd(), 'dist'));
+  const { sourcePath, targetPath } = resolveFeedPaths(distDir, explicitFeedFile);
 
-  if (!fs.existsSync(feedPath)) {
-    throw new Error(`Arquivo nao encontrado: ${feedPath}`);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Arquivo nao encontrado: ${sourcePath}`);
   }
 
   const rpm = pickLatestRpm(distDir);
@@ -65,14 +78,17 @@ function main() {
     throw new Error(`Nenhum .rpm encontrado em ${distDir}`);
   }
 
-  const content = fs.readFileSync(feedPath, 'utf8');
+  const content = fs.readFileSync(sourcePath, 'utf8');
   if (content.includes(`url: ${rpm.name}`)) {
-    console.log(`latest-linux.yml ja contem ${rpm.name}`);
+    if (sourcePath !== targetPath) {
+      fs.writeFileSync(targetPath, content, 'utf8');
+    }
+    console.log(`${path.basename(targetPath)} ja contem ${rpm.name}`);
     return;
   }
 
   if (!content.includes('\npath:')) {
-    throw new Error('Formato inesperado em latest-linux.yml (campo path ausente).');
+    throw new Error(`Formato inesperado em ${path.basename(sourcePath)} (campo path ausente).`);
   }
 
   const rpmSha512 = sha512Base64(rpm.filePath);
@@ -82,13 +98,22 @@ function main() {
     `    size: ${rpm.size}\n`;
 
   const patched = content.replace('\npath:', `\n${rpmEntry}path:`);
-  fs.writeFileSync(feedPath, patched, 'utf8');
-  console.log(`${path.basename(feedPath)} atualizado com ${rpm.name}`);
+  fs.writeFileSync(targetPath, patched, 'utf8');
+  console.log(`${path.basename(targetPath)} atualizado com ${rpm.name}`);
 }
 
-try {
-  main();
-} catch (err) {
-  console.error(err?.message || String(err));
-  process.exitCode = 1;
+if (require.main === module) {
+  try {
+    patchLinuxFeedWithRpm(process.argv[2], process.argv[3]);
+  } catch (err) {
+    console.error(err?.message || String(err));
+    process.exitCode = 1;
+  }
 }
+
+module.exports = {
+  patchLinuxFeedWithRpm,
+  pickLatestRpm,
+  resolveFeedPaths,
+  sha512Base64,
+};

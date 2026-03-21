@@ -99,6 +99,12 @@ function loadToolOrchestratorModule(mockProviderChat) {
   }
 }
 
+function loadPatchLinuxFeedModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'patch-linux-feed-with-rpm.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadBotManagerModule(mockFork) {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'botManager.js');
   delete require.cache[require.resolve(modulePath)];
@@ -316,7 +322,7 @@ test('release channel utility resolves stable releases to latest feed', () => {
 
 test('release channel utility resolves beta and rc feeds', () => {
   const { getReleaseChannelInfo } = loadReleaseChannelModule();
-  const beta = getReleaseChannelInfo('v4.2.0-beta.2');
+  const beta = getReleaseChannelInfo('v4.2.0-beta.3');
   const rc = getReleaseChannelInfo('4.2.0-rc.1');
 
   assert.strictEqual(beta.channel, 'beta');
@@ -330,7 +336,7 @@ test('release channel utility resolves beta and rc feeds', () => {
 test('release channel utility maps prerelease semver to RPM-safe version metadata', () => {
   const { getRpmVersionInfo } = loadReleaseChannelModule();
   const stable = getRpmVersionInfo('v4.2.0');
-  const beta = getRpmVersionInfo('4.2.0-beta.2');
+  const beta = getRpmVersionInfo('4.2.0-beta.3');
 
   assert.deepStrictEqual(stable, {
     appVersion: '4.2.0',
@@ -339,10 +345,40 @@ test('release channel utility maps prerelease semver to RPM-safe version metadat
     isPrerelease: false,
   });
   assert.deepStrictEqual(beta, {
-    appVersion: '4.2.0-beta.2',
+    appVersion: '4.2.0-beta.3',
     version: '4.2.0',
-    release: '0.beta.2',
+    release: '0.beta.3',
     isPrerelease: true,
+  });
+});
+
+test('linux feed patch can derive beta feed from latest-linux.yml', () => {
+  withTempDir((dir) => {
+    const { patchLinuxFeedWithRpm } = loadPatchLinuxFeedModule();
+    const latestFeedPath = path.join(dir, 'latest-linux.yml');
+    const betaFeedPath = path.join(dir, 'beta-linux.yml');
+    const rpmPath = path.join(dir, 'botassist-whatsapp-4.2.0-beta.3.x86_64.rpm');
+
+    fs.writeFileSync(
+      latestFeedPath,
+      [
+        'version: 4.2.0-beta.3',
+        'files:',
+        'path: BotAssist WhatsApp-4.2.0-beta.3.AppImage',
+        'sha512: fake',
+        'releaseDate: 2026-03-21T00:00:00.000Z',
+        '',
+      ].join('\n'),
+      'utf8'
+    );
+    fs.writeFileSync(rpmPath, 'rpm-binary', 'utf8');
+
+    patchLinuxFeedWithRpm(dir, 'beta-linux.yml');
+
+    assert.ok(fs.existsSync(betaFeedPath));
+    const patched = fs.readFileSync(betaFeedPath, 'utf8');
+    assert.ok(patched.includes('url: botassist-whatsapp-4.2.0-beta.3.x86_64.rpm'));
+    assert.ok(patched.includes('size: 10'));
   });
 });
 

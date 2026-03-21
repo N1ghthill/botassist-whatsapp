@@ -32,7 +32,7 @@ O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara
 
 ## Estado atual
 
-- Canal preparado no repo: `4.2.0-beta.2`
+- Canal preparado no repo: `4.2.0-beta.3`
 - Estavel recomendado para usuarios finais: a release marcada como `latest` no GitHub
 - Beta recomendada para validar refatoracoes maiores antes de promover para stable
 

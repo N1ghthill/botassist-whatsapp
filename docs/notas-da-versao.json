@@ -1,30 +1,32 @@
 {
-  "latestVersion": "4.2.0-beta.2",
+  "latestVersion": "4.2.0-beta.3",
   "updatedAt": "2026-03-21",
   "releases": [
     {
-      "version": "4.2.0-beta.2",
+      "version": "4.2.0-beta.3",
       "date": "2026-03-21",
       "title": "Beta de reorganizacao com correcao do pipeline de prerelease",
-      "summary": "Beta focada em maturidade estrutural do projeto, agora com renderer modular, canais de release separados, prerelease publicada corretamente e empacotamento RPM compativel com semver prerelease.",
+      "summary": "Beta focada em maturidade estrutural do projeto, agora com renderer modular, canais de release separados, prerelease publicada corretamente, empacotamento RPM compativel com semver prerelease e feed Linux do canal gerado corretamente.",
       "highlights": [
         "Renderer dividido em modulos menores sem adicionar bundler ao projeto.",
         "Canais de release separados entre stable, beta e rc.",
         "Subsistema de tools reorganizado com registry unico, politicas isoladas e executores por dominio.",
-        "Workflow de release ajustado para publicar prerelease real e concluir o build Linux com RPM."
+        "Workflow de release ajustado para publicar prerelease real e concluir o build Linux com RPM e feed por canal."
       ],
       "technical": [
         "Novo contrato compartilhado de release em src/shared/releaseChannel.js.",
         "Mapeamento de versao semver para Version/Release do RPM em prereleases.",
+        "scripts/patch-linux-feed-with-rpm.js agora deriva beta-linux.yml/rc-linux.yml a partir do latest-linux.yml quando necessario.",
         "src/renderer/app.js reduzido a papel de orquestrador.",
         "src/core/tools.js convertido em facade sobre src/core/tooling/*.",
-        "Cobertura de testes ampliada para release channel, metadata RPM, registry, politicas e fluxo de tools."
+        "Cobertura de testes ampliada para release channel, metadata RPM, patch de feed Linux, registry, politicas e fluxo de tools."
       ],
       "fixes": [
         "Removida duplicacao de comportamento e metadados no renderer.",
         "Reduzido drift entre definicao de tools, handlers e aprovacao.",
         "Workflow de release passa a preparar a release antes da matrix de builds.",
-        "Build RPM deixa de falhar em versoes beta/rc com hifen no campo Version."
+        "Build RPM deixa de falhar em versoes beta/rc com hifen no campo Version.",
+        "Publicacao Linux deixa de falhar quando beta-linux.yml/rc-linux.yml ainda nao existem no dist."
       ],
       "upgradeNotes": [
         "Trate esta versao como beta antes de promover para stable.",
@@ -160,7 +162,7 @@
   "roadmap": {
     "next": {
       "focus": [
-        "Promover 4.2.0-beta.2 para stable apos smoke test no app instalado.",
+        "Promover 4.2.0-beta.3 para stable apos smoke test no app instalado.",
         "Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.",
         "Endurecer shell.exec com politica ainda mais restritiva."
       ]
