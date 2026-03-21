@@ -11,6 +11,17 @@ if [[ ! -d "$LINUX_UNPACKED" ]]; then
 fi
 
 VERSION="$(node -p "require('$ROOT_DIR/package.json').version")"
+readarray -t RPM_META < <(node - <<'NODE' "$ROOT_DIR"
+const root = process.argv[2];
+const pkg = require(`${root}/package.json`);
+const { getRpmVersionInfo } = require(`${root}/src/shared/releaseChannel`);
+const info = getRpmVersionInfo(pkg.version);
+console.log(info.version);
+console.log(info.release);
+NODE
+)
+RPM_VERSION="${RPM_META[0]}"
+RPM_RELEASE="${RPM_META[1]}"
 APP_NAME="botassist-whatsapp"
 PRODUCT_DIR="BotAssist-WhatsApp"
 SUMMARY="BotAssist - Assistente WhatsApp IA com Interface Gráfica"
@@ -87,8 +98,8 @@ find "$STAGE_DIR" \( -type f -o -type l \) | sed "s|^$STAGE_DIR||" | sort > "$SO
 
 cat > "$SPECS/$APP_NAME.spec" <<EOF
 Name: $APP_NAME
-Version: $VERSION
-Release: 1
+Version: $RPM_VERSION
+Release: $RPM_RELEASE
 Summary: $SUMMARY
 License: MIT
 URL: https://github.com/N1ghthill/botassist-whatsapp

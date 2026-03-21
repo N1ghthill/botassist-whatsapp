@@ -15,7 +15,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        shell: bash
+        run: |
+          node - <<'NODE' >> "$GITHUB_ENV"
+          const { getReleaseChannelInfo } = require('./src/shared/releaseChannel');
+          const tag = String(process.env.RELEASE_TAG || '').trim();
+          if (!/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(tag)) {
+            throw new Error(
+              `Ref inválida para release: "${tag}". Execute o workflow a partir de uma tag semver.`
+            );
+          }
+          const info = getReleaseChannelInfo(tag);
+          console.log(`RELEASE_CHANNEL=${info.channel}`);
+          console.log(`RELEASE_FEED_FILE=${info.feedFile}`);
+          console.log(`RELEASE_IS_PRERELEASE=${info.isPrerelease ? 'true' : 'false'}`);
+          NODE
+
+      - name: Ensure GitHub Release exists
+        shell: bash
+        run: |
+          CREATE_FLAGS=(--title "${RELEASE_TAG}" --verify-tag)
+          EDIT_FLAGS=(--title "${RELEASE_TAG}" --verify-tag)
+
+          if [[ "${RELEASE_IS_PRERELEASE}" == "true" ]]; then
+            CREATE_FLAGS+=(--prerelease --latest=false)
+            EDIT_FLAGS+=(--prerelease)
+          else
+            CREATE_FLAGS+=(--latest)
+            EDIT_FLAGS+=(--latest)
+          fi
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" "${EDIT_FLAGS[@]}"
+          else
+            gh release create "${RELEASE_TAG}" "${CREATE_FLAGS[@]}" --generate-notes
+          fi
+
   build-and-publish:
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -61,21 +109,6 @@ jobs:
       - name: Install rpm tooling (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm
-
-      - name: Ensure GitHub Release exists (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          FLAGS=(--draft --title "${RELEASE_TAG}")
-          if [[ "${RELEASE_IS_PRERELEASE}" == "true" ]]; then
-            FLAGS+=(--prerelease)
-          fi
-
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release edit "${RELEASE_TAG}" "${FLAGS[@]}"
-          else
-            gh release create "${RELEASE_TAG}" "${FLAGS[@]}" --generate-notes
-          fi
 
       - name: Build (Linux AppImage + deb)
         if: runner.os == 'Linux'

@@ -327,6 +327,25 @@ test('release channel utility resolves beta and rc feeds', () => {
   assert.strictEqual(rc.feedFile, 'rc-linux.yml');
 });
 
+test('release channel utility maps prerelease semver to RPM-safe version metadata', () => {
+  const { getRpmVersionInfo } = loadReleaseChannelModule();
+  const stable = getRpmVersionInfo('v4.2.0');
+  const beta = getRpmVersionInfo('4.2.0-beta.2');
+
+  assert.deepStrictEqual(stable, {
+    appVersion: '4.2.0',
+    version: '4.2.0',
+    release: '1',
+    isPrerelease: false,
+  });
+  assert.deepStrictEqual(beta, {
+    appVersion: '4.2.0-beta.2',
+    version: '4.2.0',
+    release: '0.beta.2',
+    isPrerelease: true,
+  });
+});
+
 test('tool registry keeps a single source of truth for canonical and internal names', () => {
   const { TOOL_DEFINITIONS, TOOL_REGISTRY, getToolByName } = loadToolRegistryModule();
   const keys = new Set();

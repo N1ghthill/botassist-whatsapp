@@ -3,31 +3,33 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
-## 4.2.0-beta.1 - 2026-03-21
+## 4.2.0-beta.2 - 2026-03-21
 
 ### Resumo
 
-Beta de reorganizacao estrutural do projeto, com renderer modular, fluxo de release por canais e subsistema de tools refatorado para uma arquitetura mais profissional.
+Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao corrigido para prereleases, RPM compativel com semver prerelease e a refatoracao maior do renderer/tools consolidada.
 
 ### Highlights
 
 - Renderer quebrado em modulos menores sem introduzir bundler adicional.
 - Canais de release separados entre `stable`, `beta` e `rc`.
 - Subsistema de tools reorganizado com catalogo unico, politicas isoladas e executores por dominio.
-- README e docs reposicionados para refletir o produto atual em vez de um projeto de experimento.
+- Workflow de release ajustado para publicar prerelease real em vez de draft quebrada.
 
 ### Tecnico
 
 - Novo contrato compartilhado de canal de release em `src/shared/releaseChannel.js`.
+- Mapeamento de versao para RPM seguro em prereleases (`Version` + `Release`).
 - `src/renderer/app.js` virou orquestrador, com extracoes para `profile-settings.js`, `setup-wizard.js` e `shell-ui.js`.
 - `src/core/tools.js` virou facade; a implementacao real foi movida para `src/core/tooling/*`.
-- Novos testes para release channel, registry de tools, politicas e fluxo automatico/manual de tools.
+- Novos testes para release channel, metadata RPM, registry de tools, politicas e fluxo automatico/manual de tools.
 
 ### Correcoes
 
 - Reduzida a duplicacao de configuracao e comportamento no renderer.
 - Eliminado drift entre metadados de tools, handlers e regras de aprovacao.
-- Workflow de release agora marca pre-release corretamente e publica o feed Linux do canal certo.
+- Workflow de release agora prepara a release antes da matrix de builds e publica prerelease corretamente.
+- Build RPM passa a aceitar tags `beta/rc` sem falhar por causa do campo `Version`.
 
 ### Upgrade notes
 
@@ -182,7 +184,7 @@ Versao focada em estabilidade de configuracao, operacao com perfis e seguranca n
 
 ### Foco
 
-- Promover `4.2.0-beta.1` para stable apos smoke test no app instalado.
+- Promover `4.2.0-beta.2` para stable apos smoke test no app instalado.
 - Expandir smoke tests E2E para onboarding + fluxo de update no app instalado.
 - Endurecer `shell.exec` com politica ainda mais restritiva.
 
