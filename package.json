@@ -22,23 +22,23 @@
     "clean": "node scripts/maintenance.js clean && npm i"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^7.1.0",
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "dotenv": "^16.6.1",
-    "electron-updater": "^6.6.2",
+    "electron-updater": "^6.8.3",
     "groq-sdk": "^0.7.0",
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
-    "mailparser": "^3.9.3",
+    "mailparser": "^3.9.4",
     "pino": "^9.14.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@electron/asar": "^4.0.1",
-    "@eslint/js": "^9.20.0",
+    "@electron/asar": "^4.1.0",
+    "@eslint/js": "^9.39.4",
     "electron": "^28.3.3",
-    "electron-builder": "^24.13.3",
-    "eslint": "^9.20.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.12.0",
     "prettier": "^3.4.2"
@@ -48,6 +48,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/N1ghthill/botassist-whatsapp.git"
+  },
+  "overrides": {
+    "file-type": "21.3.3",
+    "flatted": "3.4.2",
+    "music-metadata": "11.12.3",
+    "utf7": {
+      "semver": "5.7.2"
+    }
   },
   "build": {
     "appId": "br.dev.ruas.botassist",
