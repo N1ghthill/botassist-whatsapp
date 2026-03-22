@@ -83,6 +83,14 @@ Para evitar alertas e melhorar confianca:
 
 ## Registro recente (2026-03-21)
 
+- Release formal `4.2.1` com upgrade para Electron `41.0.3`.
+- Bot principal migrado de `child_process.fork()` para `utilityProcess`.
+- Build empacotado agora aplica Electron fuses para ASAR integrity, `RunAsNode=false` e bloqueio de `NODE_OPTIONS` / `--inspect`.
+- Navegacao inesperada no `BrowserWindow` e novas janelas passaram a ser bloqueadas por padrao.
+- `npm audit` caiu para `0` vulnerabilidades apos a rodada de atualizacao do runtime e dependencias.
+
+## Registro recente (2026-03-21)
+
 - Linha de release preparada em `4.2.0`.
 - Renderer reorganizado em modulos menores sem mudar a stack de build.
 - Subsistema de tools refeito com registry unico, politicas isoladas e executores por dominio.
@@ -90,7 +98,7 @@ Para evitar alertas e melhorar confianca:
 - Pipeline de prerelease deixa de gerar falha no RPM para tags `beta/rc`.
 - Feed Linux do canal agora e derivado corretamente do `latest-linux.yml` durante a publicacao.
 - Upload do electron-builder agora usa o mesmo tipo de release (`pre-release` ou `release`) que o workflow preparou.
-- Promocao para stable concluida na linha `4.2.0`.
+- Promocao para stable concluida inicialmente na linha `4.2.0`.
 
 ## Registro recente (2026-02-11)
 

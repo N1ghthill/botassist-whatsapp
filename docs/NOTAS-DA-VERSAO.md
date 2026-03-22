@@ -3,6 +3,39 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.1 - 2026-03-21
+
+### Resumo
+
+Patch estavel focado em upgrade de runtime, hardening do app empacotado e reducao da superficie de ataque do processo principal.
+
+### Highlights
+
+- Electron atualizado para `41.0.3`.
+- Bot migrado para `utilityProcess`, removendo a dependencia de `ELECTRON_RUN_AS_NODE`.
+- Build empacotado agora aplica Electron fuses para ASAR integrity, carga exclusiva via `app.asar` e bloqueio de `NODE_OPTIONS` / `--inspect`.
+- Navegacoes inesperadas e novas janelas passaram a ser negadas por padrao no `BrowserWindow`.
+- `npm audit` validado com `0` vulnerabilidades.
+
+### Tecnico
+
+- `src/main/botManager.js` troca `child_process.fork()` por `utilityProcess.fork()`.
+- `src/core/bot.js` passa a emitir eventos tambem por `process.parentPort.postMessage()`.
+- `package.json` ativa `asar` explicitamente e configura `electronFuses` no `electron-builder`.
+- `src/main.js` adiciona hardening de `will-navigate` e `setWindowOpenHandler`.
+- Testes ajustados para o novo modelo de processo e CI validado em Windows, macOS e Linux.
+
+### Correcoes
+
+- Eliminada a dependencia do fuse `RunAsNode` para o processo do bot.
+- Reduzido risco de carregamento de codigo fora do `app.asar` no build empacotado.
+- Removida a vulnerabilidade moderada pendente do Electron `28.x`.
+
+### Upgrade notes
+
+- Nenhuma migracao de configuracao e obrigatoria para usuarios atuais.
+- Em runtime empacotado, o suporte minimo pratico passa a exigir Windows 10+ e macOS 12+.
+
 ## 4.2.0 - 2026-03-21
 
 ### Resumo

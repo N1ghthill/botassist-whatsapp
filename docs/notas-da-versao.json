@@ -1,7 +1,36 @@
 {
-  "latestVersion": "4.2.0",
+  "latestVersion": "4.2.1",
   "updatedAt": "2026-03-21",
   "releases": [
+    {
+      "version": "4.2.1",
+      "date": "2026-03-21",
+      "title": "Upgrade de runtime e hardening do app empacotado",
+      "summary": "Patch estavel focado em atualizar o Electron, endurecer o runtime empacotado com fuses e reduzir a superficie de ataque do processo principal.",
+      "highlights": [
+        "Electron atualizado para 41.0.3.",
+        "Bot migrado para utilityProcess em vez de child_process.fork().",
+        "Build empacotado com ASAR integrity, onlyLoadAppFromAsar e bloqueio de NODE_OPTIONS / --inspect.",
+        "Navegacoes inesperadas e novas janelas bloqueadas por padrao no BrowserWindow.",
+        "npm audit validado com 0 vulnerabilidades."
+      ],
+      "technical": [
+        "src/main/botManager.js troca child_process.fork() por utilityProcess.fork().",
+        "src/core/bot.js passa a enviar eventos por process.parentPort.postMessage().",
+        "package.json ativa asar explicitamente e configura electronFuses no electron-builder.",
+        "src/main.js adiciona hardening de will-navigate e setWindowOpenHandler.",
+        "CI validado em Windows, macOS e Linux com Electron 41."
+      ],
+      "fixes": [
+        "Eliminada a dependencia de ELECTRON_RUN_AS_NODE no processo do bot.",
+        "Reduzido risco de carregamento de codigo fora do app.asar no build empacotado.",
+        "Removida a vulnerabilidade moderada pendente da linha Electron 28.x."
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria de configuracao.",
+        "Em runtime empacotado, o suporte minimo pratico passa a exigir Windows 10+ e macOS 12+."
+      ]
+    },
     {
       "version": "4.2.0",
       "date": "2026-03-21",
