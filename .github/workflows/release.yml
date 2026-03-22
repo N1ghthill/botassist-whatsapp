@@ -140,6 +140,19 @@ jobs:
           mac_sign_ready=false
           mac_notarization_ready=false
 
+          export_env() {
+            local key="$1"
+            local value="$2"
+            if [[ -z "${value}" ]]; then
+              return 0
+            fi
+            {
+              echo "${key}<<EOF"
+              echo "${value}"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          }
+
           if [[ -n "${WINDOWS_CSC_LINK}" && -n "${WINDOWS_CSC_KEY_PASSWORD}" ]]; then
             windows_ready=true
           fi
@@ -164,12 +177,24 @@ jobs:
             echo "- Require signed releases: ${REQUIRE_SIGNED_RELEASES:-false}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "${windows_ready}" != "true" && "${runner_os:-${RUNNER_OS}}" == "Windows" ]]; then
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            export_env CSC_LINK "${WINDOWS_CSC_LINK}"
+            export_env CSC_KEY_PASSWORD "${WINDOWS_CSC_KEY_PASSWORD}"
           fi
 
-          if [[ "${mac_sign_ready}" != "true" && "${runner_os:-${RUNNER_OS}}" == "macOS" ]]; then
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            if [[ "${mac_sign_ready}" != "true" ]]; then
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            fi
+            export_env CSC_LINK "${MAC_CSC_LINK}"
+            export_env CSC_KEY_PASSWORD "${MAC_CSC_KEY_PASSWORD}"
+            export_env CSC_NAME "${MAC_CSC_NAME}"
+            export_env APPLE_API_KEY "${APPLE_API_KEY}"
+            export_env APPLE_API_KEY_ID "${APPLE_API_KEY_ID}"
+            export_env APPLE_API_ISSUER "${APPLE_API_ISSUER}"
+            export_env APPLE_ID "${APPLE_ID}"
+            export_env APPLE_APP_SPECIFIC_PASSWORD "${APPLE_APP_SPECIFIC_PASSWORD}"
+            export_env APPLE_TEAM_ID "${APPLE_TEAM_ID}"
           fi
 
           if [[ "${REQUIRE_SIGNED_RELEASES}" == "true" ]]; then
@@ -213,21 +238,8 @@ jobs:
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
-        env:
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
         run: npm run build:win -- --publish always
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
-        env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK || secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
-          CSC_NAME: ${{ secrets.MAC_CSC_NAME || secrets.CSC_NAME }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run build:mac -- --publish always

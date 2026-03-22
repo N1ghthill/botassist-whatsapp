@@ -38,19 +38,24 @@ function commandExists(command) {
 }
 
 function createLaunchCommand(binaryPath) {
+  const binaryArgs = [];
+  if (process.platform === 'linux' && process.env.CI === 'true') {
+    binaryArgs.push('--no-sandbox');
+  }
+
   if (process.platform === 'linux' && !process.env.DISPLAY) {
     if (!commandExists('xvfb-run')) {
       throw new Error('DISPLAY ausente e xvfb-run nao encontrado para executar a build empacotada.');
     }
     return {
       command: 'xvfb-run',
-      args: ['-a', binaryPath],
+      args: ['-a', binaryPath, ...binaryArgs],
     };
   }
 
   return {
     command: binaryPath,
-    args: [],
+    args: binaryArgs,
   };
 }
 
