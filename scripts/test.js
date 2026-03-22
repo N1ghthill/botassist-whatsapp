@@ -324,6 +324,36 @@ test('shared settings schema seeds home dir for enabled tools when no paths are 
   assert.deepStrictEqual(normalized.allowedPaths, ['/tmp/botassist-home']);
 });
 
+test('shared settings schema centralizes profile, history, and interaction normalization', () => {
+  const schema = loadSharedSchema();
+  const normalized = schema.normalizeInteractionSettings(
+    schema.normalizeHistoryState(
+      schema.normalizeProfileState({
+        profiles: [],
+        profileRouting: { users: { '5511': 'missing-profile' } },
+        historyEnabled: 1,
+        historySummaryEnabled: undefined,
+        historyMaxMessages: '999',
+        groupCommandPrefix: '   ',
+        cooldownSecondsDm: -5,
+        cooldownSecondsGroup: 999999,
+        maxResponseChars: '50',
+      })
+    )
+  );
+
+  assert.ok(Array.isArray(normalized.profiles));
+  assert.ok(normalized.profiles.length >= 1);
+  assert.deepStrictEqual(normalized.profileRouting, { users: {}, groups: {} });
+  assert.strictEqual(normalized.historyEnabled, true);
+  assert.strictEqual(normalized.historySummaryEnabled, true);
+  assert.strictEqual(normalized.historyMaxMessages, 200);
+  assert.strictEqual(normalized.groupCommandPrefix, '!');
+  assert.strictEqual(normalized.cooldownSecondsDm, 0);
+  assert.strictEqual(normalized.cooldownSecondsGroup, 86400);
+  assert.strictEqual(normalized.maxResponseChars, 200);
+});
+
 test('runtime settings store applies active profile and env fallback', () => {
   withTempDir((dir) => {
     const settingsPath = path.join(dir, 'settings.json');

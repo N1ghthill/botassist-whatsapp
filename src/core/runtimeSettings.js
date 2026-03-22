@@ -5,9 +5,10 @@ const path = require('path');
 const {
   DEFAULT_SETTINGS,
   applyActiveProfile,
-  ensureProfiles,
   normalizeEmailSettings,
-  normalizeProfileRouting,
+  normalizeHistoryState,
+  normalizeInteractionSettings,
+  normalizeProfileState,
   normalizeProvider,
   normalizeToolsSettings,
   resolveDmPolicy,
@@ -126,34 +127,14 @@ function createRuntimeSettingsStore({
     merged.groupOnlyMention = true;
     merged.requireGroupAllowlist = merged.requireGroupAllowlist !== false;
     merged.groupRequireCommand = Boolean(merged.groupRequireCommand);
-    merged.groupCommandPrefix = String(merged.groupCommandPrefix || '!').trim() || '!';
-    merged.cooldownSecondsDm = Math.max(
-      0,
-      Math.min(86400, Math.floor(Number(merged.cooldownSecondsDm ?? 2) || 0))
-    );
-    merged.cooldownSecondsGroup = Math.max(
-      0,
-      Math.min(86400, Math.floor(Number(merged.cooldownSecondsGroup ?? 12) || 0))
-    );
-    merged.maxResponseChars = Math.max(
-      200,
-      Math.min(10000, Math.floor(Number(merged.maxResponseChars ?? 1500) || 1500))
-    );
 
     for (const key of ['allowedUsers', 'allowedGroups']) {
       merged[key] = Array.isArray(merged[key]) ? merged[key].map((value) => String(value)) : [];
     }
 
-    const normalizedProfiles = ensureProfiles(merged);
-    merged.profiles = normalizedProfiles.profiles;
-    merged.activeProfileId = normalizedProfiles.activeProfileId;
-    merged.profileRouting = normalizeProfileRouting(merged.profileRouting, merged.profiles);
-    merged.historyEnabled = Boolean(merged.historyEnabled);
-    merged.historySummaryEnabled = merged.historySummaryEnabled !== false;
-    merged.historyMaxMessages = Math.max(
-      4,
-      Math.min(200, Math.floor(Number(merged.historyMaxMessages || 12) || 12))
-    );
+    Object.assign(merged, normalizeProfileState(merged));
+    Object.assign(merged, normalizeHistoryState(merged, DEFAULT_SETTINGS));
+    Object.assign(merged, normalizeInteractionSettings(merged, DEFAULT_SETTINGS));
     merged.tools = normalizeToolsSettings(merged.tools, DEFAULT_SETTINGS.tools, {
       homeDir: os.homedir(),
     });
