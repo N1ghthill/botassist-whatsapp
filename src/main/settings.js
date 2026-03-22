@@ -8,7 +8,6 @@ const {
   PROVIDERS,
   PROVIDER_META,
   applyActiveProfile,
-  ensureProfiles,
   normalizeDmPolicy,
   normalizeEmailSettings: normalizeEmailSettingsBase,
   normalizeGroupPolicy,

@@ -11,7 +11,7 @@ const {
   resolveDmPolicy,
   resolveGroupPolicy,
 } = require('../shared/settingsSchema');
-const { BOT_EVENTS, SETTINGS_UPDATE_ACTIONS } = require('../shared/ipcContracts');
+const { BOT_EVENTS } = require('../shared/ipcContracts');
 const {
   buildToolUnsupportedKey,
   getProviderLabel,
