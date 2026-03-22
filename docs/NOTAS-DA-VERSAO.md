@@ -3,11 +3,11 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
-## 4.2.0-beta.3 - 2026-03-21
+## 4.2.0-beta.4 - 2026-03-21
 
 ### Resumo
 
-Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao corrigido de ponta a ponta para prereleases, incluindo RPM compativel com semver prerelease e geracao correta do feed Linux por canal.
+Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao corrigido de ponta a ponta para prereleases, incluindo RPM compativel com semver prerelease, feed Linux por canal e uploads do electron-builder alinhados com o tipo real da release.
 
 ### Highlights
 
@@ -16,12 +16,14 @@ Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao co
 - Subsistema de tools reorganizado com catalogo unico, politicas isoladas e executores por dominio.
 - Workflow de release ajustado para publicar prerelease real em vez de draft quebrada.
 - Feed Linux do canal (`beta-linux.yml` / `rc-linux.yml`) agora pode ser derivado do `latest-linux.yml` gerado no build.
+- `electron-builder` agora publica com `EP_PRE_RELEASE/EP_DRAFT` coerentes com o canal, sem pular assets por incompatibilidade de tipo.
 
 ### Tecnico
 
 - Novo contrato compartilhado de canal de release em `src/shared/releaseChannel.js`.
 - Mapeamento de versao para RPM seguro em prereleases (`Version` + `Release`).
 - Script `patch-linux-feed-with-rpm.js` agora resolve `source` e `target` separadamente para criar feeds por canal.
+- Workflow passa `EP_PRE_RELEASE` e `EP_DRAFT=false` para manter o tipo de publicacao alinhado no GitHub provider.
 - `src/renderer/app.js` virou orquestrador, com extracoes para `profile-settings.js`, `setup-wizard.js` e `shell-ui.js`.
 - `src/core/tools.js` virou facade; a implementacao real foi movida para `src/core/tooling/*`.
 - Novos testes para release channel, metadata RPM, patch de feed Linux, registry de tools, politicas e fluxo automatico/manual de tools.
@@ -33,6 +35,7 @@ Beta de reorganizacao estrutural do projeto, agora com pipeline de publicacao co
 - Workflow de release agora prepara a release antes da matrix de builds e publica prerelease corretamente.
 - Build RPM passa a aceitar tags `beta/rc` sem falhar por causa do campo `Version`.
 - Publicacao Linux volta a concluir mesmo quando o build gera primeiro apenas `latest-linux.yml`.
+- Upload de assets Windows/macOS/AppImage/deb deixa de ser pulado por `existingType=pre-release` vs `publishingType=draft`.
 
 ### Upgrade notes
 
@@ -187,7 +190,7 @@ Versao focada em estabilidade de configuracao, operacao com perfis e seguranca n
 
 ### Foco
 
-- Promover `4.2.0-beta.3` para stable apos smoke test no app instalado.
+- Promover `4.2.0-beta.4` para stable apos smoke test no app instalado.
 - Expandir smoke tests E2E para onboarding + fluxo de update no app instalado.
 - Endurecer `shell.exec` com politica ainda mais restritiva.
 

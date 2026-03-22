@@ -40,6 +40,8 @@ jobs:
           console.log(`RELEASE_CHANNEL=${info.channel}`);
           console.log(`RELEASE_FEED_FILE=${info.feedFile}`);
           console.log(`RELEASE_IS_PRERELEASE=${info.isPrerelease ? 'true' : 'false'}`);
+          console.log(`EP_PRE_RELEASE=${info.isPrerelease ? 'true' : 'false'}`);
+          console.log('EP_DRAFT=false');
           NODE
 
       - name: Ensure GitHub Release exists
@@ -92,6 +94,8 @@ jobs:
           console.log(`RELEASE_CHANNEL=${info.channel}`);
           console.log(`RELEASE_FEED_FILE=${info.feedFile}`);
           console.log(`RELEASE_IS_PRERELEASE=${info.isPrerelease ? 'true' : 'false'}`);
+          console.log(`EP_PRE_RELEASE=${info.isPrerelease ? 'true' : 'false'}`);
+          console.log('EP_DRAFT=false');
           NODE
 
       - name: Setup Node

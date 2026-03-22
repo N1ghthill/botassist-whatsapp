@@ -322,7 +322,7 @@ test('release channel utility resolves stable releases to latest feed', () => {
 
 test('release channel utility resolves beta and rc feeds', () => {
   const { getReleaseChannelInfo } = loadReleaseChannelModule();
-  const beta = getReleaseChannelInfo('v4.2.0-beta.3');
+  const beta = getReleaseChannelInfo('v4.2.0-beta.4');
   const rc = getReleaseChannelInfo('4.2.0-rc.1');
 
   assert.strictEqual(beta.channel, 'beta');
@@ -336,7 +336,7 @@ test('release channel utility resolves beta and rc feeds', () => {
 test('release channel utility maps prerelease semver to RPM-safe version metadata', () => {
   const { getRpmVersionInfo } = loadReleaseChannelModule();
   const stable = getRpmVersionInfo('v4.2.0');
-  const beta = getRpmVersionInfo('4.2.0-beta.3');
+  const beta = getRpmVersionInfo('4.2.0-beta.4');
 
   assert.deepStrictEqual(stable, {
     appVersion: '4.2.0',
@@ -345,9 +345,9 @@ test('release channel utility maps prerelease semver to RPM-safe version metadat
     isPrerelease: false,
   });
   assert.deepStrictEqual(beta, {
-    appVersion: '4.2.0-beta.3',
+    appVersion: '4.2.0-beta.4',
     version: '4.2.0',
-    release: '0.beta.3',
+    release: '0.beta.4',
     isPrerelease: true,
   });
 });
@@ -357,14 +357,14 @@ test('linux feed patch can derive beta feed from latest-linux.yml', () => {
     const { patchLinuxFeedWithRpm } = loadPatchLinuxFeedModule();
     const latestFeedPath = path.join(dir, 'latest-linux.yml');
     const betaFeedPath = path.join(dir, 'beta-linux.yml');
-    const rpmPath = path.join(dir, 'botassist-whatsapp-4.2.0-beta.3.x86_64.rpm');
+    const rpmPath = path.join(dir, 'botassist-whatsapp-4.2.0-beta.4.x86_64.rpm');
 
     fs.writeFileSync(
       latestFeedPath,
       [
-        'version: 4.2.0-beta.3',
+        'version: 4.2.0-beta.4',
         'files:',
-        'path: BotAssist WhatsApp-4.2.0-beta.3.AppImage',
+        'path: BotAssist WhatsApp-4.2.0-beta.4.AppImage',
         'sha512: fake',
         'releaseDate: 2026-03-21T00:00:00.000Z',
         '',
@@ -377,7 +377,7 @@ test('linux feed patch can derive beta feed from latest-linux.yml', () => {
 
     assert.ok(fs.existsSync(betaFeedPath));
     const patched = fs.readFileSync(betaFeedPath, 'utf8');
-    assert.ok(patched.includes('url: botassist-whatsapp-4.2.0-beta.3.x86_64.rpm'));
+    assert.ok(patched.includes('url: botassist-whatsapp-4.2.0-beta.4.x86_64.rpm'));
     assert.ok(patched.includes('size: 10'));
   });
 });
