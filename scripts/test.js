@@ -302,12 +302,16 @@ test('runtime settings store applies active profile and env fallback', () => {
       reloadDebounceMs: 1,
     });
 
-    const loaded = store.readSettings();
-    assert.strictEqual(loaded.apiKey, 'env-secret');
-    assert.strictEqual(loaded.model, 'llama-3.3-70b-versatile');
-    assert.strictEqual(loaded.profilePrompt, 'Prompt do perfil 1');
-    assert.strictEqual(loaded.botTag, '[P1]');
-    assert.strictEqual(loaded.groupOnlyMention, true);
+    try {
+      const loaded = store.readSettings();
+      assert.strictEqual(loaded.apiKey, 'env-secret');
+      assert.strictEqual(loaded.model, 'llama-3.3-70b-versatile');
+      assert.strictEqual(loaded.profilePrompt, 'Prompt do perfil 1');
+      assert.strictEqual(loaded.botTag, '[P1]');
+      assert.strictEqual(loaded.groupOnlyMention, true);
+    } finally {
+      store.dispose();
+    }
   });
 });
 

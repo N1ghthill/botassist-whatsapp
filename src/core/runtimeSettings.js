@@ -47,6 +47,7 @@ function createRuntimeSettingsStore({
 } = {}) {
   const settingsBaseName = settingsPath ? path.basename(settingsPath) : '';
   let cachedSettings = null;
+  let settingsWatcher = null;
   let settingsWatchStarted = false;
   let settingsReloadTimer = null;
 
@@ -58,13 +59,24 @@ function createRuntimeSettingsStore({
     }, reloadDebounceMs);
   }
 
+  function stopSettingsWatcher() {
+    if (settingsWatcher) {
+      try {
+        settingsWatcher.close();
+      } catch {
+        // ignore watcher close errors
+      }
+      settingsWatcher = null;
+    }
+    settingsWatchStarted = false;
+  }
+
   function startSettingsWatcher() {
     if (settingsWatchStarted || !settingsPath) return;
-    settingsWatchStarted = true;
 
     const watchTarget = fs.existsSync(settingsPath) ? settingsPath : path.dirname(settingsPath);
     try {
-      fs.watch(watchTarget, { persistent: false }, (_eventType, filename) => {
+      const watcher = fs.watch(watchTarget, { persistent: false }, (_eventType, filename) => {
         if (!filename) {
           scheduleSettingsReload();
           return;
@@ -74,9 +86,22 @@ function createRuntimeSettingsStore({
           scheduleSettingsReload();
         }
       });
+      settingsWatcher = watcher;
+      settingsWatchStarted = true;
+      watcher.on('error', () => {
+        stopSettingsWatcher();
+      });
     } catch {
-      // ignore watcher errors
+      stopSettingsWatcher();
     }
+  }
+
+  function dispose() {
+    if (settingsReloadTimer) {
+      clearTimeout(settingsReloadTimer);
+      settingsReloadTimer = null;
+    }
+    stopSettingsWatcher();
   }
 
   function loadSettingsFromDisk() {
@@ -157,6 +182,7 @@ function createRuntimeSettingsStore({
   return {
     loadSettingsFromDisk,
     readSettings,
+    dispose,
   };
 }
 
