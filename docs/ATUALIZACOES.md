@@ -45,12 +45,13 @@ Voce precisa:
 4. Commit e crie a tag semver correspondente no commit final.
 5. Push da tag: `git push origin <tag>`.
 6. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
+7. Depois da publicacao, rode `npm run release:verify -- --tag vX.Y.Z` para baixar feeds e assets da release real, validar `sha256` dos assets publicados e conferir `sha512`/`size` dos feeds.
 
 ## Garantia de builds no deploy
 
 As builds sao geradas no deploy de release (tags `vX.Y.Z`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N` ou `workflow_dispatch` executado a partir da propria tag).
 
-O workflow `release.yml` roda em Windows, macOS e Linux e publica os artefatos no GitHub Release.
+O workflow `release.yml` roda em Windows, macOS e Linux, publica os artefatos no GitHub Release e encerra com uma verificacao automatica dos feeds e dos assets publicados.
 
 ## Notas da versao (site)
 

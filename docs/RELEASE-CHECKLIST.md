@@ -27,10 +27,13 @@
 10. Em release Linux, valide o feed do canal correto (`latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`):
    - Deve listar os formatos publicados (`AppImage`, `.deb` e `.rpm`, quando houver).
    - Confirme `url`, `sha512` e `size` coerentes com os artefatos da release.
-11. Confirme no GitHub Release se a marcacao esta coerente:
+11. Depois que a tag publicar a release, rode `npm run release:verify -- --tag vX.Y.Z`:
+   - O script baixa os feeds e os assets referenciados, compara `sha256` dos assets publicados e valida `sha512`/`size` dos feeds.
+   - Use `--keep-temp` apenas se precisar inspecionar os downloads manualmente.
+12. Confirme no GitHub Release se a marcacao esta coerente:
    - `stable` nao deve sair como pre-release
    - `beta/rc` devem sair como pre-release
-12. Confira o summary do workflow para readiness de assinatura/notarizacao:
+13. Confira o summary do workflow para readiness de assinatura/notarizacao:
    - Se a release precisa sair assinada, habilite `REQUIRE_SIGNED_RELEASES=true`.
    - Se a release pode sair unsigned, confirme conscientemente o estado reportado.
-13. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.
+14. Atualize `docs/ATUALIZACOES.md` se houver mudanca no processo de release/deploy.
