@@ -3,7 +3,7 @@ name: Portfolio Hygiene Issue
 on:
   schedule:
     # Monthly: day 1 at 12:00 UTC
-    - cron: "0 12 1 * *"
+    - cron: '0 12 1 * *'
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Create monthly hygiene issue (deduplicated)
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const now = new Date();
