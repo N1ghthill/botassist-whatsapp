@@ -48,6 +48,11 @@ const {
   toolFsList,
   toolFsRead,
 } = require('./tools');
+const {
+  createToolApprovalEntry,
+  handleToolApprovalCommand,
+  sendApprovalPrompt,
+} = require('./tooling/approvalFlow');
 const { createRuntimeSettingsStore } = require('./runtimeSettings');
 
 const REPLY_MAP_TTL_MS = 6 * 60 * 60 * 1000;
@@ -301,10 +306,6 @@ function ensurePairingEntry(id) {
   return entry;
 }
 
-function createApprovalId() {
-  return `auth_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
 function getPendingToolApproval(id) {
   const key = String(id || '').trim();
   if (!key) return null;
@@ -429,194 +430,6 @@ async function main() {
     }
 
     saveSessionState(sessionId, updated);
-  }
-
-  function buildApprovalPrompt(entry, prefix, botTag) {
-    const lines = ['Preciso de autorização para executar:'];
-    for (const pending of entry.pendingCalls || []) {
-      lines.push(`- ${summarizeToolCallForApproval(pending.call, entry.toolContext)}`);
-    }
-    lines.push(`ID: ${entry.id}`);
-    lines.push(`Responda com ${prefix}aprovar ${entry.id} ou ${prefix}negar ${entry.id}.`);
-    lines.push('Apenas o owner pode aprovar.');
-    lines.push('Expira em 15 minutos.');
-    const text = lines.join('\n');
-    return (botTag ? `${botTag} ` : '') + text;
-  }
-
-  async function sendApprovalPrompt(entry, quotedMessage) {
-    const prefix = entry.prefix || '!';
-    const botTag = entry.botTag || '';
-    const text = buildApprovalPrompt(entry, prefix, botTag);
-    await sock.sendMessage(entry.remoteJid, { text }, { quoted: quotedMessage });
-  }
-
-  async function handleToolApprovalCommand({
-    command,
-    remoteJid,
-    senderJid: _senderJid,
-    senderPhone: _senderPhone,
-    isOwner,
-    message,
-    prefix,
-    botTag,
-  }) {
-    const approvalId = String(command.rawArgs || '').trim();
-    if (!approvalId) {
-      await sock.sendMessage(
-        remoteJid,
-        {
-          text: (botTag ? `${botTag} ` : '') + `Use: ${prefix}aprovar <id> ou ${prefix}negar <id>`,
-        },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    const entry = getPendingToolApproval(approvalId);
-    if (!entry) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Nenhuma aprovação pendente com esse ID.' },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    const canApprove = isOwner;
-    if (!canApprove) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Você não tem permissão para aprovar esta ação.' },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    pendingToolApprovals.delete(approvalId);
-
-    if (command.command === 'negar') {
-      await sock.sendMessage(
-        entry.remoteJid,
-        {
-          text:
-            (entry.botTag ? `${entry.botTag} ` : '') +
-            'Ação cancelada. Nenhuma ferramenta foi executada.',
-        },
-        { quoted: entry.quotedMessage || message }
-      );
-      if (remoteJid !== entry.remoteJid) {
-        await sock.sendMessage(
-          remoteJid,
-          { text: (botTag ? `${botTag} ` : '') + 'Ação negada.' },
-          { quoted: message }
-        );
-      }
-      return true;
-    }
-
-    if (remoteJid !== entry.remoteJid) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Aprovado. Executando ferramentas...' },
-        { quoted: message }
-      );
-    }
-
-    try {
-      const approvedToolMessages = await runApprovedToolCalls(
-        entry.pendingCalls || [],
-        entry.toolContext
-      );
-      const followUpMessages = [
-        ...(entry.messages || []),
-        entry.assistantMessage,
-        ...(entry.autoToolMessages || []),
-        ...approvedToolMessages,
-      ].filter(Boolean);
-
-      const result = await runToolLoop({
-        provider: entry.provider,
-        apiKey: entry.apiKey,
-        baseUrl: entry.baseUrl,
-        model: entry.model,
-        messages: followUpMessages,
-        toolContext: entry.toolContext,
-        requesterIsOwner: true,
-        temperature: entry.temperature ?? 0.7,
-        maxTokens: entry.maxTokens ?? 700,
-      });
-
-      if (result.pending) {
-        const newEntry = {
-          id: createApprovalId(),
-          createdAt: Date.now(),
-          expiresAt: Date.now() + TOOL_APPROVAL_TTL_MS,
-          remoteJid: entry.remoteJid,
-          requesterJid: entry.requesterJid,
-          requesterPhone: entry.requesterPhone,
-          requireOwner: entry.requireOwner,
-          messages: [...followUpMessages],
-          assistantMessage: result.pending.assistantMessage,
-          autoToolMessages: result.pending.toolMessages,
-          pendingCalls: result.pending.pendingCalls,
-          toolContext: entry.toolContext,
-          provider: entry.provider,
-          apiKey: entry.apiKey,
-          baseUrl: entry.baseUrl,
-          model: entry.model,
-          botTag: entry.botTag,
-          prefix: entry.prefix,
-          quotedMessage: entry.quotedMessage,
-          sessionId: entry.sessionId,
-          userInput: entry.userInput,
-          historyEnabled: entry.historyEnabled,
-          historySummaryEnabled: entry.historySummaryEnabled,
-          historyMaxMessages: entry.historyMaxMessages,
-          maxResponseChars: entry.maxResponseChars,
-        };
-        addPendingToolApproval(newEntry);
-        await sendApprovalPrompt(newEntry, entry.quotedMessage || message);
-        return true;
-      }
-
-      let answer = result.answer || '';
-      if (answer && entry.maxResponseChars && answer.length > entry.maxResponseChars) {
-        answer = answer.slice(0, entry.maxResponseChars - 1).trimEnd() + '…';
-      }
-
-      if (answer) {
-        await sock.sendMessage(
-          entry.remoteJid,
-          { text: (entry.botTag ? `${entry.botTag} ` : '') + answer },
-          { quoted: entry.quotedMessage || message }
-        );
-        await persistHistory({
-          sessionId: entry.sessionId,
-          userInput: entry.userInput,
-          answer,
-          provider: entry.provider,
-          apiKey: entry.apiKey,
-          baseUrl: entry.baseUrl,
-          model: entry.model,
-          historyEnabled: entry.historyEnabled,
-          historySummaryEnabled: entry.historySummaryEnabled,
-          historyMaxMessages: entry.historyMaxMessages,
-        });
-      }
-    } catch (err) {
-      await sock.sendMessage(
-        entry.remoteJid,
-        {
-          text:
-            (entry.botTag ? `${entry.botTag} ` : '') +
-            `Erro ao executar ferramentas: ${err?.message || String(err)}`,
-        },
-        { quoted: entry.quotedMessage || message }
-      );
-    }
-
-    return true;
   }
 
   const baileys = await import('@whiskeysockets/baileys');
@@ -796,12 +609,19 @@ async function main() {
           const handled = await handleToolApprovalCommand({
             command,
             remoteJid,
-            senderJid,
-            senderPhone,
             isOwner,
             message,
             prefix,
             botTag,
+            getPendingToolApproval,
+            removePendingToolApproval: (approvalId) => pendingToolApprovals.delete(approvalId),
+            addPendingToolApproval,
+            sendMessage: (jid, content, options) => sock.sendMessage(jid, content, options),
+            summarizeToolCallForApproval,
+            runApprovedToolCalls,
+            runToolLoop,
+            persistHistory,
+            ttlMs: TOOL_APPROVAL_TTL_MS,
           });
           if (handled) continue;
         }
@@ -1365,35 +1185,40 @@ async function main() {
               });
 
               if (result.pending) {
-                const approvalEntry = {
-                  id: createApprovalId(),
-                  createdAt: Date.now(),
-                  expiresAt: Date.now() + TOOL_APPROVAL_TTL_MS,
-                  remoteJid,
-                  requesterJid: senderJid,
-                  requesterPhone: senderPhone,
-                  requireOwner: true,
-                  messages: baseMessages,
-                  assistantMessage: result.pending.assistantMessage,
-                  autoToolMessages: result.pending.toolMessages,
-                  pendingCalls: result.pending.pendingCalls,
-                  toolContext,
-                  provider,
-                  apiKey: providerApiKey,
-                  baseUrl: providerBaseUrl,
-                  model,
-                  botTag,
-                  prefix,
-                  quotedMessage: message,
-                  sessionId,
-                  userInput,
-                  historyEnabled,
-                  historySummaryEnabled,
-                  historyMaxMessages,
-                  maxResponseChars: settings.maxResponseChars,
-                };
+                const approvalEntry = createToolApprovalEntry(
+                  {
+                    remoteJid,
+                    requesterJid: senderJid,
+                    requesterPhone: senderPhone,
+                    requireOwner: true,
+                    messages: baseMessages,
+                    assistantMessage: result.pending.assistantMessage,
+                    autoToolMessages: result.pending.toolMessages,
+                    pendingCalls: result.pending.pendingCalls,
+                    toolContext,
+                    provider,
+                    apiKey: providerApiKey,
+                    baseUrl: providerBaseUrl,
+                    model,
+                    botTag,
+                    prefix,
+                    quotedMessage: message,
+                    sessionId,
+                    userInput,
+                    historyEnabled,
+                    historySummaryEnabled,
+                    historyMaxMessages,
+                    maxResponseChars: settings.maxResponseChars,
+                  },
+                  { ttlMs: TOOL_APPROVAL_TTL_MS }
+                );
                 addPendingToolApproval(approvalEntry);
-                await sendApprovalPrompt(approvalEntry, message);
+                await sendApprovalPrompt({
+                  entry: approvalEntry,
+                  quotedMessage: message,
+                  sendMessage: (jid, content, options) => sock.sendMessage(jid, content, options),
+                  summarizeToolCallForApproval,
+                });
                 continue;
               }
 

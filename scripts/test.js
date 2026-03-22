@@ -149,6 +149,12 @@ function loadToolsDiagnosticsModule() {
   return require(modulePath);
 }
 
+function loadApprovalFlowModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'approvalFlow.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadAppProtocolModule() {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'appProtocol.js');
   delete require.cache[require.resolve(modulePath)];
@@ -533,6 +539,86 @@ test('tool loop returns pending approvals in manual mode', async () => {
   assert.ok(result.pending);
   assert.strictEqual(result.pending.pendingCalls.length, 1);
   assert.strictEqual(result.pending.pendingCalls[0].canonicalName, 'fs.list');
+});
+
+test('approval flow creates entry metadata with deterministic ttl', () => {
+  const { createToolApprovalEntry } = loadApprovalFlowModule();
+  const entry = createToolApprovalEntry(
+    {
+      remoteJid: '5511999999999@s.whatsapp.net',
+      pendingCalls: [],
+    },
+    { now: 1234, ttlMs: 5000 }
+  );
+
+  assert.ok(/^auth_/.test(entry.id));
+  assert.strictEqual(entry.createdAt, 1234);
+  assert.strictEqual(entry.expiresAt, 6234);
+  assert.strictEqual(entry.remoteJid, '5511999999999@s.whatsapp.net');
+});
+
+test('approval flow executes approved tools and persists follow-up answer', async () => {
+  const { handleToolApprovalCommand } = loadApprovalFlowModule();
+  const sent = [];
+  const removed = [];
+  const persisted = [];
+  const entry = {
+    id: 'auth_test',
+    remoteJid: 'chat@s.whatsapp.net',
+    requesterJid: 'user@s.whatsapp.net',
+    requesterPhone: '5511999999999',
+    messages: [{ role: 'user', content: 'Liste a pasta' }],
+    assistantMessage: { role: 'assistant', content: 'Vou usar ferramentas.' },
+    autoToolMessages: [{ role: 'tool', content: 'Ferramenta sugerida.' }],
+    pendingCalls: [{ call: { name: 'fs_list' } }],
+    toolContext: { tools: { mode: 'manual' } },
+    provider: 'groq',
+    apiKey: 'secret',
+    baseUrl: '',
+    model: 'llama-3.3-70b-versatile',
+    botTag: '[Bot]',
+    prefix: '!',
+    quotedMessage: { key: { id: 'msg1' } },
+    sessionId: 'chat@s.whatsapp.net',
+    userInput: 'Liste a pasta',
+    historyEnabled: true,
+    historySummaryEnabled: true,
+    historyMaxMessages: 12,
+    maxResponseChars: 500,
+  };
+
+  const handled = await handleToolApprovalCommand({
+    command: { command: 'aprovar', rawArgs: 'auth_test' },
+    remoteJid: 'owner@s.whatsapp.net',
+    isOwner: true,
+    message: { key: { id: 'owner-msg' } },
+    prefix: '!',
+    botTag: '[Owner]',
+    getPendingToolApproval: (id) => (id === 'auth_test' ? entry : null),
+    removePendingToolApproval: (id) => removed.push(id),
+    addPendingToolApproval: () => {
+      throw new Error('should not enqueue new approval for answer path');
+    },
+    sendMessage: async (jid, content, options) => {
+      sent.push({ jid, content, options });
+    },
+    summarizeToolCallForApproval: () => 'fs.list /tmp',
+    runApprovedToolCalls: async () => [{ role: 'tool', content: 'saida da ferramenta' }],
+    runToolLoop: async () => ({ answer: 'Resposta final ao usuario' }),
+    persistHistory: async (payload) => {
+      persisted.push(payload);
+    },
+  });
+
+  assert.strictEqual(handled, true);
+  assert.deepStrictEqual(removed, ['auth_test']);
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent[0].jid, 'owner@s.whatsapp.net');
+  assert.match(sent[0].content.text, /Aprovado\. Executando ferramentas/);
+  assert.strictEqual(sent[1].jid, 'chat@s.whatsapp.net');
+  assert.match(sent[1].content.text, /Resposta final ao usuario/);
+  assert.strictEqual(persisted.length, 1);
+  assert.strictEqual(persisted[0].sessionId, 'chat@s.whatsapp.net');
 });
 
 test('tool loop auto-executes allowed read-only tools and resumes provider reply', async () => {
