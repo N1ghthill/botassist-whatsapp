@@ -105,6 +105,12 @@ function loadPatchLinuxFeedModule() {
   return require(modulePath);
 }
 
+function loadReleaseVerifyModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'verify-release-assets.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadBotManagerModule(mockFork) {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'botManager.js');
   delete require.cache[require.resolve(modulePath)];
@@ -442,6 +448,76 @@ test('release channel utility maps prerelease semver to RPM-safe version metadat
     release: '0.beta.4',
     isPrerelease: true,
   });
+});
+
+test('release verifier targets channel-specific linux feed while keeping shared desktop feeds', () => {
+  const { buildRequiredFeedNames } = loadReleaseVerifyModule();
+
+  assert.deepStrictEqual(buildRequiredFeedNames('v4.2.3'), [
+    'latest.yml',
+    'latest-mac.yml',
+    'latest-linux.yml',
+  ]);
+  assert.deepStrictEqual(buildRequiredFeedNames('v4.2.0-beta.4'), [
+    'latest.yml',
+    'latest-mac.yml',
+    'beta-linux.yml',
+  ]);
+});
+
+test('release verifier parses updater feeds without duplicating primary path entry', () => {
+  const { parseUpdaterFeed } = loadReleaseVerifyModule();
+  const parsed = parseUpdaterFeed(
+    [
+      'version: 4.2.3',
+      'files:',
+      '  - url: BotAssist-WhatsApp-4.2.3.AppImage',
+      '    sha512: appimage-hash',
+      '    size: 123',
+      '  - url: botassist-whatsapp_4.2.3_amd64.deb',
+      '    sha512: deb-hash',
+      '    size: 456',
+      'path: BotAssist-WhatsApp-4.2.3.AppImage',
+      'sha512: appimage-hash',
+      'releaseDate: 2026-03-22T09:00:00.000Z',
+      '',
+    ].join('\n')
+  );
+
+  assert.strictEqual(parsed.version, '4.2.3');
+  assert.deepStrictEqual(parsed.entries, [
+    {
+      url: 'BotAssist-WhatsApp-4.2.3.AppImage',
+      sha512: 'appimage-hash',
+      size: 123,
+    },
+    {
+      url: 'botassist-whatsapp_4.2.3_amd64.deb',
+      sha512: 'deb-hash',
+      size: 456,
+    },
+  ]);
+});
+
+test('release verifier requires rpm in linux feed when release publishes rpm asset', () => {
+  const { verifyLinuxFeedCoverage } = loadReleaseVerifyModule();
+  const assetMap = new Map([
+    ['BotAssist-WhatsApp-4.2.3.AppImage', { name: 'BotAssist-WhatsApp-4.2.3.AppImage' }],
+    ['botassist-whatsapp_4.2.3_amd64.deb', { name: 'botassist-whatsapp_4.2.3_amd64.deb' }],
+    ['botassist-whatsapp-4.2.3.x86_64.rpm', { name: 'botassist-whatsapp-4.2.3.x86_64.rpm' }],
+  ]);
+
+  assert.throws(() => {
+    verifyLinuxFeedCoverage(
+      {
+        entries: [
+          { url: 'BotAssist-WhatsApp-4.2.3.AppImage' },
+          { url: 'botassist-whatsapp_4.2.3_amd64.deb' },
+        ],
+      },
+      assetMap
+    );
+  }, /Feed Linux nao lista artefato \.rpm/);
 });
 
 test('linux feed patch can derive beta feed from latest-linux.yml', () => {
