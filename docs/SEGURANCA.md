@@ -10,6 +10,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Politica de grupos recomendada: allowlist
 - Owner definido por token/comando no WhatsApp (`!owner <token>`)
 - Build empacotado com Electron fuses para endurecer o runtime (`RunAsNode=false`, ASAR integrity, `NODE_OPTIONS` e `--inspect` desativados)
+- Renderer servido por protocolo dedicado `app://`, sem depender de `file://`
 - Navegacao inesperada e novas janelas bloqueadas no `BrowserWindow`; links externos abrem no navegador do sistema
 
 ## Recomendacoes de uso
@@ -37,6 +38,7 @@ Sempre exigem aprovacao explicita:
 Boas praticas:
 
 - use allowlist/denylist de comandos
+- a allowlist/denylist de `shell.exec` vale por comando-base e a execucao ocorre sem shell intermediario
 - mantenha `tools.mode = auto` somente com auto-allow de leitura
 - audite `userData/logs/tools_audit.log`
 

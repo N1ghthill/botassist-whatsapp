@@ -40,10 +40,14 @@ jobs:
 
       - name: Syntax checks
         run: |
+          node --check scripts/render-release-notes.js
+          node --check scripts/smoke-packaged.js
           node --check src/main.js
+          node --check src/main/appProtocol.js
           node --check src/main/botManager.js
           node --check src/main/paths.js
           node --check src/main/settings.js
+          node --check src/main/smokeHarness.js
           node --check src/main/ui.js
           node --check src/main/updates.js
           node --check src/main/userData.js
@@ -56,3 +60,7 @@ jobs:
         if: runner.os == 'Linux'
         env:
           ELECTRON_BUILDER_PUBLISH: never
+
+      - name: Smoke packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: npm run smoke:packaged

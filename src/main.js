@@ -1,19 +1,25 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 
+if (process.env.BOTASSIST_USER_DATA_DIR) {
+  app.setPath('userData', path.resolve(process.env.BOTASSIST_USER_DATA_DIR));
+}
+
+const { buildAppUrl, registerAppProtocol } = require('./main/appProtocol');
 const { createMenu, createTray, updateTrayStatus } = require('./main/ui');
 const updates = require('./main/updates');
 const settings = require('./main/settings');
 const { createBotManager } = require('./main/botManager');
 const { createUserDataManager } = require('./main/userData');
 const { getAssetPath, fileExists } = require('./main/paths');
+const { createSmokeHarness } = require('./main/smokeHarness');
 const { runToolsDiagnostics } = require('./main/toolsDiagnostics');
 
 let mainWindow = null;
 let bot = null;
 let isQuitting = false;
+const smokeHarness = createSmokeHarness({ app });
 
 const getMainWindow = () => mainWindow;
 const sendToRenderer = (channel, payload) => mainWindow?.webContents.send(channel, payload);
@@ -84,8 +90,7 @@ function openPrivacy() {
 function createWindow() {
   const iconPath = [getAssetPath('icon-window.png'), getAssetPath('icon.png')].find(fileExists);
   const preloadPath = path.join(__dirname, 'preload.js');
-  const indexPath = path.join(__dirname, 'renderer/index.html');
-  const indexUrl = pathToFileURL(indexPath);
+  const indexUrl = buildAppUrl('/src/renderer/index.html');
   const enableSandbox = process.env.ELECTRON_SANDBOX === '1';
   const isMac = process.platform === 'darwin';
   console.log('[main] preload:', preloadPath, 'exists=', fileExists(preloadPath));
@@ -105,7 +110,8 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(indexPath);
+  mainWindow.loadURL(indexUrl);
+  smokeHarness.schedule(mainWindow);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     openExternalSafely(url);
     return { action: 'deny' };
@@ -114,10 +120,7 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     try {
       const parsedUrl = new URL(navigationUrl);
-      if (
-        parsedUrl.protocol === 'file:' &&
-        decodeURIComponent(parsedUrl.pathname) === decodeURIComponent(indexUrl.pathname)
-      ) {
+      if (parsedUrl.protocol === 'app:' && parsedUrl.hostname === 'botassist') {
         return;
       }
     } catch {
@@ -353,6 +356,7 @@ ipcMain.on('preload-error', (event, message) => {
 
 // App Events
 app.whenReady().then(async () => {
+  registerAppProtocol();
   settings.loadSettings();
   try {
     await settings.migrateLegacyApiKeyToKeytar();

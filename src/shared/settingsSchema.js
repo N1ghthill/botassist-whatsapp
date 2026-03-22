@@ -57,7 +57,7 @@
     maxFileSizeMb: 10,
     maxOutputChars: 6000,
     commandAllowlist: [],
-    commandDenylist: ['rm ', 'sudo', 'shutdown', 'reboot', 'mkfs', 'dd ', ':(){'],
+    commandDenylist: ['rm', 'sudo', 'shutdown', 'reboot', 'mkfs', 'dd'],
   };
 
   const DEFAULT_EMAIL_SETTINGS = {

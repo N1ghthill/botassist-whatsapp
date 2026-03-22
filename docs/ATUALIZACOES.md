@@ -37,14 +37,14 @@ Voce precisa:
 
 ### Passo a passo (exemplo)
 
-1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.1-beta.1`, `4.2.1-rc.1`).
+1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.2-beta.1`, `4.2.2-rc.1`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
-3. Rode validacoes (`npm test`, `npm run lint`).
+3. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
 4. Commit e crie a tag semver correspondente no commit final.
 5. Push da tag: `git push origin <tag>`.
-6. O workflow `.github/workflows/release.yml` publica os artefatos no GitHub Release.
+6. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
 
 ## Garantia de builds no deploy
 
@@ -65,12 +65,16 @@ Este projeto inclui `keytar` (modulo nativo) para armazenar segredos no sistema.
 
 antes do build para garantir binarios compativeis com a versao do Electron.
 
-## Assinatura de codigo (recomendado)
+## Assinatura de codigo e notarizacao
 
-Para evitar alertas e melhorar confianca:
+O workflow aceita assinatura/notarizacao quando os segredos do repositorio estao configurados.
 
-- Windows: Code Signing (certificado)
-- macOS: assinatura + notarizacao
+- Windows: `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` (ou fallback `CSC_LINK` / `CSC_KEY_PASSWORD`)
+- macOS signing: `MAC_CSC_LINK` + `MAC_CSC_KEY_PASSWORD` (ou fallback `CSC_LINK` / `CSC_KEY_PASSWORD`)
+- macOS notarization: `APPLE_API_KEY` + `APPLE_API_KEY_ID` + `APPLE_API_ISSUER` ou `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + `APPLE_TEAM_ID`
+- Se `REQUIRE_SIGNED_RELEASES=true`, o workflow falha quando a configuracao minima nao esta pronta
+
+Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 
 ## Observacoes
 
@@ -80,6 +84,15 @@ Para evitar alertas e melhorar confianca:
 - O workflow de release usa o `GITHUB_TOKEN` do proprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
 - O feed Linux publicado segue o canal da release: `latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`.
+
+## Registro recente (2026-03-21)
+
+- Release formal `4.2.2` focada em confiabilidade operacional da distribuicao.
+- Renderer carregado por `app://`, permitindo desabilitar `GrantFileProtocolExtraPrivileges`.
+- `shell.exec` passou a usar validacao por comando-base e execucao sem shell intermediario.
+- Smoke test do binario empacotado cobre onboarding, owner por token, tool read-only e fluxo de update.
+- Release notes passam a ser renderizadas a partir de `docs/notas-da-versao.json`, com downloads e capturas padronizadas.
+- Workflow de release agora resume readiness de assinatura/notarizacao e aceita gating por `REQUIRE_SIGNED_RELEASES`.
 
 ## Registro recente (2026-03-21)
 
@@ -115,10 +128,9 @@ Para evitar alertas e melhorar confianca:
 
 ## Em preparacao (proxima release)
 
-- Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.
-- Reforcar validacoes de release para confirmar mudancas visuais apos update.
-- Seguir reduzindo divergencia entre documentacao e comportamento real.
-- Manter `stable` e `beta/rc` com cadencia distinta, sem hotfix estavel em cadeia.
+- Validar assinatura real de codigo/notarizacao quando os certificados forem adicionados ao repositorio.
+- Adicionar smoke multi-plataforma para Windows e macOS, alem do Linux empacotado.
+- Continuar reduzindo divergencia entre documentacao e comportamento real.
 
 ## Registro recente (2026-02-11)
 

@@ -81,8 +81,10 @@ Se `allowedDomains` vazio, qualquer dominio pode ser usado (menos bloqueados).
 
 ## Comandos de terminal
 
-- `tools.commandAllowlist`: se preenchido, so executa prefixos permitidos
-- `tools.commandDenylist`: bloqueia termos perigosos
+- `tools.commandAllowlist`: se preenchido, libera apenas o comando-base (`node`, `git`, `ls`)
+- `tools.commandDenylist`: bloqueia por comando-base, nao por substring solta
+- `shell.exec` nao aceita shell composto, redirecionamento, pipes ou `&&`
+- A execucao usa `spawn(..., { shell: false })`, entao a allowlist/denylist vale sobre o executavel real
 
 ## Email (IMAP)
 

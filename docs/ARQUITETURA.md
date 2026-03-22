@@ -5,7 +5,9 @@ Visao tecnica do BotAssist.
 ## Componentes principais
 
 - `src/main.js`: processo principal do Electron
+- `src/main/appProtocol.js`: protocolo seguro `app://botassist/*`
 - `src/preload.js`: bridge segura (`contextBridge`)
+- `src/main/smokeHarness.js`: smoke test interno do app empacotado
 - `src/renderer/*`: UI (HTML/CSS/JS)
 - `src/shared/settingsSchema.js`: schema/defaults compartilhados entre camadas
 - `src/shared/releaseChannel.js`: resolucao de canal de release (`latest`, `beta`, `rc`, etc.)
@@ -23,10 +25,11 @@ Visao tecnica do BotAssist.
 ## Fluxo geral
 
 1. Electron inicia UI.
-2. Usuario configura API Key/modelo, conecta QR e define owner com token (`!owner <token>`).
-3. `main/botManager.js` sobe `bot.js` via `utilityProcess.fork()`.
-4. Mensagens entram no pipeline de politicas/contexto/tools.
-5. Resposta final volta para renderer via eventos IPC.
+2. O `main` registra `app://botassist/*` e carrega o renderer por protocolo dedicado.
+3. Usuario configura API Key/modelo, conecta QR e define owner com token (`!owner <token>`).
+4. `main/botManager.js` sobe `bot.js` via `utilityProcess.fork()`.
+5. Mensagens entram no pipeline de politicas/contexto/tools.
+6. Resposta final volta para renderer via eventos IPC.
 
 ## Camadas de inteligencia
 
@@ -63,6 +66,7 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 - As politicas de acesso e contexto nao ficam misturadas com os handlers.
 - O orquestrador decide `auto` vs `manual` sem duplicar metadados em varios mapas/sets paralelos.
 - Handlers de dominio nao sabem nada sobre provider, aprovacao ou IPC; eles so executam a operacao.
+- `shell.exec` e validado por comando-base e executado com `spawn(..., { shell: false })`, bloqueando sintaxe composta do shell.
 
 ## Contratos compartilhados
 
@@ -76,6 +80,7 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 - `src/renderer/profile-settings.js` concentra perfis, roteamento e serializacao do formulario.
 - `src/renderer/setup-wizard.js` concentra onboarding, owner token e fluxo guiado inicial.
 - `src/renderer/shell-ui.js` concentra tema, update UI, hints de provider e chrome da janela.
+- O renderer sinaliza prontidao (`document.documentElement.dataset.appReady = "1"`) para o smoke test empacotado.
 
 ## Busca web
 
@@ -108,6 +113,7 @@ Eventos principais:
 
 - API Key com `keytar` (quando disponivel)
 - Binario empacotado com Electron fuses para `RunAsNode=false`, ASAR integrity e bloqueio de `NODE_OPTIONS` / `--inspect`
+- `GrantFileProtocolExtraPrivileges` fica desligado porque o app usa `app://` em vez de `file://`
 - Navegacao externa bloqueada por padrao no `BrowserWindow`, com abertura explicita apenas para `http(s)` no navegador do sistema
 - Paths com validacao por caminho real (symlink-safe)
 - Escrita/remocao/comandos exigem aprovacao do owner

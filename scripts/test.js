@@ -124,6 +124,46 @@ function loadBotManagerModule(mockFork) {
   }
 }
 
+function loadShellExecutorModule() {
+  const modulePath = path.join(
+    process.cwd(),
+    'src',
+    'core',
+    'tooling',
+    'executors',
+    'shell.js'
+  );
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function loadAppProtocolModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'main', 'appProtocol.js');
+  delete require.cache[require.resolve(modulePath)];
+
+  const originalLoad = Module._load;
+  Module._load = function patchedLoad(request, parent, isMain) {
+    if (request === 'electron') {
+      return {
+        protocol: {
+          registerSchemesAsPrivileged: () => {},
+          handle: () => {},
+        },
+        net: {
+          fetch: (url) => url,
+        },
+      };
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    return require(modulePath);
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
 }
@@ -531,6 +571,69 @@ test('tool loop auto-executes allowed read-only tools and resumes provider reply
     assert.strictEqual(result.answer, 'Ferramenta executada com sucesso.');
     assert.strictEqual(calls, 2);
   });
+});
+
+test('shell executor enforces allowlist by command base', async () => {
+  const { toolShellExec } = loadShellExecutorModule();
+  const result = await toolShellExec(
+    {
+      command: 'node -e "process.stdout.write(\'ok\')"',
+      timeoutMs: 5000,
+    },
+    {
+      baseDir: process.cwd(),
+      allowedReadPaths: [process.cwd()],
+      tools: {
+        commandAllowlist: ['node'],
+        commandDenylist: [],
+      },
+    }
+  );
+
+  assert.strictEqual(result.commandBase, 'node');
+  assert.strictEqual(result.stdout, 'ok');
+  assert.strictEqual(result.error, undefined);
+});
+
+test('shell executor rejects compound shell syntax', async () => {
+  const { toolShellExec } = loadShellExecutorModule();
+  await assert.rejects(
+    () =>
+      toolShellExec(
+        { command: 'node -e "process.stdout.write(\'ok\')" && echo fail' },
+        {
+          baseDir: process.cwd(),
+          allowedReadPaths: [process.cwd()],
+          tools: { commandAllowlist: ['node'], commandDenylist: [] },
+        }
+      ),
+    /Comandos compostos/
+  );
+});
+
+test('shell executor denylist uses command base', async () => {
+  const { toolShellExec } = loadShellExecutorModule();
+  await assert.rejects(
+    () =>
+      toolShellExec(
+        { command: 'node -e "process.stdout.write(\'ok\')"' },
+        {
+          baseDir: process.cwd(),
+          allowedReadPaths: [process.cwd()],
+          tools: { commandAllowlist: [], commandDenylist: ['node'] },
+        }
+      ),
+    /denylist/
+  );
+});
+
+test('app protocol resolves renderer path and blocks traversal', () => {
+  const { buildAppUrl, normalizeAppPath, resolveAppFilePath } = loadAppProtocolModule();
+  const appUrl = buildAppUrl('/src/renderer/index.html');
+
+  assert.strictEqual(normalizeAppPath('/src/renderer/index.html'), 'src/renderer/index.html');
+  assert.ok(resolveAppFilePath(appUrl).endsWith(path.join('src', 'renderer', 'index.html')));
+  assert.strictEqual(resolveAppFilePath('app://botassist/../../etc/passwd'), '');
 });
 
 test('botManager starts bot process with expected env and forwards status/log events', async () => {

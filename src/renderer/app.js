@@ -1283,6 +1283,7 @@ async function init() {
   document.getElementById('messagesToday').textContent = '0';
   document.getElementById('aiStatus').textContent = 'Desconectada';
   await refreshMaintenanceStats();
+  document.documentElement.dataset.appReady = '1';
 }
 
 // Initialize when DOM is loaded

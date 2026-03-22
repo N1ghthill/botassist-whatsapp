@@ -27,13 +27,14 @@ O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara
 - Roteamento de perfis por usuario e por grupo
 - Ferramentas opt-in para web, arquivos, shell e email
 - Politicas de acesso para grupos, allowlists, cooldown e tamanho maximo de resposta
+- `shell.exec` com allowlist/denylist por comando-base e execucao sem shell intermediario
 - Persistencia de configuracao com `keytar` quando disponivel
 - Auto-update via GitHub Releases para `stable`, `beta` e `rc`
 
 ## Estado atual
 
-- Canal preparado no repo: `4.2.1`
-- Release estavel ativa: `v4.2.1`
+- Canal preparado no repo: `4.2.2`
+- Release estavel ativa: `v4.2.2`
 - Canal beta continua reservado para validar refatoracoes maiores antes da proxima stable
 
 ## Comece em 5 minutos
@@ -87,6 +88,7 @@ Por padrao, operacoes mutaveis e `shell.exec` ficam no fluxo de aprovacao por ow
 - Acoes de tools geram auditoria local em `userData/logs/tools_audit.log`
 - `keytar` e usado para segredos quando o ambiente permite
 - O binario empacotado usa fuses do Electron para desativar `RunAsNode`, bloquear `NODE_OPTIONS`/`--inspect` e exigir carga por `app.asar` com validacao de integridade
+- O renderer empacotado carrega por `app://botassist/*`, sem depender de `file://`
 - Links externos abrem no navegador padrao e navegacoes inesperadas sao bloqueadas no `BrowserWindow`
 
 ## Requisitos
@@ -122,6 +124,7 @@ Validacoes locais:
 ```bash
 npm test
 npm run lint
+npm run release:notes -- --tag v4.2.2 --title-only
 ```
 
 Builds:
@@ -132,6 +135,8 @@ npm run build:mac
 npm run build:linux
 npm run build:linux:appimage
 npm run build:linux:rpm
+npm run build:linux:dir
+npm run smoke:packaged
 ```
 
 ## Releases
@@ -144,6 +149,14 @@ O projeto agora separa canais:
 
 O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md) e a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md).
 
+## Capturas
+
+![Dashboard](docs/assets/quickstart-dashboard.png)
+
+![Configuracao de tools](docs/assets/tools-configs.png)
+
+![Logs e aprovacao](docs/assets/tools-logs.png)
+
 ## Documentacao
 
 Comece por:
@@ -152,6 +165,7 @@ Comece por:
 - [docs/GUIA-RAPIDO.md](docs/GUIA-RAPIDO.md)
 - [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md)
 - [docs/ARQUITETURA.md](docs/ARQUITETURA.md)
+- [docs/ASSINATURA-E-NOTARIZACAO.md](docs/ASSINATURA-E-NOTARIZACAO.md)
 - [docs/NOTAS-DA-VERSAO.md](docs/NOTAS-DA-VERSAO.md)
 
 ## Troubleshooting rapido

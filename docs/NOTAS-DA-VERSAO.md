@@ -3,6 +3,41 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.2 - 2026-03-21
+
+### Resumo
+
+Patch estavel focado em confiabilidade operacional da distribuicao: renderer carregado por `app://`, `shell.exec` sem shell intermediario, smoke test do binario empacotado e release notes padronizadas direto do changelog estruturado.
+
+### Highlights
+
+- Renderer migrado para `app://botassist/*`, permitindo desligar `GrantFileProtocolExtraPrivileges`.
+- `shell.exec` agora valida por comando-base e executa com `spawn(..., { shell: false })`.
+- Smoke test do app empacotado cobre onboarding, owner por token, tool read-only e fluxo de update.
+- GitHub Release passa a sair com texto padronizado, downloads e capturas gerados a partir de `docs/notas-da-versao.json`.
+- Workflow registra readiness de assinatura/notarizacao e pode exigir release assinada via `REQUIRE_SIGNED_RELEASES=true`.
+
+### Tecnico
+
+- `src/main/appProtocol.js` registra e resolve `app://botassist/*` para o renderer e assets locais.
+- `src/main/smokeHarness.js` e `scripts/smoke-packaged.js` validam o binario empacotado sem depender de update real.
+- `src/main/updates.js` ganhou caminho sintetico de update para smoke tests.
+- `scripts/render-release-notes.js` passou a renderizar o corpo padronizado do GitHub Release com base no changelog estruturado.
+- `.github/workflows/release.yml` publica release notes consistentes e resume readiness de signing/notarization.
+
+### Correcoes
+
+- Eliminada a dependencia de `file://` no renderer empacotado.
+- Bloqueada sintaxe composta de shell, redirecionamento e pipes em `shell.exec`.
+- Corrigido falso-positivo de smoke por corrida entre `did-finish-load` e `init` assincrono do renderer.
+- Reduzido drift entre `docs/NOTAS-DA-VERSAO.md`, `docs/notas-da-versao.json` e o corpo do GitHub Release.
+
+### Upgrade notes
+
+- Sem migracao obrigatoria de configuracao.
+- Se voce usava `commandAllowlist`/`commandDenylist` com strings longas, normalize para o comando-base (ex.: `node`, `git`, `ls`).
+- Assinatura/notarizacao continuam opcionais ate os certificados serem configurados no repositorio.
+
 ## 4.2.1 - 2026-03-21
 
 ### Resumo
@@ -254,9 +289,9 @@ Versao focada em estabilidade de configuracao, operacao com perfis e seguranca n
 
 ### Foco
 
-- Iniciar a linha `4.2.1` a partir da base estavel atual.
-- Expandir smoke tests E2E para onboarding + fluxo de update no app instalado.
-- Endurecer `shell.exec` com politica ainda mais restritiva.
+- Configurar certificados reais e validar uma release assinada/notarizada de ponta a ponta.
+- Expandir smoke tests empacotados para Windows e macOS, alem do Linux.
+- Seguir reduzindo divergencia entre documentacao publica e comportamento real do app.
 
 ## Como publicar no site
 

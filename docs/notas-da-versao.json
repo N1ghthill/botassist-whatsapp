@@ -1,7 +1,61 @@
 {
-  "latestVersion": "4.2.1",
+  "latestVersion": "4.2.2",
   "updatedAt": "2026-03-21",
   "releases": [
+    {
+      "version": "4.2.2",
+      "date": "2026-03-21",
+      "title": "Confiabilidade operacional da release e do renderer",
+      "summary": "Patch estavel focado em endurecer a superficie publica da distribuicao: renderer carregado por app://, shell.exec sem shell intermediario, smoke test do binario empacotado e release notes padronizadas direto do changelog estruturado.",
+      "highlights": [
+        "Renderer migrado para app://botassist/*, permitindo desligar GrantFileProtocolExtraPrivileges.",
+        "shell.exec agora valida por comando-base e executa com spawn(..., { shell: false }).",
+        "Smoke test do app empacotado cobre onboarding, owner por token, tool read-only e fluxo de update.",
+        "GitHub Release passa a sair com texto padronizado, downloads e capturas gerados a partir de docs/notas-da-versao.json.",
+        "Workflow registra readiness de assinatura/notarizacao e pode exigir release assinada via REQUIRE_SIGNED_RELEASES=true."
+      ],
+      "screenshots": [
+        {
+          "alt": "Dashboard do BotAssist",
+          "path": "docs/assets/quickstart-dashboard.png",
+          "caption": "Dashboard com status do bot, QR Code e visao geral de operacao."
+        },
+        {
+          "alt": "Configuracao de tools",
+          "path": "docs/assets/tools-configs.png",
+          "caption": "Configuracao de paths, dominios, approvals e comandos de terminal."
+        },
+        {
+          "alt": "Logs e aprovacao de tools",
+          "path": "docs/assets/tools-logs.png",
+          "caption": "Logs operacionais e trilha de aprovacao para actions sensiveis."
+        }
+      ],
+      "technical": [
+        "src/main/appProtocol.js registra e resolve app://botassist/* para o renderer e assets locais.",
+        "src/main/smokeHarness.js e scripts/smoke-packaged.js validam o binario empacotado sem depender de update real.",
+        "src/main/updates.js ganhou caminho sintético de update para smoke tests.",
+        "scripts/render-release-notes.js passou a renderizar o corpo padronizado do GitHub Release com base no changelog estruturado.",
+        ".github/workflows/release.yml passou a publicar release notes consistentes e a resumir readiness de signing/notarization."
+      ],
+      "fixes": [
+        "Eliminada a dependencia de file:// no renderer empacotado.",
+        "Bloqueada sintaxe composta de shell, redirecionamento e pipes em shell.exec.",
+        "Corrigido falso-positivo de smoke por corrida entre did-finish-load e init assíncrono do renderer.",
+        "Reduzido drift entre docs/NOTAS-DA-VERSAO.md, docs/notas-da-versao.json e corpo do GitHub Release."
+      ],
+      "verification": [
+        "npm test",
+        "npm run lint",
+        "npm run build:linux:dir",
+        "npm run smoke:packaged"
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria de configuracao.",
+        "Se voce usava commandAllowlist/commandDenylist com strings longas, normalize para o comando-base (ex.: node, git, ls).",
+        "Assinatura/notarizacao continuam opcionais ate os certificados serem configurados no repositorio."
+      ]
+    },
     {
       "version": "4.2.1",
       "date": "2026-03-21",
@@ -220,9 +274,9 @@
   "roadmap": {
     "next": {
       "focus": [
-        "Iniciar a linha 4.2.1 a partir da base estavel atual.",
-        "Expandir smoke tests E2E para onboarding e fluxo de update no app instalado.",
-        "Endurecer shell.exec com politica ainda mais restritiva."
+        "Configurar certificados reais e validar uma release assinada/notarizada de ponta a ponta.",
+        "Expandir smoke tests empacotados para Windows e macOS, alem do Linux.",
+        "Seguir reduzindo divergencia entre documentacao publica e comportamento real do app."
       ]
     }
   }

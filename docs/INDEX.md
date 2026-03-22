@@ -4,7 +4,7 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 
 Estado atual do repositorio:
 
-- linha de release preparada: `4.2.1`
+- linha de release preparada: `4.2.2`
 - canal estavel continua separado de `beta` e `rc`
 - `README.md` e o ponto de entrada recomendado para quem chega no projeto
 
@@ -23,6 +23,7 @@ Estado atual do repositorio:
 - `docs/ORGANIZACAO-REPO.md` — Mapa de pastas e responsabilidades
 - `docs/FAQ.md` — Perguntas frequentes
 - `docs/ATUALIZACOES.md` — Processo de release e atualizacoes
+- `docs/ASSINATURA-E-NOTARIZACAO.md` — Contrato de signing/notarizacao para CI e releases
 - `docs/NOTAS-DA-VERSAO.md` — Changelog editorial pronto para site/blog
 - `docs/notas-da-versao.json` — Fonte estruturada para app/site
 - `docs/ARQUITETURA.md` — Visao tecnica do app (Electron + bot)
