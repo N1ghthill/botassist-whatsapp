@@ -33,9 +33,9 @@ O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara
 
 ## Estado atual
 
-- Canal preparado no repo: `4.2.2`
-- Release estavel ativa: `v4.2.2`
-- Canal beta continua reservado para validar refatoracoes maiores antes da proxima stable
+- Linha publicada no repo: `4.2.3`
+- Release estavel ativa: `v4.2.3`
+- Validacao de release fechada com `lint`, `test`, build Linux, smoke empacotado e `release:verify`
 
 ## Comece em 5 minutos
 
@@ -124,7 +124,8 @@ Validacoes locais:
 ```bash
 npm test
 npm run lint
-npm run release:notes -- --tag v4.2.2 --title-only
+npm run release:notes -- --tag vX.Y.Z --title-only
+npm run release:verify -- --tag vX.Y.Z
 ```
 
 Builds:
@@ -147,7 +148,7 @@ O projeto agora separa canais:
 - `vX.Y.Z-beta.N`: beta
 - `vX.Y.Z-rc.N`: release candidate
 
-O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md) e a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md).
+O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md), a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md) e a verificacao pos-publicacao usa `npm run release:verify`.
 
 ## Capturas
 

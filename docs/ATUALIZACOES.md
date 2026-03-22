@@ -37,7 +37,7 @@ Voce precisa:
 
 ### Passo a passo (exemplo)
 
-1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.2-beta.1`, `4.2.2-rc.1`).
+1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.3`, `4.2.3-beta.1`, `4.2.3-rc.1`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
@@ -85,6 +85,14 @@ Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 - O workflow de release usa o `GITHUB_TOKEN` do proprio GitHub Actions para publicar releases.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
 - O feed Linux publicado segue o canal da release: `latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`.
+
+## Registro recente (2026-03-22)
+
+- Release formal `4.2.3` com modularizacao incremental do runtime e hardening do subsistema de tools.
+- `bot.js` perdeu concentracao de responsabilidade com extracao de comandos e approval flow.
+- Contratos de IPC/eventos foram centralizados em modulo compartilhado.
+- Normalizacao de settings passou a ficar mais consistente entre `main`, `core` e `renderer`.
+- Publicacao agora pode ser fechada com `npm run release:verify`, que confere feeds e assets reais da release publicada.
 
 ## Registro recente (2026-03-21)
 
