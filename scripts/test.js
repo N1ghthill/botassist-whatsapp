@@ -137,6 +137,18 @@ function loadShellExecutorModule() {
   return require(modulePath);
 }
 
+function loadFsExecutorModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'executors', 'fs.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function loadToolsDiagnosticsModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'main', 'toolsDiagnostics.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadAppProtocolModule() {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'appProtocol.js');
   delete require.cache[require.resolve(modulePath)];
@@ -570,6 +582,114 @@ test('tool loop auto-executes allowed read-only tools and resumes provider reply
 
     assert.strictEqual(result.answer, 'Ferramenta executada com sucesso.');
     assert.strictEqual(calls, 2);
+  });
+});
+
+test('fs read blocks symlink escape from allowed path', async () => {
+  await withTempDir(async (dir) => {
+    const { toolFsRead } = loadFsExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideFile = path.join(dir, 'segredo.txt');
+    const linkPath = path.join(allowedDir, 'atalho.txt');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.writeFileSync(outsideFile, 'segredo', 'utf8');
+    fs.symlinkSync(outsideFile, linkPath);
+
+    await assert.rejects(
+      () =>
+        toolFsRead(
+          { path: linkPath },
+          {
+            baseDir: process.cwd(),
+            allowedReadPaths: [allowedDir],
+            blockedExtensions: [],
+            maxFileSizeMb: 10,
+            tools: { maxOutputChars: 1000 },
+          }
+        ),
+      /Caminho nao permitido/
+    );
+  });
+});
+
+test('fs write blocks destination through symlinked parent', async () => {
+  await withTempDir(async (dir) => {
+    const { toolFsWrite } = loadFsExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+    const targetFile = path.join(linkDir, 'novo.txt');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    await assert.rejects(
+      () =>
+        toolFsWrite(
+          { path: targetFile, content: 'teste' },
+          {
+            baseDir: process.cwd(),
+            allowedWritePaths: [allowedDir],
+          }
+        ),
+      /Caminho nao permitido/
+    );
+
+    assert.strictEqual(fs.existsSync(path.join(outsideDir, 'novo.txt')), false);
+  });
+});
+
+test('shell executor blocks cwd through symlink escape', async () => {
+  await withTempDir(async (dir) => {
+    const { toolShellExec } = loadShellExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    await assert.rejects(
+      () =>
+        toolShellExec(
+          {
+            command: 'node -e "process.stdout.write(\'ok\')"',
+            cwd: linkDir,
+          },
+          {
+            baseDir: process.cwd(),
+            allowedReadPaths: [allowedDir],
+            tools: { commandAllowlist: ['node'], commandDenylist: [] },
+          }
+        ),
+      /Diretorio de trabalho nao permitido/
+    );
+  });
+});
+
+test('tools diagnostics keeps allowlist checks aligned with tooling helpers', () => {
+  withTempDir((dir) => {
+    const { runToolsDiagnostics } = loadToolsDiagnosticsModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    const result = runToolsDiagnostics({
+      tools: {
+        enabled: true,
+        allowedPaths: [allowedDir],
+      },
+    });
+
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.path, allowedDir);
   });
 });
 
