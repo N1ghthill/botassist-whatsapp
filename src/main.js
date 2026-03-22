@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const { createMenu, createTray, updateTrayStatus } = require('./main/ui');
 const updates = require('./main/updates');
@@ -17,6 +18,24 @@ let isQuitting = false;
 const getMainWindow = () => mainWindow;
 const sendToRenderer = (channel, payload) => mainWindow?.webContents.send(channel, payload);
 const getIsBotRunning = () => (bot ? bot.getIsBotRunning() : false);
+
+function isSafeExternalUrl(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function openExternalSafely(targetUrl) {
+  if (!isSafeExternalUrl(targetUrl)) return;
+  setImmediate(() => {
+    shell.openExternal(targetUrl).catch((err) => {
+      console.error('Falha ao abrir link externo:', err);
+    });
+  });
+}
 
 function applyLaunchOnStartup(value) {
   try {
@@ -65,6 +84,8 @@ function openPrivacy() {
 function createWindow() {
   const iconPath = [getAssetPath('icon-window.png'), getAssetPath('icon.png')].find(fileExists);
   const preloadPath = path.join(__dirname, 'preload.js');
+  const indexPath = path.join(__dirname, 'renderer/index.html');
+  const indexUrl = pathToFileURL(indexPath);
   const enableSandbox = process.env.ELECTRON_SANDBOX === '1';
   const isMac = process.platform === 'darwin';
   console.log('[main] preload:', preloadPath, 'exists=', fileExists(preloadPath));
@@ -84,7 +105,28 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+  mainWindow.loadFile(indexPath);
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalSafely(url);
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    try {
+      const parsedUrl = new URL(navigationUrl);
+      if (
+        parsedUrl.protocol === 'file:' &&
+        decodeURIComponent(parsedUrl.pathname) === decodeURIComponent(indexUrl.pathname)
+      ) {
+        return;
+      }
+    } catch {
+      // fall through to deny
+    }
+
+    event.preventDefault();
+    openExternalSafely(navigationUrl);
+  });
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools();

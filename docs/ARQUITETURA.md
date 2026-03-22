@@ -9,7 +9,7 @@ Visao tecnica do BotAssist.
 - `src/renderer/*`: UI (HTML/CSS/JS)
 - `src/shared/settingsSchema.js`: schema/defaults compartilhados entre camadas
 - `src/shared/releaseChannel.js`: resolucao de canal de release (`latest`, `beta`, `rc`, etc.)
-- `src/core/bot.js`: entry point do processo Node do bot
+- `src/core/bot.js`: entry point do `utilityProcess` do bot
 - `src/core/provider.js`: adaptador do provedor de IA
 - `src/core/tools.js`: facade publica do subsistema de tools
 - `src/core/tooling/registry.js`: catalogo unico de tools (schema, nome interno, risco e handler)
@@ -24,7 +24,7 @@ Visao tecnica do BotAssist.
 
 1. Electron inicia UI.
 2. Usuario configura API Key/modelo, conecta QR e define owner com token (`!owner <token>`).
-3. `bot.js` conecta ao WhatsApp via Baileys.
+3. `main/botManager.js` sobe `bot.js` via `utilityProcess.fork()`.
 4. Mensagens entram no pipeline de politicas/contexto/tools.
 5. Resposta final volta para renderer via eventos IPC.
 
@@ -87,6 +87,7 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 
 O bot envia eventos para o app via:
 
+- `process.parentPort.postMessage` no `utilityProcess`
 - `process.send` (IPC Node)
 - fallback em stdout: `BOTASSIST:{...}`
 
@@ -106,6 +107,8 @@ Eventos principais:
 ## Seguranca
 
 - API Key com `keytar` (quando disponivel)
+- Binario empacotado com Electron fuses para `RunAsNode=false`, ASAR integrity e bloqueio de `NODE_OPTIONS` / `--inspect`
+- Navegacao externa bloqueada por padrao no `BrowserWindow`, com abertura explicita apenas para `http(s)` no navegador do sistema
 - Paths com validacao por caminho real (symlink-safe)
 - Escrita/remocao/comandos exigem aprovacao do owner
 - Em grupos: mencao obrigatoria + politica configurada

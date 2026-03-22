@@ -50,7 +50,7 @@ Criar chave: `https://groq.com/`
 ## Fluxo operacional
 
 1. O app Electron sobe a interface e gerencia `settings`, updates e ciclo do bot.
-2. O bot roda em processo separado com Baileys + provider de IA.
+2. O bot roda em `utilityProcess` separado com Baileys + provider de IA.
 3. O renderer conversa com o processo principal via `preload` seguro.
 4. Quando tools estao habilitadas, o provider pode pedir execucao de acoes dentro das politicas configuradas.
 5. A UI recebe logs, status, QR Code, updates e sincronizacao de configuracao em tempo real.
@@ -86,10 +86,15 @@ Por padrao, operacoes mutaveis e `shell.exec` ficam no fluxo de aprovacao por ow
 - Tools usam validacao de path, dominio, extensao e limites de tamanho
 - Acoes de tools geram auditoria local em `userData/logs/tools_audit.log`
 - `keytar` e usado para segredos quando o ambiente permite
+- O binario empacotado usa fuses do Electron para desativar `RunAsNode`, bloquear `NODE_OPTIONS`/`--inspect` e exigir carga por `app.asar` com validacao de integridade
+- Links externos abrem no navegador padrao e navegacoes inesperadas sao bloqueadas no `BrowserWindow`
 
 ## Requisitos
 
-- Node.js LTS
+- Windows 10 ou superior
+- macOS 12 (Monterey) ou superior
+- Linux x64 moderno
+- Node.js 22 LTS recomendado para desenvolvimento local
 - npm
 
 Em alguns ambientes pode ser necessario rebuildar modulos nativos para o Electron:

@@ -9,6 +9,8 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Em grupos, resposta apenas com mencao
 - Politica de grupos recomendada: allowlist
 - Owner definido por token/comando no WhatsApp (`!owner <token>`)
+- Build empacotado com Electron fuses para endurecer o runtime (`RunAsNode=false`, ASAR integrity, `NODE_OPTIONS` e `--inspect` desativados)
+- Navegacao inesperada e novas janelas bloqueadas no `BrowserWindow`; links externos abrem no navegador do sistema
 
 ## Recomendacoes de uso
 
@@ -43,3 +45,8 @@ Boas praticas:
 - Configuracoes e sessoes ficam no `userData` do Electron
 - API key usa `keytar` quando disponivel
 - Recomendado backup periodico via aba Manutencao
+
+## Runtime do bot
+
+- O bot roda em `utilityProcess`, nao mais em `child_process.fork()` dependente de `ELECTRON_RUN_AS_NODE`
+- Isso permite manter o fuse `RunAsNode` desligado no binario empacotado

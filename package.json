@@ -36,7 +36,7 @@
   "devDependencies": {
     "@electron/asar": "^4.1.0",
     "@eslint/js": "^9.39.4",
-    "electron": "^28.3.3",
+    "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.0",
@@ -61,6 +61,7 @@
     "appId": "br.dev.ruas.botassist",
     "productName": "BotAssist WhatsApp",
     "icon": "assets/icon.png",
+    "asar": true,
     "directories": {
       "output": "dist"
     },
@@ -88,6 +89,14 @@
         "releaseType": "release"
       }
     ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "win": {
       "icon": "assets/icon.png",
       "target": [

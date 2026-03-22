@@ -111,8 +111,8 @@ function loadBotManagerModule(mockFork) {
 
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
-    if (request === 'child_process') {
-      return { fork: mockFork };
+    if (request === 'electron') {
+      return { utilityProcess: { fork: mockFork } };
     }
     return originalLoad.call(this, request, parent, isMain);
   };
@@ -539,14 +539,15 @@ test('botManager starts bot process with expected env and forwards status/log ev
       super();
       this.stdout = new EventEmitter();
       this.stderr = new EventEmitter();
-      this.exitCode = null;
+      this.pid = 12345;
       this.kills = [];
     }
 
     kill(signal) {
       this.kills.push(signal);
-      this.exitCode = 0;
+      this.__botassistExitCode = 0;
       setImmediate(() => this.emit('exit', 0, signal));
+      return true;
     }
   }
 
@@ -571,9 +572,11 @@ test('botManager starts bot process with expected env and forwards status/log ev
   await manager.startBot();
 
   assert.ok(forkOptions);
+  assert.strictEqual(forkOptions.options.serviceName, 'BotAssist WhatsApp Bot');
   assert.strictEqual(forkOptions.options.env.BOTASSIST_CONFIG_PATH, '/tmp/botassist-settings.json');
   assert.strictEqual(forkOptions.options.env.BOTASSIST_DATA_DIR, '/tmp/botassist-userdata');
   assert.strictEqual(forkOptions.options.env.GROQ_API_KEY, 'secret-key');
+  assert.strictEqual(forkOptions.options.env.ELECTRON_RUN_AS_NODE, undefined);
 
   fakeProc.emit('message', { event: 'status', status: 'online' });
   fakeProc.stdout.emit(
@@ -604,7 +607,7 @@ test('botManager starts bot process with expected env and forwards status/log ev
 
   manager.stopBot();
   await flushMicrotasks();
-  assert.ok(fakeProc.kills.includes('SIGTERM'));
+  assert.ok(fakeProc.kills.includes(undefined));
 });
 
 async function run() {

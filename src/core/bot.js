@@ -83,6 +83,14 @@ const PERSONAS = {
 
 function emit(event, payload = {}) {
   const message = { event, ...payload };
+  if (process.parentPort && typeof process.parentPort.postMessage === 'function') {
+    try {
+      process.parentPort.postMessage(message);
+      return;
+    } catch {
+      // fall through to other transports
+    }
+  }
   if (typeof process.send === 'function') {
     try {
       process.send(message);

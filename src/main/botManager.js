@@ -1,5 +1,49 @@
-const { fork } = require('child_process');
+const { utilityProcess } = require('electron');
 const path = require('path');
+
+function forkBotProcess(modulePath, env) {
+  if (utilityProcess && typeof utilityProcess.fork === 'function') {
+    return utilityProcess.fork(modulePath, [], {
+      env,
+      stdio: 'pipe',
+      serviceName: 'BotAssist WhatsApp Bot',
+    });
+  }
+
+  const { fork } = require('child_process');
+  return fork(modulePath, [], {
+    env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+    windowsHide: true,
+  });
+}
+
+function killBotProcess(proc, { force = false } = {}) {
+  if (!proc) return false;
+
+  if (force && Number.isInteger(proc.pid)) {
+    try {
+      process.kill(proc.pid, 'SIGKILL');
+      return true;
+    } catch {
+      // fall through to process-specific kill
+    }
+  }
+
+  if (typeof proc.kill !== 'function') return false;
+
+  try {
+    return force ? proc.kill('SIGKILL') : proc.kill();
+  } catch {
+    return false;
+  }
+}
+
+function getProcessExitCode(proc) {
+  if (!proc) return null;
+  if (proc.exitCode != null) return proc.exitCode;
+  return proc.__botassistExitCode ?? null;
+}
 
 function createBotManager({
   sendToRenderer,
@@ -133,8 +177,9 @@ function createBotManager({
 
   function waitForProcessExit(proc, timeoutMs = 5000) {
     if (!proc) return Promise.resolve({ ok: true, alreadyExited: true });
-    if (proc.exitCode != null) {
-      return Promise.resolve({ ok: true, alreadyExited: true, code: proc.exitCode });
+    const exitCode = getProcessExitCode(proc);
+    if (exitCode != null) {
+      return Promise.resolve({ ok: true, alreadyExited: true, code: exitCode });
     }
 
     return new Promise((resolve) => {
@@ -173,18 +218,13 @@ function createBotManager({
       const provider = 'groq';
       const env = {
         ...process.env,
-        ELECTRON_RUN_AS_NODE: '1',
         BOTASSIST_CONFIG_PATH: getSettingsPath(),
         BOTASSIST_DATA_DIR: getUserDataDir(),
         BOTASSIST_PROVIDER: provider,
       };
       if (groqApiKey) env.GROQ_API_KEY = groqApiKey;
 
-      botProcess = fork(botPath, [], {
-        env,
-        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-        windowsHide: true,
-      });
+      botProcess = forkBotProcess(botPath, env);
 
       botProcess.on('message', (payload) => {
         try {
@@ -231,6 +271,7 @@ function createBotManager({
       });
 
       botProcess.on('exit', (code, signal) => {
+        botProcess.__botassistExitCode = code;
         console.log(`Bot process exited (code=${code}, signal=${signal || 'n/a'})`);
         if (killTimer) {
           clearTimeout(killTimer);
@@ -286,7 +327,7 @@ function createBotManager({
     setBotStatus('stopping');
 
     try {
-      botProcess.kill('SIGTERM');
+      killBotProcess(botProcess);
     } catch {
       // ignore kill errors; exit handler will clean up
     }
@@ -294,9 +335,9 @@ function createBotManager({
     const proc = botProcess;
     if (killTimer) clearTimeout(killTimer);
     killTimer = setTimeout(() => {
-      if (proc && proc.exitCode == null) {
+      if (proc && getProcessExitCode(proc) == null) {
         try {
-          proc.kill('SIGKILL');
+          killBotProcess(proc, { force: true });
         } catch {
           // ignore
         }
