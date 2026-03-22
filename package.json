@@ -76,7 +76,8 @@
       {
         "provider": "github",
         "owner": "N1ghthill",
-        "repo": "botassist-whatsapp"
+        "repo": "botassist-whatsapp",
+        "releaseType": "release"
       }
     ],
     "win": {
