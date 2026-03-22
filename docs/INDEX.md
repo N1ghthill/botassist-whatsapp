@@ -4,8 +4,9 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 
 Estado atual do repositorio:
 
-- linha de release preparada: `4.2.2`
+- release estavel publicada: `v4.2.3`
 - canal estavel continua separado de `beta` e `rc`
+- verificacao pos-release automatizada ja faz parte do fluxo
 - `README.md` e o ponto de entrada recomendado para quem chega no projeto
 
 ## Comece por aqui
