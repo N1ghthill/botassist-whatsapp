@@ -37,7 +37,7 @@ Voce precisa:
 
 ### Passo a passo (exemplo)
 
-1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.0-beta.4`, `4.2.0-rc.1`).
+1. Atualize a versao no `package.json` com o canal correto (ex.: `4.2.0`, `4.2.1-beta.1`, `4.2.1-rc.1`).
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
@@ -83,13 +83,14 @@ Para evitar alertas e melhorar confianca:
 
 ## Registro recente (2026-03-21)
 
-- Linha de release preparada em `4.2.0-beta.4`.
+- Linha de release preparada em `4.2.0`.
 - Renderer reorganizado em modulos menores sem mudar a stack de build.
 - Subsistema de tools refeito com registry unico, politicas isoladas e executores por dominio.
 - Processo de release agora separa `stable`, `beta` e `rc` de forma coerente com o updater.
 - Pipeline de prerelease deixa de gerar falha no RPM para tags `beta/rc`.
 - Feed Linux do canal agora e derivado corretamente do `latest-linux.yml` durante a publicacao.
 - Upload do electron-builder agora usa o mesmo tipo de release (`pre-release` ou `release`) que o workflow preparou.
+- Promocao para stable concluida na linha `4.2.0`.
 
 ## Registro recente (2026-02-11)
 

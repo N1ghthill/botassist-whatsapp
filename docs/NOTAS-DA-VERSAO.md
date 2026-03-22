@@ -3,6 +3,37 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.0 - 2026-03-21
+
+### Resumo
+
+Promocao da linha `4.2.0` para stable apos a validacao da beta. Esta release consolida a reorganizacao do renderer, o redesenho do subsistema de tools e o fluxo de release por canais com publicacao completa dos artefatos.
+
+### Highlights
+
+- Renderer modularizado mantido como base estavel do app.
+- Subsistema de tools com catalogo unico, politicas isoladas e executores por dominio.
+- Pipeline de release com canais `stable`, `beta` e `rc` formalizado.
+- Publicacao estavel validada com assets de Windows, macOS e Linux.
+
+### Tecnico
+
+- `src/shared/releaseChannel.js` segue como contrato unico de canal e metadata de release.
+- `scripts/build-rpm.sh` converte prerelease semver para metadata RPM segura sem quebrar a linha estavel.
+- `scripts/patch-linux-feed-with-rpm.js` mantem o feed Linux consistente com `.rpm`.
+- Workflow `.github/workflows/release.yml` alinha o tipo de release do GitHub e do `electron-builder`.
+
+### Correcoes
+
+- Eliminada a inconsistência entre pre-release existente e `publishingType=draft` no GitHub provider.
+- Corrigida a geracao do feed Linux por canal quando apenas `latest-linux.yml` existe no `dist`.
+- Validado o empacotamento `.rpm` para a linha nova sem regressao no fluxo estavel.
+
+### Upgrade notes
+
+- Nenhuma migracao obrigatoria para instalacoes estaveis.
+- Instalacoes em canal beta continuam seguindo o canal beta; para voltar ao estavel, use a build `v4.2.0`.
+
 ## 4.2.0-beta.4 - 2026-03-21
 
 ### Resumo
@@ -190,7 +221,7 @@ Versao focada em estabilidade de configuracao, operacao com perfis e seguranca n
 
 ### Foco
 
-- Promover `4.2.0-beta.4` para stable apos smoke test no app instalado.
+- Iniciar a linha `4.2.1` a partir da base estavel atual.
 - Expandir smoke tests E2E para onboarding + fluxo de update no app instalado.
 - Endurecer `shell.exec` com politica ainda mais restritiva.
 
