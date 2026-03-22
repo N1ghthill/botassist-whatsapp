@@ -81,10 +81,11 @@
         createDefaultSettings,
         createProfileId,
         ensureBracketedTag,
-        ensureProfiles,
         normalizeEmailSettings,
+        normalizeHistoryState,
+        normalizeInteractionSettings,
         normalizeProfile,
-        normalizeProfileRouting,
+        normalizeProfileState,
         normalizeToolsSettings,
         resolveDmPolicy,
         resolveGroupPolicy,
@@ -208,10 +209,7 @@
         const next = { ...settings };
         next.dmPolicy = resolveDmPolicy(next);
         next.groupPolicy = resolveGroupPolicy(next);
-        const normalizedProfiles = ensureProfiles(next);
-        next.profiles = normalizedProfiles.profiles;
-        next.activeProfileId = normalizedProfiles.activeProfileId;
-        next.profileRouting = normalizeProfileRouting(next.profileRouting, next.profiles);
+        Object.assign(next, normalizeProfileState(next));
         if (typeof next.historyEnabled !== 'boolean') next.historyEnabled = Boolean(next.historyEnabled);
         if (typeof next.historySummaryEnabled !== 'boolean') {
           next.historySummaryEnabled = next.historySummaryEnabled !== false;
@@ -219,9 +217,8 @@
         if (typeof next.launchOnStartup !== 'boolean') {
           next.launchOnStartup = Boolean(next.launchOnStartup);
         }
-        const historyMax = Number(next.historyMaxMessages);
-        if (!Number.isFinite(historyMax)) next.historyMaxMessages = 12;
-        else next.historyMaxMessages = Math.max(4, Math.min(200, Math.floor(historyMax)));
+        Object.assign(next, normalizeHistoryState(next));
+        Object.assign(next, normalizeInteractionSettings(next));
         next.tools = normalizeToolsSettings(next.tools || {});
         next.email = normalizeEmailSettings(next.email || {});
         return next;

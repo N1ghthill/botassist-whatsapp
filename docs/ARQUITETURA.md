@@ -10,10 +10,13 @@ Visao tecnica do BotAssist.
 - `src/main/smokeHarness.js`: smoke test interno do app empacotado
 - `src/renderer/*`: UI (HTML/CSS/JS)
 - `src/shared/settingsSchema.js`: schema/defaults compartilhados entre camadas
+- `src/shared/ipcContracts.js`: canais IPC, eventos e acoes compartilhadas
 - `src/shared/releaseChannel.js`: resolucao de canal de release (`latest`, `beta`, `rc`, etc.)
 - `src/core/bot.js`: entry point do `utilityProcess` do bot
+- `src/core/messageCommands.js`: handlers de comandos operacionais/admin e checks de acesso
 - `src/core/provider.js`: adaptador do provedor de IA
 - `src/core/tools.js`: facade publica do subsistema de tools
+- `src/core/tooling/approvalFlow.js`: aprovacao manual de tools e retomada do loop
 - `src/core/tooling/registry.js`: catalogo unico de tools (schema, nome interno, risco e handler)
 - `src/core/tooling/policies.js`: acesso, contexto e regras de aprovacao
 - `src/core/tooling/orchestrator.js`: loop de tools e integracao com o provider
@@ -28,7 +31,7 @@ Visao tecnica do BotAssist.
 2. O `main` registra `app://botassist/*` e carrega o renderer por protocolo dedicado.
 3. Usuario configura API Key/modelo, conecta QR e define owner com token (`!owner <token>`).
 4. `main/botManager.js` sobe `bot.js` via `utilityProcess.fork()`.
-5. Mensagens entram no pipeline de politicas/contexto/tools.
+5. Mensagens entram no pipeline de politicas/contexto/tools; `bot.js` delega comandos e aprovacoes para modulos dedicados.
 6. Resposta final volta para renderer via eventos IPC.
 
 ## Camadas de inteligencia
@@ -65,12 +68,14 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 - O contrato de cada tool fica centralizado no registry: nome canonico, nome interno, schema, nivel de aprovacao e resumo para auditoria.
 - As politicas de acesso e contexto nao ficam misturadas com os handlers.
 - O orquestrador decide `auto` vs `manual` sem duplicar metadados em varios mapas/sets paralelos.
+- A aprovacao manual e a retomada do loop ficam isoladas em `src/core/tooling/approvalFlow.js`.
 - Handlers de dominio nao sabem nada sobre provider, aprovacao ou IPC; eles so executam a operacao.
 - `shell.exec` e validado por comando-base e executado com `spawn(..., { shell: false })`, bloqueando sintaxe composta do shell.
 
 ## Contratos compartilhados
 
 - O schema de configuracao fica centralizado em `src/shared/settingsSchema.js`.
+- Canais IPC, eventos do bot e acoes de `settings-update` ficam centralizados em `src/shared/ipcContracts.js`.
 - `main`, `core` e `renderer` usam o mesmo conjunto de defaults e normalizacao para reduzir drift.
 - O canal de release usado pelo updater e pelo workflow fica centralizado em `src/shared/releaseChannel.js`.
 

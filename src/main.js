@@ -15,6 +15,7 @@ const { createUserDataManager } = require('./main/userData');
 const { getAssetPath, fileExists } = require('./main/paths');
 const { createSmokeHarness } = require('./main/smokeHarness');
 const { runToolsDiagnostics } = require('./main/toolsDiagnostics');
+const { IPC_EVENTS, IPC_INVOKE } = require('./shared/ipcContracts');
 
 let mainWindow = null;
 let bot = null;
@@ -80,11 +81,11 @@ const userDataManager = createUserDataManager({
 });
 
 function openSettings() {
-  mainWindow?.webContents.send('open-settings');
+  mainWindow?.webContents.send(IPC_EVENTS.OPEN_SETTINGS);
 }
 
 function openPrivacy() {
-  mainWindow?.webContents.send('open-privacy');
+  mainWindow?.webContents.send(IPC_EVENTS.OPEN_PRIVACY);
 }
 
 function createWindow() {
@@ -157,14 +158,14 @@ function createWindow() {
   });
 
   mainWindow.on('maximize', () => {
-    sendToRenderer('window-state', { maximized: true });
+    sendToRenderer(IPC_EVENTS.WINDOW_STATE, { maximized: true });
   });
 
   mainWindow.on('unmaximize', () => {
-    sendToRenderer('window-state', { maximized: false });
+    sendToRenderer(IPC_EVENTS.WINDOW_STATE, { maximized: false });
   });
 
-  updates.setUpdateEmitter((state) => sendToRenderer('update-event', state));
+  updates.setUpdateEmitter((state) => sendToRenderer(IPC_EVENTS.UPDATE_EVENT, state));
   createMenu({
     restartBot: bot.restartBot,
     stopBot: bot.stopBot,
@@ -175,7 +176,7 @@ function createWindow() {
 }
 
 // IPC Handlers
-ipcMain.handle('start-bot', async (event, config) => {
+ipcMain.handle(IPC_INVOKE.START_BOT, async (event, config) => {
   try {
     const incoming = config && typeof config === 'object' ? { ...config } : null;
     const apiKeyValue = incoming && 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
@@ -190,28 +191,28 @@ ipcMain.handle('start-bot', async (event, config) => {
     return { ok: true };
   } catch (err) {
     console.error('start-bot failed:', err);
-    sendToRenderer('bot-error', err?.message || String(err));
+    sendToRenderer(IPC_EVENTS.BOT_ERROR, err?.message || String(err));
     throw err;
   }
 });
 
-ipcMain.handle('stop-bot', () => {
+ipcMain.handle(IPC_INVOKE.STOP_BOT, () => {
   bot.stopBot();
 });
 
-ipcMain.handle('restart-bot', () => {
+ipcMain.handle(IPC_INVOKE.RESTART_BOT, () => {
   bot.restartBot();
 });
 
-ipcMain.handle('get-bot-status', () => {
+ipcMain.handle(IPC_INVOKE.GET_BOT_STATUS, () => {
   return bot.getBotStatus();
 });
 
-ipcMain.handle('get-settings', () => {
+ipcMain.handle(IPC_INVOKE.GET_SETTINGS, () => {
   return settings.getSettingsForRenderer();
 });
 
-ipcMain.handle('set-settings', async (event, partial) => {
+ipcMain.handle(IPC_INVOKE.SET_SETTINGS, async (event, partial) => {
   const incoming = partial && typeof partial === 'object' ? { ...partial } : {};
   const apiKeyValue = 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
   delete incoming.apiKey;
@@ -224,15 +225,15 @@ ipcMain.handle('set-settings', async (event, partial) => {
   return settings.getSettingsForRenderer();
 });
 
-ipcMain.handle('generate-owner-token', () => {
+ipcMain.handle(IPC_INVOKE.GENERATE_OWNER_TOKEN, () => {
   return settings.generateOwnerClaimToken();
 });
 
-ipcMain.handle('clear-owner-token', () => {
+ipcMain.handle(IPC_INVOKE.CLEAR_OWNER_TOKEN, () => {
   return settings.clearOwnerClaimToken();
 });
 
-ipcMain.handle('export-profiles', async (event, payload) => {
+ipcMain.handle(IPC_INVOKE.EXPORT_PROFILES, async (event, payload) => {
   try {
     const snapshot = settings.getSettingsSnapshot?.() || {};
     const profiles = Array.isArray(payload?.profiles) ? payload.profiles : snapshot.profiles || [];
@@ -257,7 +258,7 @@ ipcMain.handle('export-profiles', async (event, payload) => {
   }
 });
 
-ipcMain.handle('import-profiles', async () => {
+ipcMain.handle(IPC_INVOKE.IMPORT_PROFILES, async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Importar perfis',
@@ -274,40 +275,40 @@ ipcMain.handle('import-profiles', async () => {
   }
 });
 
-ipcMain.handle('get-userdata-stats', async () => {
+ipcMain.handle(IPC_INVOKE.GET_USERDATA_STATS, async () => {
   return userDataManager.getUserDataStats();
 });
 
-ipcMain.handle('backup-userdata', async () => {
+ipcMain.handle(IPC_INVOKE.BACKUP_USERDATA, async () => {
   return userDataManager.backupUserData();
 });
 
-ipcMain.handle('reset-session', async () => {
+ipcMain.handle(IPC_INVOKE.RESET_SESSION, async () => {
   return userDataManager.resetSession();
 });
 
-ipcMain.handle('clear-history', async () => {
+ipcMain.handle(IPC_INVOKE.CLEAR_HISTORY, async () => {
   return userDataManager.clearHistory();
 });
 
-ipcMain.handle('open-userdata-dir', async () => {
+ipcMain.handle(IPC_INVOKE.OPEN_USERDATA_DIR, async () => {
   const opened = await shell.openPath(settings.getUserDataPath());
   return opened ? { ok: false, error: opened } : { ok: true };
 });
 
-ipcMain.handle('get-app-version', () => {
+ipcMain.handle(IPC_INVOKE.GET_APP_VERSION, () => {
   return app.getVersion();
 });
 
-ipcMain.handle('get-update-state', () => {
+ipcMain.handle(IPC_INVOKE.GET_UPDATE_STATE, () => {
   return updates.getUpdateState();
 });
 
-ipcMain.handle('check-for-updates', async () => {
+ipcMain.handle(IPC_INVOKE.CHECK_FOR_UPDATES, async () => {
   return updates.checkForUpdates();
 });
 
-ipcMain.handle('test-tools', async () => {
+ipcMain.handle(IPC_INVOKE.TEST_TOOLS, async () => {
   try {
     return runToolsDiagnostics(settings.getSettingsSnapshot());
   } catch (err) {
@@ -315,15 +316,15 @@ ipcMain.handle('test-tools', async () => {
   }
 });
 
-ipcMain.handle('quit-and-install-update', () => {
+ipcMain.handle(IPC_INVOKE.QUIT_AND_INSTALL_UPDATE, () => {
   updates.quitAndInstallUpdate();
 });
 
-ipcMain.handle('window-minimize', () => {
+ipcMain.handle(IPC_INVOKE.WINDOW_MINIMIZE, () => {
   mainWindow?.minimize();
 });
 
-ipcMain.handle('window-toggle-maximize', () => {
+ipcMain.handle(IPC_INVOKE.WINDOW_TOGGLE_MAXIMIZE, () => {
   if (!mainWindow) return false;
   if (mainWindow.isMaximized()) {
     mainWindow.unmaximize();
@@ -333,24 +334,24 @@ ipcMain.handle('window-toggle-maximize', () => {
   return mainWindow.isMaximized();
 });
 
-ipcMain.handle('window-close', () => {
+ipcMain.handle(IPC_INVOKE.WINDOW_CLOSE, () => {
   mainWindow?.close();
 });
 
-ipcMain.handle('window-is-maximized', () => {
+ipcMain.handle(IPC_INVOKE.WINDOW_IS_MAXIMIZED, () => {
   return mainWindow?.isMaximized() ?? false;
 });
 
-ipcMain.handle('app-quit', () => {
+ipcMain.handle(IPC_INVOKE.APP_QUIT, () => {
   isQuitting = true;
   app.quit();
 });
 
-ipcMain.on('preload-ready', () => {
+ipcMain.on(IPC_EVENTS.PRELOAD_READY, () => {
   console.log('[main] preload-ready');
 });
 
-ipcMain.on('preload-error', (event, message) => {
+ipcMain.on(IPC_EVENTS.PRELOAD_ERROR, (event, message) => {
   console.log('[main] preload-error:', message);
 });
 

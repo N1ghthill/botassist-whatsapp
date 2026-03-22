@@ -87,17 +87,61 @@ function resolveFilePath(input, baseDir) {
   return path.resolve(baseDir || process.cwd(), raw);
 }
 
+function resolveRealPath(filePath) {
+  const realpathSync = typeof fs.realpathSync.native === 'function'
+    ? fs.realpathSync.native
+    : fs.realpathSync;
+  return realpathSync(filePath);
+}
+
+function resolvePathForPolicy(inputPath, { allowMissing = false } = {}) {
+  const raw = String(inputPath || '').trim();
+  if (!raw) return '';
+
+  const absolutePath = path.resolve(raw);
+  if (fs.existsSync(absolutePath)) {
+    try {
+      return resolveRealPath(absolutePath);
+    } catch {
+      return '';
+    }
+  }
+
+  if (!allowMissing) return '';
+
+  const missingSegments = [];
+  let current = absolutePath;
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (!parent || parent === current) return '';
+    missingSegments.unshift(path.basename(current));
+    current = parent;
+  }
+
+  try {
+    return path.join(resolveRealPath(current), ...missingSegments);
+  } catch {
+    return '';
+  }
+}
+
 function isSubPath(parent, target) {
   const relative = path.relative(parent, target);
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-function isPathAllowed(targetPath, allowedPaths) {
+function isPathAllowed(targetPath, allowedPaths, options = {}) {
   if (!Array.isArray(allowedPaths) || allowedPaths.length === 0) return true;
-  const normalizedTarget = path.resolve(targetPath);
+  const normalizedTarget = resolvePathForPolicy(targetPath, {
+    allowMissing: options.allowMissingTarget !== false,
+  });
+  if (!normalizedTarget) return false;
+
   for (const allowed of allowedPaths) {
     if (!allowed) continue;
-    if (isSubPath(allowed, normalizedTarget)) return true;
+    const normalizedAllowed = resolvePathForPolicy(allowed, { allowMissing: true });
+    if (!normalizedAllowed) continue;
+    if (isSubPath(normalizedAllowed, normalizedTarget)) return true;
   }
   return false;
 }
@@ -230,6 +274,7 @@ module.exports = {
   isValidHttpUrl,
   readFileChunk,
   resolveFilePath,
+  resolvePathForPolicy,
   safeJsonParse,
   sanitizeLogValue,
   stripHtml,

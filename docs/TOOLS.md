@@ -30,6 +30,7 @@ Quando uma tool nao esta liberada automaticamente:
 3. O ID vem na propria mensagem de aprovacao enviada pelo bot.
 
 Somente o owner pode aprovar/negar.
+O fluxo de aprovacao e retomada do loop fica isolado em `src/core/tooling/approvalFlow.js`.
 
 ![Logs e aprovacao](assets/tools-logs.png)
 

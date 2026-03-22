@@ -3,6 +3,41 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.3 - 2026-03-22
+
+### Resumo
+
+Patch estavel focado em modularizacao incremental do runtime e endurecimento da execucao de tools, sem reescrever o sistema e sem mudar o comportamento esperado em producao.
+
+### Highlights
+
+- Validacao de paths das tools agora usa caminho real canonico para bloquear escape de allowlist por symlink.
+- Canais IPC, eventos do bot e acoes de `settings-update` foram centralizados em contrato compartilhado.
+- Fluxo de aprovacao manual de tools foi extraido de `src/core/bot.js` para modulo dedicado.
+- Comandos operacionais e administrativos sairam do runtime principal para handlers dedicados.
+- Normalizacao de perfil, historico e limites de interacao passou a ser compartilhada entre `main`, `core` e `renderer`.
+
+### Tecnico
+
+- `src/core/tooling/helpers.js` e `src/core/tooling/executors/fs.js` validam `allowedPaths` e `allowedWritePaths` com resolucao canonica.
+- `src/shared/ipcContracts.js` centraliza canais IPC, eventos do bot e acoes de atualizacao de settings.
+- `src/core/tooling/approvalFlow.js` isola criacao de approvals, prompt de aprovacao e retomada do loop de tools.
+- `src/core/messageCommands.js` separa comandos de owner, pairing, grupos, status, help e tools do runtime principal.
+- `src/shared/settingsSchema.js` ganhou helpers compartilhados para normalizacao de perfis, historico e settings de interacao.
+
+### Correcoes
+
+- Eliminado escape plausivel de leitura/escrita fora da allowlist via symlink em tools de filesystem.
+- Reduzido drift entre `preload`, `main`, `botManager` e `bot` ao remover nomes de canais/eventos espalhados.
+- Diminuido o vetor de crescimento acidental de `src/core/bot.js` como runtime gigante.
+- Reduzida duplicacao de normalizacao entre settings persistidos, runtime do bot e renderer.
+
+### Upgrade notes
+
+- Sem migracao obrigatoria de configuracao.
+- Nao ha mudanca de contrato para comandos de owner, pairing, help ou aprovacao de tools.
+- Release validada localmente para Linux empacotado; Windows, macOS e assinatura continuam dependentes do workflow de release.
+
 ## 4.2.2 - 2026-03-21
 
 ### Resumo

@@ -8,6 +8,7 @@ const {
   isPathAllowed,
   readFileChunk,
   resolveFilePath,
+  resolvePathForPolicy,
   truncateText,
 } = require('../helpers');
 
@@ -37,9 +38,10 @@ async function toolFsRead(args = {}, context = {}) {
   if (!isPathAllowed(filePath, context.allowedReadPaths)) {
     throw new Error('Caminho nao permitido.');
   }
-  const stats = fs.statSync(filePath);
+  const inspectedPath = resolvePathForPolicy(filePath) || filePath;
+  const stats = fs.statSync(inspectedPath);
   if (!stats.isFile()) throw new Error('O caminho nao e um arquivo.');
-  const ext = path.extname(filePath || '').toLowerCase();
+  const ext = path.extname(inspectedPath || '').toLowerCase();
   const blockedExtensions = Array.isArray(context.blockedExtensions)
     ? context.blockedExtensions
     : [];
@@ -60,7 +62,7 @@ async function toolFsRead(args = {}, context = {}) {
     context.tools?.maxOutputChars ?? TOOL_DEFAULT_MAX_OUTPUT_CHARS
   );
   const maxBytes = Math.min(stats.size, Math.max(4096, Math.min(1024 * 1024, maxChars * 4)));
-  const buffer = readFileChunk(filePath, maxBytes);
+  const buffer = readFileChunk(inspectedPath, maxBytes);
   if (buffer.includes(0)) {
     return { path: filePath, size: stats.size, error: 'Arquivo binario detectado.' };
   }

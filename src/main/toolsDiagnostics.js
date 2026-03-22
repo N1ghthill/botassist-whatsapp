@@ -1,35 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
-function expandHomePath(input) {
-  const raw = String(input || '').trim();
-  if (!raw) return '';
-  if (raw === '~') return os.homedir();
-  if (raw.startsWith('~/') || raw.startsWith('~\\')) return path.join(os.homedir(), raw.slice(2));
-  return raw;
-}
-
-function resolveFilePath(input, baseDir) {
-  const raw = expandHomePath(input);
-  if (!raw) return '';
-  return path.resolve(baseDir || os.homedir(), raw);
-}
-
-function isSubPath(parent, target) {
-  const relative = path.relative(parent, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
-function isPathAllowed(targetPath, allowedPaths) {
-  if (!Array.isArray(allowedPaths) || allowedPaths.length === 0) return true;
-  const normalizedTarget = path.resolve(targetPath);
-  for (const allowed of allowedPaths) {
-    if (!allowed) continue;
-    if (isSubPath(allowed, normalizedTarget)) return true;
-  }
-  return false;
-}
+const { isPathAllowed, resolveFilePath } = require('../core/tooling/helpers');
 
 function pickTestPath(allowedPaths, homeDir) {
   const candidates = [path.join(homeDir, 'Documentos'), path.join(homeDir, 'Documents'), homeDir];

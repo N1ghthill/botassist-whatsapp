@@ -1,7 +1,62 @@
 {
-  "latestVersion": "4.2.2",
-  "updatedAt": "2026-03-21",
+  "latestVersion": "4.2.3",
+  "updatedAt": "2026-03-22",
   "releases": [
+    {
+      "version": "4.2.3",
+      "date": "2026-03-22",
+      "title": "Modularizacao incremental do runtime e hardening de tools",
+      "summary": "Patch estavel focado em reduzir acoplamento do runtime principal, formalizar contratos entre camadas e endurecer a execucao de tools sem mudar o comportamento esperado do produto em producao.",
+      "highlights": [
+        "Validacao de paths das tools agora usa caminho real canônico para bloquear escape de allowlist por symlink.",
+        "Canais IPC, eventos do bot e acoes de settings-update foram centralizados em um contrato compartilhado.",
+        "Fluxo de aprovacao manual de tools foi extraido do runtime principal sem mudar o comportamento funcional.",
+        "Comandos operacionais e administrativos sairam de src/core/bot.js para handlers dedicados.",
+        "Normalizacao de perfil, historico e limites de interacao passou a ser compartilhada entre main, core e renderer."
+      ],
+      "screenshots": [
+        {
+          "alt": "Dashboard do BotAssist",
+          "path": "docs/assets/quickstart-dashboard.png",
+          "caption": "Dashboard com status do bot, QR Code e visao geral de operacao."
+        },
+        {
+          "alt": "Configuracao de tools",
+          "path": "docs/assets/tools-configs.png",
+          "caption": "Configuracao de paths, dominios, approvals e comandos de terminal."
+        },
+        {
+          "alt": "Logs e aprovacao de tools",
+          "path": "docs/assets/tools-logs.png",
+          "caption": "Logs operacionais e trilha de aprovacao para actions sensiveis."
+        }
+      ],
+      "technical": [
+        "src/core/tooling/helpers.js e src/core/tooling/executors/fs.js passam a validar allowedPaths/allowedWritePaths com resolucao canônica.",
+        "src/shared/ipcContracts.js centraliza nomes de canais IPC, eventos do bot e acoes de settings-update.",
+        "src/core/tooling/approvalFlow.js isola criacao de approvals, prompt de aprovacao e retomada do loop de tools.",
+        "src/core/messageCommands.js separa comandos de owner, pairing, grupos, status, help e tools do runtime principal.",
+        "src/shared/settingsSchema.js ganhou helpers compartilhados para normalizacao de perfis, historico e settings de interacao."
+      ],
+      "fixes": [
+        "Eliminado escape plausivel de leitura/escrita fora da allowlist via symlink em tools de filesystem.",
+        "Reduzido drift entre preload, main, botManager e bot ao remover nomes de eventos/canais stringly-typed espalhados.",
+        "Diminuido o vetor de crescimento acidental de src/core/bot.js como runtime gigante.",
+        "Reduzida duplicacao de normalizacao entre settings persistidos, runtime do bot e renderer."
+      ],
+      "verification": [
+        "npm test",
+        "npm run lint",
+        "npm run build:linux:dir",
+        "npm run build:linux",
+        "npm run smoke:packaged"
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria de configuracao.",
+        "Nao ha mudanca de contrato para comandos de owner, pairing, help ou aprovacao de tools.",
+        "Release validada localmente para Linux empacotado; Windows, macOS e assinatura continuam dependentes do workflow de release."
+      ]
+    },
     {
       "version": "4.2.2",
       "date": "2026-03-21",

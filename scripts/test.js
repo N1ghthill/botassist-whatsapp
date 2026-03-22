@@ -137,6 +137,24 @@ function loadShellExecutorModule() {
   return require(modulePath);
 }
 
+function loadFsExecutorModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'executors', 'fs.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function loadToolsDiagnosticsModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'main', 'toolsDiagnostics.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function loadApprovalFlowModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'approvalFlow.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadAppProtocolModule() {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'appProtocol.js');
   delete require.cache[require.resolve(modulePath)];
@@ -304,6 +322,36 @@ test('shared settings schema seeds home dir for enabled tools when no paths are 
   );
 
   assert.deepStrictEqual(normalized.allowedPaths, ['/tmp/botassist-home']);
+});
+
+test('shared settings schema centralizes profile, history, and interaction normalization', () => {
+  const schema = loadSharedSchema();
+  const normalized = schema.normalizeInteractionSettings(
+    schema.normalizeHistoryState(
+      schema.normalizeProfileState({
+        profiles: [],
+        profileRouting: { users: { '5511': 'missing-profile' } },
+        historyEnabled: 1,
+        historySummaryEnabled: undefined,
+        historyMaxMessages: '999',
+        groupCommandPrefix: '   ',
+        cooldownSecondsDm: -5,
+        cooldownSecondsGroup: 999999,
+        maxResponseChars: '50',
+      })
+    )
+  );
+
+  assert.ok(Array.isArray(normalized.profiles));
+  assert.ok(normalized.profiles.length >= 1);
+  assert.deepStrictEqual(normalized.profileRouting, { users: {}, groups: {} });
+  assert.strictEqual(normalized.historyEnabled, true);
+  assert.strictEqual(normalized.historySummaryEnabled, true);
+  assert.strictEqual(normalized.historyMaxMessages, 200);
+  assert.strictEqual(normalized.groupCommandPrefix, '!');
+  assert.strictEqual(normalized.cooldownSecondsDm, 0);
+  assert.strictEqual(normalized.cooldownSecondsGroup, 86400);
+  assert.strictEqual(normalized.maxResponseChars, 200);
 });
 
 test('runtime settings store applies active profile and env fallback', () => {
@@ -523,6 +571,86 @@ test('tool loop returns pending approvals in manual mode', async () => {
   assert.strictEqual(result.pending.pendingCalls[0].canonicalName, 'fs.list');
 });
 
+test('approval flow creates entry metadata with deterministic ttl', () => {
+  const { createToolApprovalEntry } = loadApprovalFlowModule();
+  const entry = createToolApprovalEntry(
+    {
+      remoteJid: '5511999999999@s.whatsapp.net',
+      pendingCalls: [],
+    },
+    { now: 1234, ttlMs: 5000 }
+  );
+
+  assert.ok(/^auth_/.test(entry.id));
+  assert.strictEqual(entry.createdAt, 1234);
+  assert.strictEqual(entry.expiresAt, 6234);
+  assert.strictEqual(entry.remoteJid, '5511999999999@s.whatsapp.net');
+});
+
+test('approval flow executes approved tools and persists follow-up answer', async () => {
+  const { handleToolApprovalCommand } = loadApprovalFlowModule();
+  const sent = [];
+  const removed = [];
+  const persisted = [];
+  const entry = {
+    id: 'auth_test',
+    remoteJid: 'chat@s.whatsapp.net',
+    requesterJid: 'user@s.whatsapp.net',
+    requesterPhone: '5511999999999',
+    messages: [{ role: 'user', content: 'Liste a pasta' }],
+    assistantMessage: { role: 'assistant', content: 'Vou usar ferramentas.' },
+    autoToolMessages: [{ role: 'tool', content: 'Ferramenta sugerida.' }],
+    pendingCalls: [{ call: { name: 'fs_list' } }],
+    toolContext: { tools: { mode: 'manual' } },
+    provider: 'groq',
+    apiKey: 'secret',
+    baseUrl: '',
+    model: 'llama-3.3-70b-versatile',
+    botTag: '[Bot]',
+    prefix: '!',
+    quotedMessage: { key: { id: 'msg1' } },
+    sessionId: 'chat@s.whatsapp.net',
+    userInput: 'Liste a pasta',
+    historyEnabled: true,
+    historySummaryEnabled: true,
+    historyMaxMessages: 12,
+    maxResponseChars: 500,
+  };
+
+  const handled = await handleToolApprovalCommand({
+    command: { command: 'aprovar', rawArgs: 'auth_test' },
+    remoteJid: 'owner@s.whatsapp.net',
+    isOwner: true,
+    message: { key: { id: 'owner-msg' } },
+    prefix: '!',
+    botTag: '[Owner]',
+    getPendingToolApproval: (id) => (id === 'auth_test' ? entry : null),
+    removePendingToolApproval: (id) => removed.push(id),
+    addPendingToolApproval: () => {
+      throw new Error('should not enqueue new approval for answer path');
+    },
+    sendMessage: async (jid, content, options) => {
+      sent.push({ jid, content, options });
+    },
+    summarizeToolCallForApproval: () => 'fs.list /tmp',
+    runApprovedToolCalls: async () => [{ role: 'tool', content: 'saida da ferramenta' }],
+    runToolLoop: async () => ({ answer: 'Resposta final ao usuario' }),
+    persistHistory: async (payload) => {
+      persisted.push(payload);
+    },
+  });
+
+  assert.strictEqual(handled, true);
+  assert.deepStrictEqual(removed, ['auth_test']);
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent[0].jid, 'owner@s.whatsapp.net');
+  assert.match(sent[0].content.text, /Aprovado\. Executando ferramentas/);
+  assert.strictEqual(sent[1].jid, 'chat@s.whatsapp.net');
+  assert.match(sent[1].content.text, /Resposta final ao usuario/);
+  assert.strictEqual(persisted.length, 1);
+  assert.strictEqual(persisted[0].sessionId, 'chat@s.whatsapp.net');
+});
+
 test('tool loop auto-executes allowed read-only tools and resumes provider reply', async () => {
   await withTempDir(async (dir) => {
     fs.writeFileSync(path.join(dir, 'arquivo.txt'), 'conteudo', 'utf8');
@@ -570,6 +698,114 @@ test('tool loop auto-executes allowed read-only tools and resumes provider reply
 
     assert.strictEqual(result.answer, 'Ferramenta executada com sucesso.');
     assert.strictEqual(calls, 2);
+  });
+});
+
+test('fs read blocks symlink escape from allowed path', async () => {
+  await withTempDir(async (dir) => {
+    const { toolFsRead } = loadFsExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideFile = path.join(dir, 'segredo.txt');
+    const linkPath = path.join(allowedDir, 'atalho.txt');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.writeFileSync(outsideFile, 'segredo', 'utf8');
+    fs.symlinkSync(outsideFile, linkPath);
+
+    await assert.rejects(
+      () =>
+        toolFsRead(
+          { path: linkPath },
+          {
+            baseDir: process.cwd(),
+            allowedReadPaths: [allowedDir],
+            blockedExtensions: [],
+            maxFileSizeMb: 10,
+            tools: { maxOutputChars: 1000 },
+          }
+        ),
+      /Caminho nao permitido/
+    );
+  });
+});
+
+test('fs write blocks destination through symlinked parent', async () => {
+  await withTempDir(async (dir) => {
+    const { toolFsWrite } = loadFsExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+    const targetFile = path.join(linkDir, 'novo.txt');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    await assert.rejects(
+      () =>
+        toolFsWrite(
+          { path: targetFile, content: 'teste' },
+          {
+            baseDir: process.cwd(),
+            allowedWritePaths: [allowedDir],
+          }
+        ),
+      /Caminho nao permitido/
+    );
+
+    assert.strictEqual(fs.existsSync(path.join(outsideDir, 'novo.txt')), false);
+  });
+});
+
+test('shell executor blocks cwd through symlink escape', async () => {
+  await withTempDir(async (dir) => {
+    const { toolShellExec } = loadShellExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    await assert.rejects(
+      () =>
+        toolShellExec(
+          {
+            command: 'node -e "process.stdout.write(\'ok\')"',
+            cwd: linkDir,
+          },
+          {
+            baseDir: process.cwd(),
+            allowedReadPaths: [allowedDir],
+            tools: { commandAllowlist: ['node'], commandDenylist: [] },
+          }
+        ),
+      /Diretorio de trabalho nao permitido/
+    );
+  });
+});
+
+test('tools diagnostics keeps allowlist checks aligned with tooling helpers', () => {
+  withTempDir((dir) => {
+    const { runToolsDiagnostics } = loadToolsDiagnosticsModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const outsideDir = path.join(dir, 'outside');
+    const linkDir = path.join(allowedDir, 'link-dir');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+    fs.mkdirSync(outsideDir, { recursive: true });
+    fs.symlinkSync(outsideDir, linkDir, 'dir');
+
+    const result = runToolsDiagnostics({
+      tools: {
+        enabled: true,
+        allowedPaths: [allowedDir],
+      },
+    });
+
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.path, allowedDir);
   });
 });
 

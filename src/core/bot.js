@@ -11,6 +11,7 @@ const {
   resolveDmPolicy,
   resolveGroupPolicy,
 } = require('../shared/settingsSchema');
+const { BOT_EVENTS } = require('../shared/ipcContracts');
 const {
   buildToolUnsupportedKey,
   getProviderLabel,
@@ -27,26 +28,27 @@ const {
   extractMentionedJids,
   extractTextMessage,
   getSenderJid,
-  isGroupAllowed,
   isMentioningSelf,
   normalizeJid,
   normalizeOwnerConfig,
   normalizePhone,
   parseCommand,
-  parsePairingCommand,
-  senderMatchesList,
   shouldProcessMessage,
   stripLeadingMentions,
 } = require('./messageUtils');
+const { handleAccessCommand, handleUtilityCommand } = require('./messageCommands');
 const {
   buildToolContext,
   getToolAccess,
   runApprovedToolCalls,
   runToolLoop,
   summarizeToolCallForApproval,
-  toolFsList,
-  toolFsRead,
 } = require('./tools');
+const {
+  createToolApprovalEntry,
+  handleToolApprovalCommand,
+  sendApprovalPrompt,
+} = require('./tooling/approvalFlow');
 const { createRuntimeSettingsStore } = require('./runtimeSettings');
 
 const REPLY_MAP_TTL_MS = 6 * 60 * 60 * 1000;
@@ -103,11 +105,11 @@ function emit(event, payload = {}) {
 }
 
 function requestSettingsUpdate(action, payload = {}) {
-  emit('settings-update', { action, ...payload });
+  emit(BOT_EVENTS.SETTINGS_UPDATE, { action, ...payload });
 }
 
 function log(message, level = 'info') {
-  emit('log', { level, message });
+  emit(BOT_EVENTS.LOG, { level, message });
 }
 
 function ensureDirSync(dirPath) {
@@ -300,10 +302,6 @@ function ensurePairingEntry(id) {
   return entry;
 }
 
-function createApprovalId() {
-  return `auth_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
 function getPendingToolApproval(id) {
   const key = String(id || '').trim();
   if (!key) return null;
@@ -430,194 +428,6 @@ async function main() {
     saveSessionState(sessionId, updated);
   }
 
-  function buildApprovalPrompt(entry, prefix, botTag) {
-    const lines = ['Preciso de autorização para executar:'];
-    for (const pending of entry.pendingCalls || []) {
-      lines.push(`- ${summarizeToolCallForApproval(pending.call, entry.toolContext)}`);
-    }
-    lines.push(`ID: ${entry.id}`);
-    lines.push(`Responda com ${prefix}aprovar ${entry.id} ou ${prefix}negar ${entry.id}.`);
-    lines.push('Apenas o owner pode aprovar.');
-    lines.push('Expira em 15 minutos.');
-    const text = lines.join('\n');
-    return (botTag ? `${botTag} ` : '') + text;
-  }
-
-  async function sendApprovalPrompt(entry, quotedMessage) {
-    const prefix = entry.prefix || '!';
-    const botTag = entry.botTag || '';
-    const text = buildApprovalPrompt(entry, prefix, botTag);
-    await sock.sendMessage(entry.remoteJid, { text }, { quoted: quotedMessage });
-  }
-
-  async function handleToolApprovalCommand({
-    command,
-    remoteJid,
-    senderJid: _senderJid,
-    senderPhone: _senderPhone,
-    isOwner,
-    message,
-    prefix,
-    botTag,
-  }) {
-    const approvalId = String(command.rawArgs || '').trim();
-    if (!approvalId) {
-      await sock.sendMessage(
-        remoteJid,
-        {
-          text: (botTag ? `${botTag} ` : '') + `Use: ${prefix}aprovar <id> ou ${prefix}negar <id>`,
-        },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    const entry = getPendingToolApproval(approvalId);
-    if (!entry) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Nenhuma aprovação pendente com esse ID.' },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    const canApprove = isOwner;
-    if (!canApprove) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Você não tem permissão para aprovar esta ação.' },
-        { quoted: message }
-      );
-      return true;
-    }
-
-    pendingToolApprovals.delete(approvalId);
-
-    if (command.command === 'negar') {
-      await sock.sendMessage(
-        entry.remoteJid,
-        {
-          text:
-            (entry.botTag ? `${entry.botTag} ` : '') +
-            'Ação cancelada. Nenhuma ferramenta foi executada.',
-        },
-        { quoted: entry.quotedMessage || message }
-      );
-      if (remoteJid !== entry.remoteJid) {
-        await sock.sendMessage(
-          remoteJid,
-          { text: (botTag ? `${botTag} ` : '') + 'Ação negada.' },
-          { quoted: message }
-        );
-      }
-      return true;
-    }
-
-    if (remoteJid !== entry.remoteJid) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: (botTag ? `${botTag} ` : '') + 'Aprovado. Executando ferramentas...' },
-        { quoted: message }
-      );
-    }
-
-    try {
-      const approvedToolMessages = await runApprovedToolCalls(
-        entry.pendingCalls || [],
-        entry.toolContext
-      );
-      const followUpMessages = [
-        ...(entry.messages || []),
-        entry.assistantMessage,
-        ...(entry.autoToolMessages || []),
-        ...approvedToolMessages,
-      ].filter(Boolean);
-
-      const result = await runToolLoop({
-        provider: entry.provider,
-        apiKey: entry.apiKey,
-        baseUrl: entry.baseUrl,
-        model: entry.model,
-        messages: followUpMessages,
-        toolContext: entry.toolContext,
-        requesterIsOwner: true,
-        temperature: entry.temperature ?? 0.7,
-        maxTokens: entry.maxTokens ?? 700,
-      });
-
-      if (result.pending) {
-        const newEntry = {
-          id: createApprovalId(),
-          createdAt: Date.now(),
-          expiresAt: Date.now() + TOOL_APPROVAL_TTL_MS,
-          remoteJid: entry.remoteJid,
-          requesterJid: entry.requesterJid,
-          requesterPhone: entry.requesterPhone,
-          requireOwner: entry.requireOwner,
-          messages: [...followUpMessages],
-          assistantMessage: result.pending.assistantMessage,
-          autoToolMessages: result.pending.toolMessages,
-          pendingCalls: result.pending.pendingCalls,
-          toolContext: entry.toolContext,
-          provider: entry.provider,
-          apiKey: entry.apiKey,
-          baseUrl: entry.baseUrl,
-          model: entry.model,
-          botTag: entry.botTag,
-          prefix: entry.prefix,
-          quotedMessage: entry.quotedMessage,
-          sessionId: entry.sessionId,
-          userInput: entry.userInput,
-          historyEnabled: entry.historyEnabled,
-          historySummaryEnabled: entry.historySummaryEnabled,
-          historyMaxMessages: entry.historyMaxMessages,
-          maxResponseChars: entry.maxResponseChars,
-        };
-        addPendingToolApproval(newEntry);
-        await sendApprovalPrompt(newEntry, entry.quotedMessage || message);
-        return true;
-      }
-
-      let answer = result.answer || '';
-      if (answer && entry.maxResponseChars && answer.length > entry.maxResponseChars) {
-        answer = answer.slice(0, entry.maxResponseChars - 1).trimEnd() + '…';
-      }
-
-      if (answer) {
-        await sock.sendMessage(
-          entry.remoteJid,
-          { text: (entry.botTag ? `${entry.botTag} ` : '') + answer },
-          { quoted: entry.quotedMessage || message }
-        );
-        await persistHistory({
-          sessionId: entry.sessionId,
-          userInput: entry.userInput,
-          answer,
-          provider: entry.provider,
-          apiKey: entry.apiKey,
-          baseUrl: entry.baseUrl,
-          model: entry.model,
-          historyEnabled: entry.historyEnabled,
-          historySummaryEnabled: entry.historySummaryEnabled,
-          historyMaxMessages: entry.historyMaxMessages,
-        });
-      }
-    } catch (err) {
-      await sock.sendMessage(
-        entry.remoteJid,
-        {
-          text:
-            (entry.botTag ? `${entry.botTag} ` : '') +
-            `Erro ao executar ferramentas: ${err?.message || String(err)}`,
-        },
-        { quoted: entry.quotedMessage || message }
-      );
-    }
-
-    return true;
-  }
-
   const baileys = await import('@whiskeysockets/baileys');
   const pino = (await import('pino')).default;
 
@@ -655,7 +465,7 @@ async function main() {
     const { version } = await fetchLatestBaileysVersion();
 
     log(`Iniciando Baileys (auth em ${authDir})...`);
-    emit('status', { status: 'starting' });
+    emit(BOT_EVENTS.STATUS, { status: 'starting' });
 
     sock = makeWASocket({
       version,
@@ -668,10 +478,10 @@ async function main() {
 
     sock.ev.on('connection.update', (update) => {
       const { connection, qr, lastDisconnect } = update;
-      if (qr) emit('qr', { qr });
+      if (qr) emit(BOT_EVENTS.QR, { qr });
 
       if (connection === 'open') {
-        emit('status', { status: 'online' });
+        emit(BOT_EVENTS.STATUS, { status: 'online' });
         log('Conectado ao WhatsApp.');
 
         const current = readSettings();
@@ -693,7 +503,7 @@ async function main() {
       }
 
       if (connection === 'close') {
-        emit('status', { status: 'offline' });
+        emit(BOT_EVENTS.STATUS, { status: 'offline' });
 
         if (shuttingDown) return;
 
@@ -795,492 +605,66 @@ async function main() {
           const handled = await handleToolApprovalCommand({
             command,
             remoteJid,
-            senderJid,
-            senderPhone,
             isOwner,
             message,
             prefix,
             botTag,
+            getPendingToolApproval,
+            removePendingToolApproval: (approvalId) => pendingToolApprovals.delete(approvalId),
+            addPendingToolApproval,
+            sendMessage: (jid, content, options) => sock.sendMessage(jid, content, options),
+            summarizeToolCallForApproval,
+            runApprovedToolCalls,
+            runToolLoop,
+            persistHistory,
+            ttlMs: TOOL_APPROVAL_TTL_MS,
           });
           if (handled) continue;
         }
 
-        if (
-          !isGroup &&
-          command.isCommand &&
-          (command.command === 'owner' || command.command === 'setowner')
-        ) {
-          const providedToken = normalizeOwnerClaimToken(command.rawArgs);
-          if (!providedToken) {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text:
-                  (botTag ? `${botTag} ` : '') +
-                  `Use: ${prefix}owner <token>\nGere o token no app em Configuracoes > Basico.`,
-              },
-              { quoted: message }
-            );
-            continue;
-          }
+        const sendMessage = (jid, content, options) => sock.sendMessage(jid, content, options);
+        const sharedCommandContext = {
+          command,
+          text,
+          prefix,
+          remoteJid,
+          isGroup,
+          mentionSelf,
+          isOwner,
+          botTag,
+          message,
+          settings,
+          scopedSettings,
+          profile,
+          providerLabel,
+          model,
+          dmPolicy,
+          groupPolicy,
+          groupAccessKey,
+          senderJid,
+          senderPhone,
+          ownerConfig,
+          ownerJid,
+          toolContext,
+          pairingId,
+        };
 
-          if (!senderJid && !senderPhone) {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text:
-                  (botTag ? `${botTag} ` : '') +
-                  'Nao consegui identificar seu usuario. Tente novamente em alguns segundos.',
-              },
-              { quoted: message }
-            );
-            continue;
-          }
+        const accessHandled = await handleAccessCommand(sharedCommandContext, {
+          sendMessage,
+          normalizeOwnerClaimToken,
+          verifyOwnerClaimToken,
+          requestSettingsUpdate,
+          getPairingEntry,
+          ensurePairingEntry,
+          clearPairingEntry: (id) => pendingPairings.delete(String(id || '').trim()),
+        });
+        if (accessHandled) continue;
 
-          if (isOwner) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Voce ja esta configurado como owner.' },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          const tokenCheck = verifyOwnerClaimToken(settings, providedToken);
-          if (!tokenCheck.ok) {
-            if (tokenCheck.reason === 'expired') {
-              requestSettingsUpdate('clear-owner-token');
-            }
-            const errorText =
-              tokenCheck.reason === 'expired'
-                ? 'Token expirado. Gere um novo token no app e tente novamente.'
-                : tokenCheck.reason === 'missing'
-                  ? 'Nenhum token ativo encontrado. Gere um token no app em Configuracoes > Basico.'
-                  : 'Token invalido. Confira o codigo e tente novamente.';
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + errorText },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          requestSettingsUpdate('set-owner', {
-            ownerNumber: senderPhone || '',
-            ownerJid: senderJid || '',
-          });
-          requestSettingsUpdate('clear-owner-token');
-
-          const phoneLabel = senderPhone ? senderPhone : 'n/a';
-          const replyLines = [
-            'Owner configurado com sucesso!',
-            `Numero: ${phoneLabel}`,
-            `JID: ${senderJid || 'n/a'}`,
-            'Agora comandos administrativos e aprovacoes de ferramentas estao liberados.',
-          ];
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + replyLines.join('\n') },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (!isGroup && dmPolicy === 'pairing' && !isOwner) {
-          const allowedUsers = Array.isArray(settings.allowedUsers)
-            ? settings.allowedUsers.map((v) => String(v).trim()).filter(Boolean)
-            : [];
-          const allowlisted = senderMatchesList(senderJid, senderPhone, allowedUsers);
-          if (!allowlisted) {
-            const providedCode = parsePairingCommand(text, prefix);
-            if (providedCode) {
-              const entry = getPairingEntry(pairingId);
-              if (entry && providedCode === entry.code) {
-                const userRef = senderPhone || senderJid;
-                if (userRef) {
-                  requestSettingsUpdate('allowlist-user', { userRef });
-                }
-                pendingPairings.delete(String(pairingId || '').trim());
-                await sock.sendMessage(
-                  remoteJid,
-                  {
-                    text:
-                      (botTag ? `${botTag} ` : '') +
-                      'Pareamento concluído! Você já pode falar comigo.',
-                  },
-                  { quoted: message }
-                );
-              } else {
-                await sock.sendMessage(
-                  remoteJid,
-                  {
-                    text:
-                      (botTag ? `${botTag} ` : '') +
-                      'Código inválido. Envie "pair CODIGO" ou aguarde um novo código.',
-                  },
-                  { quoted: message }
-                );
-              }
-              continue;
-            }
-
-            const entry = ensurePairingEntry(pairingId);
-            if (entry) {
-              await sock.sendMessage(
-                remoteJid,
-                {
-                  text:
-                    (botTag ? `${botTag} ` : '') +
-                    `Para liberar acesso, responda com: pair ${entry.code}\n` +
-                    'O código expira em 10 minutos.',
-                },
-                { quoted: message }
-              );
-            }
-            continue;
-          }
-        }
-
-        if (
-          isGroup &&
-          mentionSelf &&
-          command.isCommand &&
-          (command.command === 'autorizar' ||
-            command.command === 'liberar' ||
-            command.command === 'pair')
-        ) {
-          if (!isOwner) continue;
-          if (!groupAccessKey) {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text:
-                  (botTag ? `${botTag} ` : '') + 'A chave de acesso do grupo não está configurada.',
-              },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          if (groupPolicy === 'disabled') {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Respostas em grupos estão desativadas.' },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          const provided = String(command.rawArgs || '').trim();
-          if (!provided) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + `Use: ${prefix}autorizar <chave>` },
-              { quoted: message }
-            );
-            continue;
-          }
-          if (provided !== groupAccessKey) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Chave inválida.' },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          if (groupPolicy === 'open') {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Este bot já está liberado para grupos.' },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          requestSettingsUpdate('allowlist-group', { groupJid: remoteJid });
-          await sock.sendMessage(
-            remoteJid,
-            {
-              text:
-                (botTag ? `${botTag} ` : '') + 'Grupo autorizado! Você já pode falar comigo aqui.',
-            },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        // Owner can always run admin commands in groups even if group isn't allowlisted yet.
-        if (
-          isGroup &&
-          mentionSelf &&
-          isOwner &&
-          command.isCommand &&
-          command.command === 'groupid'
-        ) {
-          const msgText =
-            `JID do grupo:\n${remoteJid}\n\n` +
-            `Cole isso em “Allowlist de grupos” nas Configurações para habilitar respostas aqui.`;
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + msgText },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (isOwner && command.isCommand && command.command === 'status') {
-          if (isGroup && !isGroupAllowed(settings, remoteJid)) continue;
-          const dmPolicyLabel =
-            dmPolicy === 'owner'
-              ? 'somente owner'
-              : dmPolicy === 'allowlist'
-                ? 'allowlist'
-                : dmPolicy === 'pairing'
-                  ? 'pairing'
-                  : 'aberto';
-          const groupPolicyLabel =
-            groupPolicy === 'disabled'
-              ? 'desativado'
-              : groupPolicy === 'open'
-                ? 'aberto'
-                : 'allowlist';
-          const activeProfile = profile || resolveActiveProfile(settings);
-          const profileLabel = activeProfile?.name ? `Perfil: ${activeProfile.name}\n` : '';
-          const summary =
-            `Status: online\n` +
-            `Provedor: ${providerLabel}\n` +
-            profileLabel +
-            `Modelo: ${model}\n` +
-            `DM: ${dmPolicyLabel}\n` +
-            `Grupos: ${groupPolicyLabel}\n` +
-            `Memória: ${settings.historyEnabled ? 'ativa' : 'desativada'}\n` +
-            `Ferramentas: ${toolContext.tools.enabled ? 'ativas' : 'desativadas'}\n` +
-            `Somente mention (grupos): sim\n` +
-            `Comandos em grupos: ${settings.groupRequireCommand ? `sim (${prefix})` : 'não'}\n` +
-            `Cooldown DM: ${settings.cooldownSecondsDm}s | Grupo: ${settings.cooldownSecondsGroup}s`;
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + summary },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (command.isCommand && (command.command === 'me' || command.command === 'whoami')) {
-          if (isGroup) {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text: (botTag ? `${botTag} ` : '') + 'Use este comando no DM para sua privacidade.',
-              },
-              { quoted: message }
-            );
-            continue;
-          }
-          const senderIsLid = Boolean(senderJid && senderJid.endsWith('@lid'));
-          const phoneLabel = senderIsLid ? 'n/a (JID @lid)' : senderPhone || 'n/a';
-          const lines = [
-            `Seu JID: ${senderJid || 'n/a'}`,
-            `Seu numero (WhatsApp): ${phoneLabel}`,
-            `Owner: ${isOwner ? 'sim' : 'não'}`,
-          ];
-          if (isOwner) {
-            lines.push(`Owner numero (config): ${ownerConfig.raw || 'n/a'}`);
-            lines.push(`Owner JID (config): ${ownerJid || 'n/a'}`);
-          }
-          lines.push(
-            'JID e o identificador interno do WhatsApp. Se terminar com @lid, copie e cole em Configuracoes > Avancado > Owner JID.'
-          );
-          lines.push(
-            `Metodo recomendado: gere um token no app e envie ${prefix}owner <token> neste DM.`
-          );
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + lines.join('\n') },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (command.isCommand && command.command === 'tools') {
-          if (isGroup) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Use este comando no DM.' },
-              { quoted: message }
-            );
-            continue;
-          }
-          const access = getToolAccess(scopedSettings, { isGroup, isOwner });
-          const reason = access.enabled
-            ? 'ok'
-            : access.reason === 'disabled'
-              ? 'ferramentas desativadas'
-              : access.reason === 'owner'
-                ? 'somente owner pode usar'
-                : access.reason === 'groups'
-                  ? 'bloqueado em grupos'
-                  : 'bloqueado';
-          const lines = [
-            `Tools: ${access.enabled ? 'ativas' : 'bloqueadas'}`,
-            `Motivo: ${reason}`,
-            `Owner: ${isOwner ? 'sim' : 'não'}`,
-          ];
-          if (isOwner) {
-            lines.push(`Permitir em grupos: ${access.tools?.allowInGroups ? 'sim' : 'não'}`);
-            lines.push(`Require owner: ${access.tools?.requireOwner ? 'sim' : 'não'}`);
-          }
-          if (!isOwner && access.tools?.requireOwner) {
-            lines.push(
-              `Dica: gere um token no app e envie ${prefix}owner <token> no DM para virar owner.`
-            );
-          }
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + lines.join('\n') },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (command.isCommand && (command.command === 'fslist' || command.command === 'fsread')) {
-          if (isGroup) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Use este comando no DM.' },
-              { quoted: message }
-            );
-            continue;
-          }
-          if (!isOwner) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + 'Somente o owner pode usar este comando.' },
-              { quoted: message }
-            );
-            continue;
-          }
-          const access = getToolAccess(scopedSettings, { isGroup, isOwner });
-          if (!access.enabled) {
-            const reason =
-              access.reason === 'disabled'
-                ? 'Ferramentas desativadas.'
-                : access.reason === 'owner'
-                  ? 'Somente o owner pode usar ferramentas.'
-                  : access.reason === 'groups'
-                    ? 'Ferramentas bloqueadas em grupos.'
-                    : 'Ferramentas bloqueadas.';
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + reason },
-              { quoted: message }
-            );
-            continue;
-          }
-
-          const rawPath = String(command.rawArgs || '').trim();
-          const targetPath = rawPath || os.homedir();
-          try {
-            if (command.command === 'fslist') {
-              const result = await toolFsList({ path: targetPath }, toolContext);
-              const entries = Array.isArray(result?.entries) ? result.entries : [];
-              const max = 80;
-              const lines = entries.slice(0, max).map((entry) => {
-                const prefix =
-                  entry.type === 'dir' ? '[DIR]' : entry.type === 'file' ? '[FILE]' : '[ITEM]';
-                return `${prefix} ${entry.name}`;
-              });
-              if (entries.length > max) lines.push(`…e mais ${entries.length - max} itens`);
-              const text =
-                `Conteúdo de ${result.path}:\n` + (lines.length ? lines.join('\n') : '(vazio)');
-              await sock.sendMessage(
-                remoteJid,
-                { text: (botTag ? `${botTag} ` : '') + text },
-                { quoted: message }
-              );
-            } else {
-              const result = await toolFsRead({ path: targetPath }, toolContext);
-              if (result?.error) {
-                await sock.sendMessage(
-                  remoteJid,
-                  { text: (botTag ? `${botTag} ` : '') + `Erro: ${result.error}` },
-                  { quoted: message }
-                );
-              } else {
-                const text =
-                  `Arquivo: ${result.path}\n` +
-                  `Tamanho: ${result.size ?? 'n/a'} bytes\n\n` +
-                  `${result.content || ''}`;
-                await sock.sendMessage(
-                  remoteJid,
-                  { text: (botTag ? `${botTag} ` : '') + text },
-                  { quoted: message }
-                );
-              }
-            }
-          } catch (err) {
-            await sock.sendMessage(
-              remoteJid,
-              { text: (botTag ? `${botTag} ` : '') + `Erro: ${err?.message || String(err)}` },
-              { quoted: message }
-            );
-          }
-          continue;
-        }
-
-        if (
-          isOwner &&
-          command.isCommand &&
-          (command.command === 'limparmemoria' || command.command === 'resetmemoria')
-        ) {
-          const ok = clearSessionState(remoteJid);
-          const reply = ok
-            ? 'Memória desta conversa foi apagada.'
-            : 'Não foi possível apagar a memória desta conversa.';
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + reply },
-            { quoted: message }
-          );
-          continue;
-        }
-
-        if (command.isCommand && command.command === 'help') {
-          if (isGroup && !isGroupAllowed(settings, remoteJid) && !isOwner) continue;
-
-          const lines = ['Comandos:', `${prefix}help — ajuda`];
-          if (!isGroup) {
-            lines.push(`${prefix}me — mostra seu JID/numero`);
-            lines.push(`${prefix}tools — status das ferramentas`);
-            lines.push(`${prefix}owner <token> — definir owner com token do app`);
-          }
-          if (isOwner) {
-            lines.push(`${prefix}status — status (owner)`);
-            lines.push(`${prefix}groupid — mostra o JID do grupo (owner)`);
-          }
-          if (groupAccessKey && groupPolicy === 'allowlist') {
-            if (isOwner) lines.push(`${prefix}autorizar <chave> — liberar este grupo (owner)`);
-          }
-          if (!isGroup && dmPolicy === 'pairing') {
-            lines.push('pair <codigo> — parear no DM');
-          }
-          if (isOwner && toolContext.tools.enabled) {
-            lines.push(`${prefix}aprovar <id> — aprovar ação de ferramenta (owner)`);
-            lines.push(`${prefix}negar <id> — negar ação de ferramenta (owner)`);
-          }
-          if (isOwner) {
-            lines.push(`${prefix}limparmemoria — limpar memória desta conversa (owner)`);
-          }
-          lines.push('', 'Segurança: em grupos, eu só respondo quando você me menciona.');
-          const help = lines.join('\n');
-          await sock.sendMessage(
-            remoteJid,
-            { text: (botTag ? `${botTag} ` : '') + help },
-            { quoted: message }
-          );
-          continue;
-        }
+        const utilityHandled = await handleUtilityCommand(sharedCommandContext, {
+          sendMessage,
+          clearSessionState,
+        });
+        if (utilityHandled) continue;
 
         if (
           !shouldProcessMessage({
@@ -1364,35 +748,40 @@ async function main() {
               });
 
               if (result.pending) {
-                const approvalEntry = {
-                  id: createApprovalId(),
-                  createdAt: Date.now(),
-                  expiresAt: Date.now() + TOOL_APPROVAL_TTL_MS,
-                  remoteJid,
-                  requesterJid: senderJid,
-                  requesterPhone: senderPhone,
-                  requireOwner: true,
-                  messages: baseMessages,
-                  assistantMessage: result.pending.assistantMessage,
-                  autoToolMessages: result.pending.toolMessages,
-                  pendingCalls: result.pending.pendingCalls,
-                  toolContext,
-                  provider,
-                  apiKey: providerApiKey,
-                  baseUrl: providerBaseUrl,
-                  model,
-                  botTag,
-                  prefix,
-                  quotedMessage: message,
-                  sessionId,
-                  userInput,
-                  historyEnabled,
-                  historySummaryEnabled,
-                  historyMaxMessages,
-                  maxResponseChars: settings.maxResponseChars,
-                };
+                const approvalEntry = createToolApprovalEntry(
+                  {
+                    remoteJid,
+                    requesterJid: senderJid,
+                    requesterPhone: senderPhone,
+                    requireOwner: true,
+                    messages: baseMessages,
+                    assistantMessage: result.pending.assistantMessage,
+                    autoToolMessages: result.pending.toolMessages,
+                    pendingCalls: result.pending.pendingCalls,
+                    toolContext,
+                    provider,
+                    apiKey: providerApiKey,
+                    baseUrl: providerBaseUrl,
+                    model,
+                    botTag,
+                    prefix,
+                    quotedMessage: message,
+                    sessionId,
+                    userInput,
+                    historyEnabled,
+                    historySummaryEnabled,
+                    historyMaxMessages,
+                    maxResponseChars: settings.maxResponseChars,
+                  },
+                  { ttlMs: TOOL_APPROVAL_TTL_MS }
+                );
                 addPendingToolApproval(approvalEntry);
-                await sendApprovalPrompt(approvalEntry, message);
+                await sendApprovalPrompt({
+                  entry: approvalEntry,
+                  quotedMessage: message,
+                  sendMessage: (jid, content, options) => sock.sendMessage(jid, content, options),
+                  summarizeToolCallForApproval,
+                });
                 continue;
               }
 
@@ -1486,7 +875,7 @@ async function main() {
 
   process.on('SIGTERM', async () => {
     shuttingDown = true;
-    emit('status', { status: 'offline' });
+    emit(BOT_EVENTS.STATUS, { status: 'offline' });
     try {
       if (cleanupTimer) clearInterval(cleanupTimer);
       if (approvalCleanupTimer) clearInterval(approvalCleanupTimer);
@@ -1504,7 +893,7 @@ async function main() {
 
 function fatal(err) {
   const message = err?.stack || err?.message || String(err);
-  emit('error', { message });
+  emit(BOT_EVENTS.ERROR, { message });
   log(message, 'error');
   process.exit(1);
 }

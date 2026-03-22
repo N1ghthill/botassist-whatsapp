@@ -8,11 +8,13 @@ const {
   PROVIDERS,
   PROVIDER_META,
   applyActiveProfile,
-  ensureProfiles,
   normalizeDmPolicy,
   normalizeEmailSettings: normalizeEmailSettingsBase,
   normalizeGroupPolicy,
+  normalizeHistoryState,
+  normalizeInteractionSettings,
   normalizeProfile,
+  normalizeProfileState,
   normalizeProfileRouting,
   normalizeProvider,
   normalizeToolsSettings: normalizeToolsSettingsBase,
@@ -116,24 +118,14 @@ function loadSettings() {
   }
   settings.provider = normalizeProvider(settings.provider);
   const needsProfileSeed = !Array.isArray(settings.profiles) || settings.profiles.length === 0;
-  const normalizedProfiles = ensureProfiles(settings);
-  settings.profiles = normalizedProfiles.profiles;
-  settings.activeProfileId = normalizedProfiles.activeProfileId;
+  settings = normalizeProfileState(settings);
   settings = applyActiveProfile(settings);
   if (!hasDmPolicy) settings.dmPolicy = '';
   if (!hasGroupPolicy) settings.groupPolicy = '';
   settings.dmPolicy = resolveDmPolicy(settings);
   settings.groupPolicy = resolveGroupPolicy(settings);
-  settings.profileRouting = normalizeProfileRouting(
-    settings.profileRouting,
-    Array.isArray(settings.profiles) ? settings.profiles : []
-  );
-  settings.historyEnabled = Boolean(settings.historyEnabled);
-  settings.historySummaryEnabled = settings.historySummaryEnabled !== false;
-  settings.historyMaxMessages = Math.max(
-    4,
-    Math.min(200, Math.floor(Number(settings.historyMaxMessages || 12) || 12))
-  );
+  settings = normalizeHistoryState(settings, DEFAULT_SETTINGS);
+  settings = normalizeInteractionSettings(settings, DEFAULT_SETTINGS);
   settings.tools = normalizeToolsSettings(settings.tools, DEFAULT_SETTINGS.tools);
   settings.email = normalizeEmailSettings(settings.email, DEFAULT_SETTINGS.email);
   settings.ownerClaimTokenHash = String(settings.ownerClaimTokenHash || '').trim();
@@ -259,19 +251,12 @@ function sanitizeSettings(partial) {
 function saveSettings(partial) {
   let next = { ...(settings || DEFAULT_SETTINGS), ...sanitizeSettings(partial) };
   next.provider = normalizeProvider(next.provider);
-  const normalizedProfiles = ensureProfiles(next);
-  next.profiles = normalizedProfiles.profiles;
-  next.activeProfileId = normalizedProfiles.activeProfileId;
+  next = normalizeProfileState(next);
   next = applyActiveProfile(next);
   next.dmPolicy = resolveDmPolicy(next);
   next.groupPolicy = resolveGroupPolicy(next);
-  next.profileRouting = normalizeProfileRouting(next.profileRouting, next.profiles || []);
-  next.historyEnabled = Boolean(next.historyEnabled);
-  next.historySummaryEnabled = next.historySummaryEnabled !== false;
-  next.historyMaxMessages = Math.max(
-    4,
-    Math.min(200, Math.floor(Number(next.historyMaxMessages || 12) || 12))
-  );
+  next = normalizeHistoryState(next, DEFAULT_SETTINGS);
+  next = normalizeInteractionSettings(next, DEFAULT_SETTINGS);
   next.tools = normalizeToolsSettings(next.tools, DEFAULT_SETTINGS.tools);
   next.email = normalizeEmailSettings(next.email, DEFAULT_SETTINGS.email);
   next.ownerClaimTokenHash = String(next.ownerClaimTokenHash || '').trim();

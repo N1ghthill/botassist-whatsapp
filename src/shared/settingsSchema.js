@@ -348,6 +348,15 @@
     };
   }
 
+  function normalizeProfileState(base = {}) {
+    const next = { ...base };
+    const normalized = ensureProfiles(next);
+    next.profiles = normalized.profiles;
+    next.activeProfileId = normalized.activeProfileId;
+    next.profileRouting = normalizeProfileRouting(next.profileRouting, next.profiles);
+    return next;
+  }
+
   function resolveActiveProfile(base) {
     const profiles = Array.isArray(base && base.profiles) ? base.profiles : [];
     if (profiles.length === 0) return null;
@@ -365,6 +374,46 @@
       model: active.model || base.model,
       botTag: active.botTag || base.botTag,
     };
+  }
+
+  function normalizeHistoryState(base = {}, fallback = DEFAULT_SETTINGS) {
+    const next = { ...base };
+    const defaults = fallback || DEFAULT_SETTINGS;
+    next.historyEnabled = Boolean(next.historyEnabled);
+    next.historySummaryEnabled = next.historySummaryEnabled !== false;
+    next.historyMaxMessages = clampNumber(
+      next.historyMaxMessages,
+      4,
+      200,
+      defaults.historyMaxMessages || DEFAULT_SETTINGS.historyMaxMessages
+    );
+    return next;
+  }
+
+  function normalizeInteractionSettings(base = {}, fallback = DEFAULT_SETTINGS) {
+    const next = { ...base };
+    const defaults = fallback || DEFAULT_SETTINGS;
+    next.groupCommandPrefix =
+      String(next.groupCommandPrefix ?? defaults.groupCommandPrefix ?? '!').trim() || '!';
+    next.cooldownSecondsDm = clampNumber(
+      next.cooldownSecondsDm,
+      0,
+      86400,
+      defaults.cooldownSecondsDm || DEFAULT_SETTINGS.cooldownSecondsDm
+    );
+    next.cooldownSecondsGroup = clampNumber(
+      next.cooldownSecondsGroup,
+      0,
+      86400,
+      defaults.cooldownSecondsGroup || DEFAULT_SETTINGS.cooldownSecondsGroup
+    );
+    next.maxResponseChars = clampNumber(
+      next.maxResponseChars,
+      200,
+      10000,
+      defaults.maxResponseChars || DEFAULT_SETTINGS.maxResponseChars
+    );
+    return next;
   }
 
   function normalizeProfileRouting(value, profiles = []) {
@@ -428,8 +477,11 @@
     normalizeProfile,
     buildProfileFromLegacy,
     ensureProfiles,
+    normalizeProfileState,
     resolveActiveProfile,
     applyActiveProfile,
+    normalizeHistoryState,
+    normalizeInteractionSettings,
     normalizeProfileRouting,
   };
 });
