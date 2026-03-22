@@ -11,6 +11,7 @@ const {
   resolveDmPolicy,
   resolveGroupPolicy,
 } = require('../shared/settingsSchema');
+const { BOT_EVENTS, SETTINGS_UPDATE_ACTIONS } = require('../shared/ipcContracts');
 const {
   buildToolUnsupportedKey,
   getProviderLabel,
@@ -103,11 +104,11 @@ function emit(event, payload = {}) {
 }
 
 function requestSettingsUpdate(action, payload = {}) {
-  emit('settings-update', { action, ...payload });
+  emit(BOT_EVENTS.SETTINGS_UPDATE, { action, ...payload });
 }
 
 function log(message, level = 'info') {
-  emit('log', { level, message });
+  emit(BOT_EVENTS.LOG, { level, message });
 }
 
 function ensureDirSync(dirPath) {
@@ -655,7 +656,7 @@ async function main() {
     const { version } = await fetchLatestBaileysVersion();
 
     log(`Iniciando Baileys (auth em ${authDir})...`);
-    emit('status', { status: 'starting' });
+    emit(BOT_EVENTS.STATUS, { status: 'starting' });
 
     sock = makeWASocket({
       version,
@@ -668,10 +669,10 @@ async function main() {
 
     sock.ev.on('connection.update', (update) => {
       const { connection, qr, lastDisconnect } = update;
-      if (qr) emit('qr', { qr });
+      if (qr) emit(BOT_EVENTS.QR, { qr });
 
       if (connection === 'open') {
-        emit('status', { status: 'online' });
+        emit(BOT_EVENTS.STATUS, { status: 'online' });
         log('Conectado ao WhatsApp.');
 
         const current = readSettings();
@@ -693,7 +694,7 @@ async function main() {
       }
 
       if (connection === 'close') {
-        emit('status', { status: 'offline' });
+        emit(BOT_EVENTS.STATUS, { status: 'offline' });
 
         if (shuttingDown) return;
 
@@ -849,7 +850,7 @@ async function main() {
           const tokenCheck = verifyOwnerClaimToken(settings, providedToken);
           if (!tokenCheck.ok) {
             if (tokenCheck.reason === 'expired') {
-              requestSettingsUpdate('clear-owner-token');
+              requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.CLEAR_OWNER_TOKEN);
             }
             const errorText =
               tokenCheck.reason === 'expired'
@@ -865,11 +866,11 @@ async function main() {
             continue;
           }
 
-          requestSettingsUpdate('set-owner', {
+          requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.SET_OWNER, {
             ownerNumber: senderPhone || '',
             ownerJid: senderJid || '',
           });
-          requestSettingsUpdate('clear-owner-token');
+          requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.CLEAR_OWNER_TOKEN);
 
           const phoneLabel = senderPhone ? senderPhone : 'n/a';
           const replyLines = [
@@ -898,7 +899,7 @@ async function main() {
               if (entry && providedCode === entry.code) {
                 const userRef = senderPhone || senderJid;
                 if (userRef) {
-                  requestSettingsUpdate('allowlist-user', { userRef });
+                  requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.ALLOWLIST_USER, { userRef });
                 }
                 pendingPairings.delete(String(pairingId || '').trim());
                 await sock.sendMessage(
@@ -998,7 +999,7 @@ async function main() {
             continue;
           }
 
-          requestSettingsUpdate('allowlist-group', { groupJid: remoteJid });
+          requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.ALLOWLIST_GROUP, { groupJid: remoteJid });
           await sock.sendMessage(
             remoteJid,
             {
@@ -1486,7 +1487,7 @@ async function main() {
 
   process.on('SIGTERM', async () => {
     shuttingDown = true;
-    emit('status', { status: 'offline' });
+    emit(BOT_EVENTS.STATUS, { status: 'offline' });
     try {
       if (cleanupTimer) clearInterval(cleanupTimer);
       if (approvalCleanupTimer) clearInterval(approvalCleanupTimer);
@@ -1504,7 +1505,7 @@ async function main() {
 
 function fatal(err) {
   const message = err?.stack || err?.message || String(err);
-  emit('error', { message });
+  emit(BOT_EVENTS.ERROR, { message });
   log(message, 'error');
   process.exit(1);
 }

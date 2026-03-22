@@ -1,5 +1,10 @@
 const { utilityProcess } = require('electron');
 const path = require('path');
+const {
+  BOT_EVENTS,
+  IPC_EVENTS,
+  SETTINGS_UPDATE_ACTIONS,
+} = require('../shared/ipcContracts');
 
 function forkBotProcess(modulePath, env) {
   if (utilityProcess && typeof utilityProcess.fork === 'function') {
@@ -72,45 +77,45 @@ function createBotManager({
     if (normalized === 'offline' || normalized === 'error') isBotRunning = false;
 
     updateTrayStatus?.();
-    sendToRenderer?.('bot-status', botStatus);
+    sendToRenderer?.(IPC_EVENTS.BOT_STATUS, botStatus);
   }
 
   function handleBotEvent(payload) {
     if (!payload || typeof payload !== 'object') return;
 
-    if (payload.event === 'log') {
+    if (payload.event === BOT_EVENTS.LOG) {
       const message = String(payload.message ?? '');
       const level = String(payload.level ?? 'info');
-      if (message) sendToRenderer?.('bot-log', { message, level });
+      if (message) sendToRenderer?.(IPC_EVENTS.BOT_LOG, { message, level });
       return;
     }
 
-    if (payload.event === 'qr') {
+    if (payload.event === BOT_EVENTS.QR) {
       const qr = String(payload.qr ?? '');
-      if (qr) sendToRenderer?.('qr-code', qr);
+      if (qr) sendToRenderer?.(IPC_EVENTS.QR_CODE, qr);
       return;
     }
 
-    if (payload.event === 'status') {
+    if (payload.event === BOT_EVENTS.STATUS) {
       const status = String(payload.status ?? '');
       if (!status) return;
       setBotStatus(status);
       return;
     }
 
-    if (payload.event === 'error') {
+    if (payload.event === BOT_EVENTS.ERROR) {
       const message = String(payload.message ?? '');
-      if (message) sendToRenderer?.('bot-error', message);
+      if (message) sendToRenderer?.(IPC_EVENTS.BOT_ERROR, message);
     }
 
-    if (payload.event === 'settings-update') {
+    if (payload.event === BOT_EVENTS.SETTINGS_UPDATE) {
       const action = String(payload.action || '');
       if (!action) return;
       if (typeof updateSettings !== 'function') return;
 
       const current = getSettingsSnapshot?.() || {};
 
-      if (action === 'allowlist-group') {
+      if (action === SETTINGS_UPDATE_ACTIONS.ALLOWLIST_GROUP) {
         const groupJid = String(payload.groupJid || '').trim();
         if (!groupJid) return;
         const allowedGroups = Array.isArray(current.allowedGroups)
@@ -118,12 +123,12 @@ function createBotManager({
           : [];
         if (!allowedGroups.includes(groupJid)) {
           updateSettings({ allowedGroups: [...allowedGroups, groupJid] });
-          sendToRenderer?.('settings-updated', { reason: action, groupJid });
+          sendToRenderer?.(IPC_EVENTS.SETTINGS_UPDATED, { reason: action, groupJid });
         }
         return;
       }
 
-      if (action === 'allowlist-user') {
+      if (action === SETTINGS_UPDATE_ACTIONS.ALLOWLIST_USER) {
         const userRef = String(payload.userRef || '').trim();
         if (!userRef) return;
         const allowedUsers = Array.isArray(current.allowedUsers)
@@ -131,12 +136,12 @@ function createBotManager({
           : [];
         if (!allowedUsers.includes(userRef)) {
           updateSettings({ allowedUsers: [...allowedUsers, userRef] });
-          sendToRenderer?.('settings-updated', { reason: action, userRef });
+          sendToRenderer?.(IPC_EVENTS.SETTINGS_UPDATED, { reason: action, userRef });
         }
         return;
       }
 
-      if (action === 'set-owner') {
+      if (action === SETTINGS_UPDATE_ACTIONS.SET_OWNER) {
         const ownerNumber = String(payload.ownerNumber || '').trim();
         const ownerJid = String(payload.ownerJid || '').trim();
         if (!ownerNumber && !ownerJid) return;
@@ -152,7 +157,7 @@ function createBotManager({
           ownerClaimTokenHash: '',
           ownerClaimTokenExpiresAt: '',
         });
-        sendToRenderer?.('settings-updated', {
+        sendToRenderer?.(IPC_EVENTS.SETTINGS_UPDATED, {
           reason: action,
           ownerNumber,
           ownerJid,
@@ -160,7 +165,7 @@ function createBotManager({
         return;
       }
 
-      if (action === 'clear-owner-token') {
+      if (action === SETTINGS_UPDATE_ACTIONS.CLEAR_OWNER_TOKEN) {
         const hasToken = Boolean(
           String(current.ownerClaimTokenHash || '').trim() ||
           String(current.ownerClaimTokenExpiresAt || '').trim()
@@ -170,7 +175,7 @@ function createBotManager({
           ownerClaimTokenHash: '',
           ownerClaimTokenExpiresAt: '',
         });
-        sendToRenderer?.('settings-updated', { reason: action });
+        sendToRenderer?.(IPC_EVENTS.SETTINGS_UPDATED, { reason: action });
       }
     }
   }
@@ -236,7 +241,7 @@ function createBotManager({
 
       botProcess.on('error', (err) => {
         console.error('Bot process error:', err);
-        sendToRenderer?.('bot-error', err?.message || String(err));
+        sendToRenderer?.(IPC_EVENTS.BOT_ERROR, err?.message || String(err));
         setBotStatus('error');
       });
 
@@ -260,14 +265,14 @@ function createBotManager({
             }
           }
 
-          sendToRenderer?.('bot-log', { message: trimmed, level: 'info' });
+          sendToRenderer?.(IPC_EVENTS.BOT_LOG, { message: trimmed, level: 'info' });
         }
       });
 
       botProcess.stderr?.on('data', (data) => {
         const message = data.toString();
         console.error('Bot Error:', message);
-        sendToRenderer?.('bot-error', message);
+        sendToRenderer?.(IPC_EVENTS.BOT_ERROR, message);
       });
 
       botProcess.on('exit', (code, signal) => {
@@ -284,11 +289,11 @@ function createBotManager({
 
         const abnormal = !botStopRequested && code != null && code !== 0;
         setBotStatus(abnormal ? 'error' : 'offline');
-        sendToRenderer?.('bot-exit', { code, signal, abnormal });
+        sendToRenderer?.(IPC_EVENTS.BOT_EXIT, { code, signal, abnormal });
 
         if (abnormal) {
           sendToRenderer?.(
-            'bot-error',
+            IPC_EVENTS.BOT_ERROR,
             `Bot encerrou inesperadamente (code=${code}, signal=${signal || 'n/a'}).`
           );
         }
@@ -305,8 +310,8 @@ function createBotManager({
       startInProgress = false;
     } catch (err) {
       console.error('Failed to start bot:', err);
-      sendToRenderer?.('bot-error', err?.message || String(err));
-      sendToRenderer?.('bot-status', 'error');
+      sendToRenderer?.(IPC_EVENTS.BOT_ERROR, err?.message || String(err));
+      sendToRenderer?.(IPC_EVENTS.BOT_STATUS, 'error');
       startInProgress = false;
       pendingStart = false;
       throw err;
