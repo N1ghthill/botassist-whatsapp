@@ -3,6 +3,38 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.4 - 2026-03-28
+
+### Resumo
+
+Patch estavel de manutencao focado em saneamento de dependencias, fechamento do fluxo de verificacao pos-release e alinhamento da documentacao da linha `4.2.4`.
+
+### Highlights
+
+- `mailparser` atualizado para `3.9.6`, puxando `nodemailer` `8.0.4` e zerando vulnerabilidades nas dependencias de producao.
+- A linha atual do repo sobe para `4.2.4` mantendo a release estavel publicada em `v4.2.3` ate o proximo tag.
+- Verificacao pos-publicacao via `npm run release:verify` segue incorporada ao fluxo e documentada com o patch novo.
+- Patch revalidado com lint, testes, build Linux `--dir` e smoke do binario empacotado.
+
+### Tecnico
+
+- `package.json` e `package-lock.json` sobem a versao do app para `4.2.4`.
+- `mailparser` passa de `3.9.4` para `3.9.6`, atualizando `nodemailer` para `8.0.4`.
+- `npm audit fix` limpa vulnerabilidades remanescentes de desenvolvimento no lockfile sem alterar a superficie publica do app.
+- `docs/notas-da-versao.json` e o changelog editorial passam a refletir a release nova.
+
+### Correcoes
+
+- Removidos os advisories de producao em `mailparser` / `nodemailer`.
+- Reduzido o risco de drift entre versao do app, lockfile e notas de release antes do proximo tag.
+- Fechado o preparo operacional para a proxima patch release sem mexer em contratos de runtime.
+
+### Upgrade notes
+
+- Sem migracao obrigatoria de configuracao.
+- Para usuarios que ja estao em `v4.2.3`, a atualizacao esperada e de manutencao, sem mudanca de fluxo funcional.
+- Assinatura e notarizacao continuam pendencias separadas da linha `4.2.4`.
+
 ## 4.2.3 - 2026-03-22
 
 ### Resumo
