@@ -33,9 +33,9 @@ O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara
 
 ## Estado atual
 
-- Linha em preparacao no repo: `4.2.4`
-- Release estavel ativa: `v4.2.3`
-- `4.2.4` ja validada localmente com `npm run lint`, `npm test`, `npm run build:linux:dir`, `npm run smoke:packaged` e `npm audit --omit=dev`
+- Linha publicada no repo: `4.2.4`
+- Release estavel ativa: `v4.2.4`
+- `v4.2.4` publicada com assets para Windows, macOS e Linux e verificada com `npm run release:verify -- --tag v4.2.4`
 
 ## Comece em 5 minutos
 

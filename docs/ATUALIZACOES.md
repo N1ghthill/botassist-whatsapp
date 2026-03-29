@@ -86,6 +86,13 @@ Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 - No Linux, o release publica `AppImage`, `.deb` e `.rpm`.
 - O feed Linux publicado segue o canal da release: `latest-linux.yml`, `beta-linux.yml` ou `rc-linux.yml`.
 
+## Registro recente (2026-03-29)
+
+- Release formal `4.2.4` publicada e concluida com sucesso em Windows, macOS e Linux.
+- `mailparser` foi atualizado para `3.9.6`, puxando `nodemailer` `8.0.4` e zerando vulnerabilidades nas dependencias de producao.
+- A verificacao pos-publicacao foi executada com `npm run release:verify -- --tag v4.2.4`.
+- A linha estavel passa a ser `v4.2.4`, mantendo o fluxo de release por canais e os feeds de auto-update consistentes.
+
 ## Registro recente (2026-03-22)
 
 - Release formal `4.2.3` com modularizacao incremental do runtime e hardening do subsistema de tools.
