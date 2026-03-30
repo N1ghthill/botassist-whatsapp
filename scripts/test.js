@@ -1000,7 +1000,7 @@ test('shell executor rejects explicit executable paths when allowlist is active'
   await assert.rejects(
     () =>
       toolShellExec(
-        { command: `${process.execPath} -e "process.stdout.write('ok')"` },
+        { command: './node -e "process.stdout.write(\'ok\')"' },
         {
           baseDir: process.cwd(),
           allowedReadPaths: [process.cwd()],
