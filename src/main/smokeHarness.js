@@ -14,6 +14,7 @@ function createSmokeHarness({ app }) {
       `
         (async () => {
           const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const trace = [];
           const waitFor = async (predicate, timeoutMs = 5000, stepMs = 50) => {
             const deadline = Date.now() + timeoutMs;
             while (Date.now() < deadline) {
@@ -21,6 +22,20 @@ function createSmokeHarness({ app }) {
               await wait(stepMs);
             }
             return Boolean(predicate());
+          };
+          const withStep = async (label, action, timeoutMs = 5000) => {
+            trace.push({ label, status: 'started' });
+            const timeout = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error(\`Timeout na etapa "\${label}"\`)), timeoutMs);
+            });
+            try {
+              const result = await Promise.race([Promise.resolve().then(action), timeout]);
+              trace.push({ label, status: 'ok' });
+              return result;
+            } catch (error) {
+              trace.push({ label, status: 'error', error: error?.message || String(error) });
+              throw error;
+            }
           };
           const isVisible = (id) => {
             const element = document.getElementById(id);
@@ -49,27 +64,39 @@ function createSmokeHarness({ app }) {
           await wait(50);
 
           const stepAfterFirstClick = document.getElementById('setupStepText')?.textContent || '';
-          const ownerToken = await window.electronAPI.generateOwnerToken();
-          const ownerSettings = await window.electronAPI.getSettings();
+          const ownerToken = await withStep(
+            'generateOwnerToken',
+            () => window.electronAPI.generateOwnerToken()
+          );
+          const ownerSettings = await withStep('getSettings', () => window.electronAPI.getSettings());
 
-          const toolsSettings = await window.electronAPI.setSettings({
-            tools: {
-              enabled: true,
-              allowedPaths: ${JSON.stringify(allowedPath ? [allowedPath] : [])},
-              commandAllowlist: ['node'],
-            },
-          });
-          const toolsResult = await window.electronAPI.testTools();
+          const toolsSettings = await withStep('setSettings', () =>
+            window.electronAPI.setSettings({
+              tools: {
+                enabled: true,
+                allowedPaths: ${JSON.stringify(allowedPath ? [allowedPath] : [])},
+                commandAllowlist: ['node'],
+              },
+            })
+          );
+          const toolsResult = await withStep('testTools', () => window.electronAPI.testTools());
 
-          const updateState = await window.electronAPI.checkForUpdates();
+          const updateState = await withStep(
+            'checkForUpdates',
+            () => window.electronAPI.checkForUpdates(),
+            8000
+          );
           await wait(100);
           const updateDom = {
             statusText: document.getElementById('updateStatus')?.textContent || '',
             installVisible: isVisible('installUpdateBtn'),
           };
 
-          await window.electronAPI.quitAndInstallUpdate();
-          const installState = await window.electronAPI.getUpdateState();
+          await withStep('quitAndInstallUpdate', () => window.electronAPI.quitAndInstallUpdate());
+          const installState = await withStep(
+            'getUpdateState',
+            () => window.electronAPI.getUpdateState()
+          );
 
           return {
             initial,
@@ -81,6 +108,7 @@ function createSmokeHarness({ app }) {
             updateState,
             updateDom,
             installState,
+            trace,
           };
         })()
       `,
@@ -166,6 +194,7 @@ function createSmokeHarness({ app }) {
         finish({
           ok: false,
           error: error?.message || String(error),
+          stack: error?.stack || '',
         });
       }
     });

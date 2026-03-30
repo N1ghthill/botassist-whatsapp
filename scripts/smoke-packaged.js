@@ -5,29 +5,79 @@ const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
+const PRODUCT_NAME = 'BotAssist WhatsApp';
+const DIST_DIR = 'dist';
+
 function ensureDirSync(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function resolvePackagedBinary() {
-  if (process.platform === 'linux') {
-    return path.join(process.cwd(), 'dist', 'linux-unpacked', 'botassist-whatsapp');
+function listDirectoryEntries(dirPath) {
+  try {
+    return fs.readdirSync(dirPath, { withFileTypes: true });
+  } catch {
+    return [];
   }
-  if (process.platform === 'win32') {
-    return path.join(process.cwd(), 'dist', 'win-unpacked', 'BotAssist WhatsApp.exe');
+}
+
+function listBinaryCandidates({ platform = process.platform, cwd = process.cwd(), env = process.env } = {}) {
+  const overridePath = String(env.BOTASSIST_SMOKE_BINARY_PATH || '').trim();
+  if (overridePath) {
+    return [path.resolve(cwd, overridePath)];
   }
-  if (process.platform === 'darwin') {
-    return path.join(
-      process.cwd(),
-      'dist',
-      'mac-arm64',
-      'BotAssist WhatsApp.app',
-      'Contents',
-      'MacOS',
-      'BotAssist WhatsApp'
-    );
+
+  const distDir = path.join(cwd, DIST_DIR);
+  if (platform === 'linux') {
+    return [path.join(distDir, 'linux-unpacked', 'botassist-whatsapp')];
   }
-  throw new Error(`Plataforma nao suportada para smoke packager: ${process.platform}`);
+  if (platform === 'win32') {
+    const candidates = [path.join(distDir, 'win-unpacked', `${PRODUCT_NAME}.exe`)];
+    for (const entry of listDirectoryEntries(distDir)) {
+      if (!entry.isDirectory() || !/^win.*unpacked$/i.test(entry.name)) continue;
+      candidates.push(path.join(distDir, entry.name, `${PRODUCT_NAME}.exe`));
+    }
+    return Array.from(new Set(candidates));
+  }
+  if (platform === 'darwin') {
+    const candidates = [
+      path.join(distDir, `${PRODUCT_NAME}.app`, 'Contents', 'MacOS', PRODUCT_NAME),
+      path.join(distDir, 'mac', `${PRODUCT_NAME}.app`, 'Contents', 'MacOS', PRODUCT_NAME),
+      path.join(distDir, 'mac-arm64', `${PRODUCT_NAME}.app`, 'Contents', 'MacOS', PRODUCT_NAME),
+      path.join(distDir, 'mac-x64', `${PRODUCT_NAME}.app`, 'Contents', 'MacOS', PRODUCT_NAME),
+    ];
+    for (const entry of listDirectoryEntries(distDir)) {
+      if (!entry.isDirectory() || !/^mac(?:$|-)/i.test(entry.name)) continue;
+      candidates.push(
+        path.join(distDir, entry.name, `${PRODUCT_NAME}.app`, 'Contents', 'MacOS', PRODUCT_NAME)
+      );
+    }
+    return Array.from(new Set(candidates));
+  }
+  throw new Error(`Plataforma nao suportada para smoke packager: ${platform}`);
+}
+
+function resolvePackagedBinary(options = {}) {
+  const platform = options.platform || process.platform;
+  const cwd = options.cwd || process.cwd();
+  const candidates = listBinaryCandidates({ ...options, platform, cwd });
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  const distDir = path.join(cwd, DIST_DIR);
+  const distEntries = listDirectoryEntries(distDir)
+    .map((entry) => `${entry.isDirectory() ? 'dir' : 'file'}:${entry.name}`)
+    .join(', ');
+
+  throw new Error(
+    [
+      `Build empacotada nao encontrada para ${platform}.`,
+      `Candidatos: ${candidates.join(', ') || '(nenhum)'}.`,
+      `Conteudo de ${distDir}: ${distEntries || '(vazio ou ausente)'}.`,
+    ].join(' ')
+  );
 }
 
 function commandExists(command) {
@@ -66,6 +116,36 @@ async function waitForExit(child) {
   });
 }
 
+async function waitForReport(reportPath, timeoutMs = 45000, pollMs = 250) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(reportPath)) {
+      return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  throw new Error(`Smoke report nao foi gerado em ${timeoutMs}ms.`);
+}
+
+async function stopChildAfterReport(child, waitForExitPromise, graceMs = 5000) {
+  if (!child || child.exitCode !== null) {
+    return waitForExitPromise;
+  }
+
+  child.kill();
+  return await Promise.race([
+    waitForExitPromise,
+    new Promise((resolve) =>
+      setTimeout(() => {
+        if (child.exitCode === null) {
+          child.kill('SIGKILL');
+        }
+        resolve(waitForExitPromise);
+      }, graceMs)
+    ),
+  ]);
+}
+
 async function main() {
   const binaryPath = resolvePackagedBinary();
   if (!fs.existsSync(binaryPath)) {
@@ -80,6 +160,8 @@ async function main() {
   ensureDirSync(allowedPath);
 
   const launch = createLaunchCommand(binaryPath);
+  console.log(`Smoke packaged using binary: ${binaryPath}`);
+  console.log(`Launch command: ${launch.command} ${launch.args.join(' ')}`.trim());
   const child = spawn(launch.command, launch.args, {
     stdio: 'inherit',
     env: {
@@ -92,14 +174,9 @@ async function main() {
     },
   });
 
-  const result = await waitForExit(child);
-  if (!fs.existsSync(reportPath)) {
-    throw new Error(
-      `Smoke report nao foi gerado. code=${result.code ?? 'n/a'} signal=${result.signal ?? 'n/a'}`
-    );
-  }
-
-  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+  const exitPromise = waitForExit(child);
+  const report = await waitForReport(reportPath);
+  const result = await stopChildAfterReport(child, exitPromise);
   if (!report?.ok) {
     console.error(JSON.stringify(report, null, 2));
     throw new Error('Smoke packaged falhou.');
@@ -109,7 +186,15 @@ async function main() {
   console.log(JSON.stringify(report.payload || report, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error?.stack || error?.message || String(error));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error?.stack || error?.message || String(error));
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  createLaunchCommand,
+  listBinaryCandidates,
+  resolvePackagedBinary,
+};

@@ -164,9 +164,17 @@ jobs:
         if: runner.os == 'Windows'
         run: npm run build:win -- --publish always
 
+      - name: Smoke packaged app (Windows)
+        if: runner.os == 'Windows'
+        run: npm run smoke:packaged
+
       - name: Build (macOS)
         if: runner.os == 'macOS'
         run: npm run build:mac -- --publish always
+
+      - name: Smoke packaged app (macOS)
+        if: runner.os == 'macOS'
+        run: npm run smoke:packaged
 
   verify-release:
     needs: build-and-publish

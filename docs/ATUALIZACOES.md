@@ -44,7 +44,7 @@ Voce precisa:
 3. Rode o preflight de signing/notarization (`npm run release:signing:check -- --format json`).
 4. Se os segredos ainda nao estiverem provisionados no GitHub, use `npm run release:signing:provision -- --dry-run` e depois aplique com `gh`.
 5. Se a release precisa sair assinada, confirme antes com `REQUIRE_SIGNED_RELEASES=true npm run release:signing:check` ou `gh workflow run signing-readiness.yml`.
-6. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
+6. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run build:win:dir`, `npm run build:mac:dir`, `npm run smoke:packaged` em cada SO quando o runner estiver disponivel).
 7. Commit e crie a tag semver correspondente no commit final.
 8. Push da tag: `git push origin <tag>`.
 9. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
@@ -54,7 +54,7 @@ Voce precisa:
 
 As builds sao geradas no deploy de release (tags `vX.Y.Z`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N` ou `workflow_dispatch` executado a partir da propria tag).
 
-O workflow `release.yml` roda em Windows, macOS e Linux, publica os artefatos no GitHub Release e encerra com uma verificacao automatica dos feeds e dos assets publicados.
+O workflow `release.yml` roda em Windows, macOS e Linux, publica os artefatos no GitHub Release, executa smoke do binario empacotado nos tres SOs e encerra com uma verificacao automatica dos feeds e dos assets publicados.
 
 O workflow `signing-readiness.yml` roda separadamente para auditar certificados/credenciais sem precisar publicar uma tag.
 
@@ -153,7 +153,6 @@ Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 
 - Provisionar os segredos reais de assinatura/notarizacao e ativar `REQUIRE_SIGNED_RELEASES=true`.
 - Validar assinatura real de codigo/notarizacao quando os certificados forem adicionados ao repositorio.
-- Adicionar smoke multi-plataforma para Windows e macOS, alem do Linux empacotado.
 - Continuar reduzindo divergencia entre documentacao e comportamento real.
 
 ## Registro recente (2026-02-11)

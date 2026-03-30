@@ -13,8 +13,11 @@
    - Se ainda faltar provisionar segredos/variavel no GitHub, use `npm run release:signing:provision -- --dry-run`
 5. Rode `npm test`.
 6. Rode `npm run lint` (quando aplicavel).
-7. Gere a build do sistema alvo (`npm run build:win`, `npm run build:mac`, `npm run build:linux`).
-8. No Linux, rode tambem `npm run build:linux:dir` e `npm run smoke:packaged`.
+7. Gere a build final do sistema alvo (`npm run build:win`, `npm run build:mac`, `npm run build:linux`).
+8. Antes da release, valide o binario empacotado em cada SO suportado:
+   - Linux: `npm run build:linux:dir` e `npm run smoke:packaged`
+   - Windows: `npm run build:win:dir` e `npm run smoke:packaged`
+   - macOS: `npm run build:mac:dir` e `npm run smoke:packaged`
 9. Abra o app instalado e valide:
    - Start/Stop/Restart do bot
    - QR Code
