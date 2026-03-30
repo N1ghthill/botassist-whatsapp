@@ -129,6 +129,12 @@ function loadReleaseManifestModule() {
   return require(modulePath);
 }
 
+function loadPackagedSmokeModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'smoke-packaged.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadSigningReadinessModule() {
   const modulePath = path.join(process.cwd(), 'scripts', 'check-signing-readiness.js');
   delete require.cache[require.resolve(modulePath)];
@@ -577,6 +583,54 @@ test('updates smoke mode supports install request even when app is not packaged'
   updates.quitAndInstallUpdate();
 
   assert.strictEqual(updates.getUpdateState().status, 'install-requested');
+});
+
+test('packaged smoke resolves Windows unpacked binary from the default dist path', () => {
+  withTempDir((dir) => {
+    const binaryPath = path.join(dir, 'dist', 'win-unpacked', 'BotAssist WhatsApp.exe');
+    fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
+    fs.writeFileSync(binaryPath, '');
+
+    const { resolvePackagedBinary } = loadPackagedSmokeModule();
+    assert.strictEqual(resolvePackagedBinary({ platform: 'win32', cwd: dir, env: {} }), binaryPath);
+  });
+});
+
+test('packaged smoke resolves macOS app bundle from mac-arm64 output', () => {
+  withTempDir((dir) => {
+    const binaryPath = path.join(
+      dir,
+      'dist',
+      'mac-arm64',
+      'BotAssist WhatsApp.app',
+      'Contents',
+      'MacOS',
+      'BotAssist WhatsApp'
+    );
+    fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
+    fs.writeFileSync(binaryPath, '');
+
+    const { resolvePackagedBinary } = loadPackagedSmokeModule();
+    assert.strictEqual(resolvePackagedBinary({ platform: 'darwin', cwd: dir, env: {} }), binaryPath);
+  });
+});
+
+test('packaged smoke honors an explicit binary override path', () => {
+  withTempDir((dir) => {
+    const binaryPath = path.join(dir, 'custom', 'BotAssist WhatsApp');
+    fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
+    fs.writeFileSync(binaryPath, '');
+
+    const { resolvePackagedBinary } = loadPackagedSmokeModule();
+    assert.strictEqual(
+      resolvePackagedBinary({
+        platform: 'linux',
+        cwd: dir,
+        env: { BOTASSIST_SMOKE_BINARY_PATH: binaryPath },
+      }),
+      binaryPath
+    );
+  });
 });
 
 test('runtime pino import supports silent logger instantiation', async () => {

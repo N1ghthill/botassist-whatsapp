@@ -74,6 +74,27 @@ jobs:
         env:
           ELECTRON_BUILDER_PUBLISH: never
 
+      - name: Package (dir only)
+        run: npm run build:win:dir
+        if: runner.os == 'Windows'
+        env:
+          ELECTRON_BUILDER_PUBLISH: never
+
+      - name: Package (dir only)
+        run: npm run build:mac:dir
+        if: runner.os == 'macOS'
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          ELECTRON_BUILDER_PUBLISH: never
+
       - name: Smoke packaged app (Linux)
         if: runner.os == 'Linux'
+        run: npm run smoke:packaged
+
+      - name: Smoke packaged app (Windows)
+        if: runner.os == 'Windows'
+        run: npm run smoke:packaged
+
+      - name: Smoke packaged app (macOS)
+        if: runner.os == 'macOS'
         run: npm run smoke:packaged
