@@ -19,6 +19,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Restrinja caminhos de leitura/escrita das tools
 - Deixe `allowedWritePaths` vazio para bloquear escrita/remocao por padrao
 - Paths sao validados por caminho real (symlink-safe)
+- `shell.exec` nao aceita atribuicoes de ambiente (`PATH=... comando`) e, com allowlist ativa, exige nome base do executavel
 - Nao exponha segredos em prompts
 - Nao habilite tools em grupos sem necessidade
 - Configure owner por token antes de habilitar tools
@@ -27,6 +28,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 
 - Revise `tools.allowedDomains` e `tools.blockedDomains`
 - Use `web.search` apenas com filtros de dominio adequados ao seu contexto
+- `web.open` revalida redirecionamentos e limita o corpo antes de carregar respostas grandes em memoria
 
 ## Ferramentas sensiveis
 
@@ -34,6 +36,7 @@ Sempre exigem aprovacao explicita:
 
 - `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
 - `shell.exec`
+- `email.read`
 
 Boas praticas:
 

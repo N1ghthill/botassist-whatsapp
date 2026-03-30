@@ -35,8 +35,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Format check
+        run: npm run format:check
+
       - name: Tests
         run: npm test
+
+      - name: Audit (high severity)
+        if: runner.os == 'Linux'
+        run: npm audit --audit-level=high
 
       - name: Syntax checks
         run: |

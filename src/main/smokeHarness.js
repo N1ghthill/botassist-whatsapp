@@ -87,7 +87,9 @@ function createSmokeHarness({ app }) {
 
     const assertions = [];
     if (payload?.initial?.protocol !== 'app:') {
-      assertions.push(`Protocolo esperado "app:", recebido "${payload?.initial?.protocol || '-'}".`);
+      assertions.push(
+        `Protocolo esperado "app:", recebido "${payload?.initial?.protocol || '-'}".`
+      );
     }
     if (!payload?.initial?.rendererReady) {
       assertions.push('Renderer nao sinalizou prontidao antes do smoke test.');
@@ -105,13 +107,17 @@ function createSmokeHarness({ app }) {
       assertions.push('Teste read-only de tools nao retornou ok.');
     }
     if (payload?.updateState?.status !== 'downloaded') {
-      assertions.push(`Fluxo de update deveria terminar em downloaded, recebeu ${payload?.updateState?.status || '-'}.`);
+      assertions.push(
+        `Fluxo de update deveria terminar em downloaded, recebeu ${payload?.updateState?.status || '-'}.`
+      );
     }
     if (!payload?.updateDom?.installVisible || payload?.updateDom?.statusText !== 'downloaded') {
       assertions.push('UI de update nao exibiu estado downloaded com botao de instalacao.');
     }
     if (payload?.installState?.status !== 'install-requested') {
-      assertions.push(`quitAndInstallUpdate nao atualizou o estado para install-requested (recebido ${payload?.installState?.status || '-'}).`);
+      assertions.push(
+        `quitAndInstallUpdate nao atualizou o estado para install-requested (recebido ${payload?.installState?.status || '-'}).`
+      );
     }
 
     return {

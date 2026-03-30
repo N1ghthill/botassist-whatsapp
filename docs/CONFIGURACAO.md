@@ -161,4 +161,6 @@ No grupo (com bot conectado e owner configurado), mencione o bot e envie:
 }
 ```
 
-No `shell.exec`, a allowlist/denylist e aplicada sobre o executavel principal. Exemplo: `node -e "..."` casa com `node`; `git status` casa com `git`. Pipes, redirecionamento e comandos compostos sao bloqueados.
+Se `allowedWritePaths` ficar vazio, escrita/remocao permanecem bloqueadas mesmo que `allowedPaths` esteja preenchido.
+
+No `shell.exec`, a allowlist/denylist e aplicada sobre o comando-base. Exemplo: `node -e "..."` casa com `node`; `git status` casa com `git`. Pipes, redirecionamento, comandos compostos, atribuicoes de ambiente e paths explicitos com allowlist ativa sao bloqueados.

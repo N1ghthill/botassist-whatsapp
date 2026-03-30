@@ -149,6 +149,12 @@ function loadFsExecutorModule() {
   return require(modulePath);
 }
 
+function loadWebExecutorModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'executors', 'web.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadToolsDiagnosticsModule() {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'toolsDiagnostics.js');
   delete require.cache[require.resolve(modulePath)];
@@ -190,6 +196,27 @@ function loadAppProtocolModule() {
 
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+function withPatchedFetch(fetchImpl, fn) {
+  const originalFetch = global.fetch;
+  global.fetch = fetchImpl;
+
+  const cleanup = () => {
+    global.fetch = originalFetch;
+  };
+
+  try {
+    const result = fn();
+    if (result && typeof result.then === 'function') {
+      return result.finally(cleanup);
+    }
+    cleanup();
+    return result;
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
 }
 
 test('loadSettings seeds at least one profile', () => {
@@ -581,6 +608,7 @@ test('tool policies normalize context and write audit log', () => {
         tools: {
           enabled: true,
           allowedPaths: [allowedPath],
+          allowedWritePaths: [allowedPath],
           autoAllow: ['fs.list'],
         },
       },
@@ -615,6 +643,28 @@ test('tool access blocks non-owner and group usage according to policy', () => {
   assert.strictEqual(ownerOnly.reason, 'owner');
   assert.strictEqual(noGroups.enabled, false);
   assert.strictEqual(noGroups.reason, 'groups');
+});
+
+test('tool policies do not inherit write paths from read paths', () => {
+  withTempDir((dir) => {
+    const { buildToolContext } = loadToolPoliciesModule();
+    const allowedPath = path.join(dir, 'allowed');
+    fs.mkdirSync(allowedPath, { recursive: true });
+
+    const context = buildToolContext(
+      {
+        tools: {
+          enabled: true,
+          allowedPaths: [allowedPath],
+        },
+      },
+      dir,
+      {}
+    );
+
+    assert.deepStrictEqual(context.allowedReadPaths, [allowedPath]);
+    assert.deepStrictEqual(context.allowedWritePaths, []);
+  });
 });
 
 test('tool loop returns pending approvals in manual mode', async () => {
@@ -833,6 +883,28 @@ test('fs write blocks destination through symlinked parent', async () => {
   });
 });
 
+test('fs write is blocked when no write paths are configured', async () => {
+  await withTempDir(async (dir) => {
+    const { toolFsWrite } = loadFsExecutorModule();
+    const allowedDir = path.join(dir, 'allowed');
+    const targetFile = path.join(allowedDir, 'novo.txt');
+
+    fs.mkdirSync(allowedDir, { recursive: true });
+
+    await assert.rejects(
+      () =>
+        toolFsWrite(
+          { path: targetFile, content: 'teste' },
+          {
+            baseDir: process.cwd(),
+            allowedWritePaths: [],
+          }
+        ),
+      /Caminho nao permitido/
+    );
+  });
+});
+
 test('shell executor blocks cwd through symlink escape', async () => {
   await withTempDir(async (dir) => {
     const { toolShellExec } = loadShellExecutorModule();
@@ -907,6 +979,38 @@ test('shell executor enforces allowlist by command base', async () => {
   assert.strictEqual(result.error, undefined);
 });
 
+test('shell executor rejects environment assignments', async () => {
+  const { toolShellExec } = loadShellExecutorModule();
+  await assert.rejects(
+    () =>
+      toolShellExec(
+        { command: 'PATH=/tmp node -e "process.stdout.write(\'ok\')"' },
+        {
+          baseDir: process.cwd(),
+          allowedReadPaths: [process.cwd()],
+          tools: { commandAllowlist: ['node'], commandDenylist: [] },
+        }
+      ),
+    /Atribuicoes de ambiente/
+  );
+});
+
+test('shell executor rejects explicit executable paths when allowlist is active', async () => {
+  const { toolShellExec } = loadShellExecutorModule();
+  await assert.rejects(
+    () =>
+      toolShellExec(
+        { command: `${process.execPath} -e "process.stdout.write('ok')"` },
+        {
+          baseDir: process.cwd(),
+          allowedReadPaths: [process.cwd()],
+          tools: { commandAllowlist: ['node'], commandDenylist: [] },
+        }
+      ),
+    /nome base do executavel/
+  );
+});
+
 test('shell executor rejects compound shell syntax', async () => {
   const { toolShellExec } = loadShellExecutorModule();
   await assert.rejects(
@@ -937,6 +1041,58 @@ test('shell executor denylist uses command base', async () => {
       ),
     /denylist/
   );
+});
+
+test('web open blocks redirects to domains outside policy', async () => {
+  const { toolWebOpen } = loadWebExecutorModule();
+
+  await withPatchedFetch(async (url, options) => {
+    assert.strictEqual(options?.redirect, 'manual');
+
+    if (url === 'https://allowed.example/inicio') {
+      return new Response('', {
+        status: 302,
+        headers: {
+          location: 'https://blocked.example/segredo',
+        },
+      });
+    }
+
+    throw new Error(`unexpected fetch url: ${url}`);
+  }, async () => {
+    await assert.rejects(
+      () =>
+        toolWebOpen(
+          { url: 'https://allowed.example/inicio' },
+          {
+            allowedDomains: ['allowed.example'],
+            blockedDomains: ['blocked.example'],
+            tools: { maxOutputChars: 6000 },
+          }
+        ),
+      /Dominio nao permitido apos redirecionamento/
+    );
+  });
+});
+
+test('web open rejects oversized bodies before loading everything into output', async () => {
+  const { toolWebOpen } = loadWebExecutorModule();
+  const largeBody = 'x'.repeat(200000);
+
+  await withPatchedFetch(async () => new Response(largeBody, { status: 200 }), async () => {
+    await assert.rejects(
+      () =>
+        toolWebOpen(
+          { url: 'https://allowed.example/conteudo', maxChars: 200 },
+          {
+            allowedDomains: ['allowed.example'],
+            blockedDomains: [],
+            tools: { maxOutputChars: 200 },
+          }
+        ),
+      /Resposta excedeu o limite/
+    );
+  });
 });
 
 test('app protocol resolves renderer path and blocks traversal', () => {

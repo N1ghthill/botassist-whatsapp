@@ -40,12 +40,12 @@ Por padrao, apenas tools de leitura:
 
 - `web.search`, `web.open`
 - `fs.list`, `fs.read`
-- `email.read` (se email estiver ativo)
 
 Sempre exigem aprovacao explicita:
 
 - `fs.write`, `fs.delete`, `fs.move`, `fs.copy`
 - `shell.exec`
+- `email.read`
 
 Se quiser aprovacao para tudo: `tools.mode = manual`.
 
@@ -65,7 +65,7 @@ Se vier "sem resultados relevantes", revise filtros de dominio e refine a pergun
 Validacao usa caminho real (symlink-safe) para evitar escape de allowlist.
 
 Se `allowedPaths` vazio: leitura/listagem usam `~/`.
-Se `allowedWritePaths` vazio: escrita/remocao usam os caminhos de leitura.
+Se `allowedWritePaths` vazio: escrita/remocao ficam bloqueadas.
 
 ## Dominios permitidos (web)
 
@@ -85,7 +85,9 @@ Se `allowedDomains` vazio, qualquer dominio pode ser usado (menos bloqueados).
 - `tools.commandAllowlist`: se preenchido, libera apenas o comando-base (`node`, `git`, `ls`)
 - `tools.commandDenylist`: bloqueia por comando-base, nao por substring solta
 - `shell.exec` nao aceita shell composto, redirecionamento, pipes ou `&&`
-- A execucao usa `spawn(..., { shell: false })`, entao a allowlist/denylist vale sobre o executavel real
+- `shell.exec` nao aceita atribuicoes de ambiente no comando (`PATH=... comando`)
+- Com allowlist ativa, use apenas o nome base do executavel; paths explicitos sao rejeitados
+- A execucao usa `spawn(..., { shell: false })`
 
 ## Email (IMAP)
 

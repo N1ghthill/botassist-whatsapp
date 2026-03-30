@@ -1,7 +1,4 @@
-const {
-  resolveDmPolicy,
-  resolveGroupPolicy,
-} = require('../shared/settingsSchema');
+const { resolveDmPolicy, resolveGroupPolicy } = require('../shared/settingsSchema');
 
 function extractTextMessage(message) {
   if (!message) return '';

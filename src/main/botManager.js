@@ -1,10 +1,6 @@
 const { utilityProcess } = require('electron');
 const path = require('path');
-const {
-  BOT_EVENTS,
-  IPC_EVENTS,
-  SETTINGS_UPDATE_ACTIONS,
-} = require('../shared/ipcContracts');
+const { BOT_EVENTS, IPC_EVENTS, SETTINGS_UPDATE_ACTIONS } = require('../shared/ipcContracts');
 
 function forkBotProcess(modulePath, env) {
   if (utilityProcess && typeof utilityProcess.fork === 'function') {

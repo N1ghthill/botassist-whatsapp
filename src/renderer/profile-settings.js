@@ -9,7 +9,12 @@
 })(
   typeof globalThis !== 'undefined' ? globalThis : this,
   function createProfileSettingsFactory(root) {
-    function createModule({ appState, settingsSchema, constants = {}, updateProviderUI = () => {} }) {
+    function createModule({
+      appState,
+      settingsSchema,
+      constants = {},
+      updateProviderUI = () => {},
+    }) {
       if (!appState || !settingsSchema) {
         throw new Error('Profile settings module requires appState and settingsSchema');
       }
@@ -181,7 +186,9 @@
       }
 
       function serializeProfiles() {
-        const profiles = Array.isArray(appState.settings.profiles) ? appState.settings.profiles : [];
+        const profiles = Array.isArray(appState.settings.profiles)
+          ? appState.settings.profiles
+          : [];
         return {
           version: 1,
           exportedAt: new Date().toISOString(),
@@ -210,7 +217,8 @@
         next.dmPolicy = resolveDmPolicy(next);
         next.groupPolicy = resolveGroupPolicy(next);
         Object.assign(next, normalizeProfileState(next));
-        if (typeof next.historyEnabled !== 'boolean') next.historyEnabled = Boolean(next.historyEnabled);
+        if (typeof next.historyEnabled !== 'boolean')
+          next.historyEnabled = Boolean(next.historyEnabled);
         if (typeof next.historySummaryEnabled !== 'boolean') {
           next.historySummaryEnabled = next.historySummaryEnabled !== false;
         }
@@ -308,7 +316,10 @@
         }
 
         container.textContent = lines.join('\n');
-        container.classList.toggle('has-errors', Boolean(parsed.errors && parsed.errors.length > 0));
+        container.classList.toggle(
+          'has-errors',
+          Boolean(parsed.errors && parsed.errors.length > 0)
+        );
       }
 
       function refreshRoutingPreviews() {
@@ -320,7 +331,9 @@
       }
 
       function mergeImportedProfiles(importedProfiles = []) {
-        const existing = Array.isArray(appState.settings.profiles) ? appState.settings.profiles : [];
+        const existing = Array.isArray(appState.settings.profiles)
+          ? appState.settings.profiles
+          : [];
         const existingIds = new Set(existing.map((profile) => profile.id));
         const existingNames = new Set(existing.map((profile) => toNameKey(profile.name)));
         const merged = [...existing];
@@ -466,7 +479,9 @@
           toolsMaxOutputCharsInput.value = String(settings.tools?.maxOutputChars ?? 6000);
         }
         if (toolsAllowedPathsInput) {
-          const list = Array.isArray(settings.tools?.allowedPaths) ? settings.tools.allowedPaths : [];
+          const list = Array.isArray(settings.tools?.allowedPaths)
+            ? settings.tools.allowedPaths
+            : [];
           toolsAllowedPathsInput.value = list.join('\n');
         }
         if (toolsAllowedWritePathsInput) {
@@ -608,8 +623,7 @@
 
         const provider = 'groq';
         const dmPolicy = dmPolicySelect?.value || appState.settings.dmPolicy || 'open';
-        const groupPolicy =
-          groupPolicySelect?.value || appState.settings.groupPolicy || 'disabled';
+        const groupPolicy = groupPolicySelect?.value || appState.settings.groupPolicy || 'disabled';
         const groupAccessKeyValue = groupAccessKeyInput?.value ?? '';
         const settings = {
           persona: updatedProfile.persona || 'custom',
