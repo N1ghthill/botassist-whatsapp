@@ -41,17 +41,21 @@ Voce precisa:
 2. Atualize as notas da release:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
-3. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
-4. Commit e crie a tag semver correspondente no commit final.
-5. Push da tag: `git push origin <tag>`.
-6. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
-7. Depois da publicacao, rode `npm run release:verify -- --tag vX.Y.Z` para baixar feeds e assets da release real, validar `sha256` dos assets publicados e conferir `sha512`/`size` dos feeds.
+3. Rode o preflight de signing/notarization (`npm run release:signing:check -- --format json`).
+4. Se a release precisa sair assinada, confirme antes com `REQUIRE_SIGNED_RELEASES=true npm run release:signing:check` ou `gh workflow run signing-readiness.yml`.
+5. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
+6. Commit e crie a tag semver correspondente no commit final.
+7. Push da tag: `git push origin <tag>`.
+8. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
+9. Depois da publicacao, rode `npm run release:verify -- --tag vX.Y.Z` para baixar feeds e assets da release real, validar `sha256` dos assets publicados e conferir `sha512`/`size` dos feeds.
 
 ## Garantia de builds no deploy
 
 As builds sao geradas no deploy de release (tags `vX.Y.Z`, `vX.Y.Z-beta.N`, `vX.Y.Z-rc.N` ou `workflow_dispatch` executado a partir da propria tag).
 
 O workflow `release.yml` roda em Windows, macOS e Linux, publica os artefatos no GitHub Release e encerra com uma verificacao automatica dos feeds e dos assets publicados.
+
+O workflow `signing-readiness.yml` roda separadamente para auditar certificados/credenciais sem precisar publicar uma tag.
 
 ## Notas da versao (site)
 
@@ -74,6 +78,7 @@ O workflow aceita assinatura/notarizacao quando os segredos do repositorio estao
 - macOS signing: `MAC_CSC_LINK` + `MAC_CSC_KEY_PASSWORD` (ou fallback `CSC_LINK` / `CSC_KEY_PASSWORD`)
 - macOS notarization: `APPLE_API_KEY` + `APPLE_API_KEY_ID` + `APPLE_API_ISSUER` ou `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + `APPLE_TEAM_ID`
 - Se `REQUIRE_SIGNED_RELEASES=true`, o workflow falha quando a configuracao minima nao esta pronta
+- `MAC_CSC_NAME`/`CSC_NAME` viram apenas seletor de identidade; sem `CSC_LINK` + `CSC_KEY_PASSWORD`, o preflight continua marcando macOS signing como incompleto em `macos-latest`
 
 Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 
@@ -144,6 +149,7 @@ Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 
 ## Em preparacao (proxima release)
 
+- Provisionar os segredos reais de assinatura/notarizacao e ativar `REQUIRE_SIGNED_RELEASES=true`.
 - Validar assinatura real de codigo/notarizacao quando os certificados forem adicionados ao repositorio.
 - Adicionar smoke multi-plataforma para Windows e macOS, alem do Linux empacotado.
 - Continuar reduzindo divergencia entre documentacao e comportamento real.

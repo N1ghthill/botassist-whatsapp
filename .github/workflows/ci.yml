@@ -26,6 +26,10 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Release signing preflight
+        if: runner.os == 'Linux'
+        run: node scripts/check-signing-readiness.js --format json --no-write-summary
+
       - name: Install dependencies
         run: npm ci
 
@@ -47,6 +51,7 @@ jobs:
 
       - name: Syntax checks
         run: |
+          node --check scripts/check-signing-readiness.js
           node --check scripts/render-release-notes.js
           node --check scripts/smoke-packaged.js
           node --check src/main.js
