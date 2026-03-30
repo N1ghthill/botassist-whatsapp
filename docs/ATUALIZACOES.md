@@ -42,12 +42,13 @@ Voce precisa:
    - `docs/notas-da-versao.json` (fonte estruturada para site/automacoes)
    - `docs/NOTAS-DA-VERSAO.md` (texto editorial)
 3. Rode o preflight de signing/notarization (`npm run release:signing:check -- --format json`).
-4. Se a release precisa sair assinada, confirme antes com `REQUIRE_SIGNED_RELEASES=true npm run release:signing:check` ou `gh workflow run signing-readiness.yml`.
-5. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
-6. Commit e crie a tag semver correspondente no commit final.
-7. Push da tag: `git push origin <tag>`.
-8. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
-9. Depois da publicacao, rode `npm run release:verify -- --tag vX.Y.Z` para baixar feeds e assets da release real, validar `sha256` dos assets publicados e conferir `sha512`/`size` dos feeds.
+4. Se os segredos ainda nao estiverem provisionados no GitHub, use `npm run release:signing:provision -- --dry-run` e depois aplique com `gh`.
+5. Se a release precisa sair assinada, confirme antes com `REQUIRE_SIGNED_RELEASES=true npm run release:signing:check` ou `gh workflow run signing-readiness.yml`.
+6. Rode validacoes (`npm test`, `npm run lint`, `npm run build:linux:dir`, `npm run smoke:packaged`).
+7. Commit e crie a tag semver correspondente no commit final.
+8. Push da tag: `git push origin <tag>`.
+9. O workflow `.github/workflows/release.yml` gera o corpo padronizado da release a partir de `docs/notas-da-versao.json`, publica os artefatos e registra o readiness de assinatura/notarizacao no summary.
+10. Depois da publicacao, rode `npm run release:verify -- --tag vX.Y.Z` para baixar feeds e assets da release real, validar `sha256` dos assets publicados e conferir `sha512`/`size` dos feeds.
 
 ## Garantia de builds no deploy
 
@@ -79,6 +80,7 @@ O workflow aceita assinatura/notarizacao quando os segredos do repositorio estao
 - macOS notarization: `APPLE_API_KEY` + `APPLE_API_KEY_ID` + `APPLE_API_ISSUER` ou `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + `APPLE_TEAM_ID`
 - Se `REQUIRE_SIGNED_RELEASES=true`, o workflow falha quando a configuracao minima nao esta pronta
 - `MAC_CSC_NAME`/`CSC_NAME` viram apenas seletor de identidade; sem `CSC_LINK` + `CSC_KEY_PASSWORD`, o preflight continua marcando macOS signing como incompleto em `macos-latest`
+- `APPLE_API_KEY` deve conter o conteudo bruto do `.p8`; o preflight materializa esse secret como arquivo temporario no runner macOS
 
 Detalhes operacionais em `docs/ASSINATURA-E-NOTARIZACAO.md`.
 

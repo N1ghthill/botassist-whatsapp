@@ -127,6 +127,7 @@ Validacoes locais:
 npm test
 npm run lint
 npm run release:signing:check -- --format json
+npm run release:signing:provision -- --dry-run
 npm run release:notes -- --tag vX.Y.Z --title-only
 npm run release:verify -- --tag vX.Y.Z
 ```

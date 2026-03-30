@@ -52,6 +52,7 @@ jobs:
       - name: Syntax checks
         run: |
           node --check scripts/check-signing-readiness.js
+          node --check scripts/provision-signing-secrets.js
           node --check scripts/render-release-notes.js
           node --check scripts/smoke-packaged.js
           node --check src/main.js
