@@ -123,6 +123,12 @@ function loadReleaseVerifyModule() {
   return require(modulePath);
 }
 
+function loadReleaseManifestModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'render-release-manifest.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadSigningReadinessModule() {
   const modulePath = path.join(process.cwd(), 'scripts', 'check-signing-readiness.js');
   delete require.cache[require.resolve(modulePath)];
@@ -646,6 +652,71 @@ test('release verifier parses updater feeds without duplicating primary path ent
   ]);
 });
 
+test('release manifest picks direct downloads from published assets', () => {
+  const { pickPrimaryDownloads } = loadReleaseManifestModule();
+  const downloads = pickPrimaryDownloads([
+    { name: 'BotAssist-WhatsApp-4.2.4-arm64.dmg', url: 'https://example.com/app.dmg' },
+    { name: 'BotAssist-WhatsApp-Setup-4.2.4.exe', url: 'https://example.com/setup.exe' },
+    { name: 'BotAssist-WhatsApp-4.2.4.exe', url: 'https://example.com/portable.exe' },
+    { name: 'BotAssist-WhatsApp-4.2.4.AppImage', url: 'https://example.com/appimage' },
+    { name: 'botassist-whatsapp_4.2.4_amd64.deb', url: 'https://example.com/deb' },
+    { name: 'botassist-whatsapp-4.2.4.x86_64.rpm', url: 'https://example.com/rpm' },
+    { name: 'latest.yml', url: 'https://example.com/latest.yml' },
+  ]);
+
+  assert.deepStrictEqual(downloads, {
+    windows: {
+      url: 'https://example.com/setup.exe',
+      path: 'BotAssist-WhatsApp-Setup-4.2.4.exe',
+      asset: 'BotAssist-WhatsApp-Setup-4.2.4.exe',
+    },
+    mac: {
+      url: 'https://example.com/app.dmg',
+      path: 'BotAssist-WhatsApp-4.2.4-arm64.dmg',
+      asset: 'BotAssist-WhatsApp-4.2.4-arm64.dmg',
+    },
+    linux: {
+      url: 'https://example.com/appimage',
+      path: 'BotAssist-WhatsApp-4.2.4.AppImage',
+      asset: 'BotAssist-WhatsApp-4.2.4.AppImage',
+      alternatives: [
+        {
+          url: 'https://example.com/deb',
+          path: 'botassist-whatsapp_4.2.4_amd64.deb',
+          asset: 'botassist-whatsapp_4.2.4_amd64.deb',
+        },
+        {
+          url: 'https://example.com/rpm',
+          path: 'botassist-whatsapp-4.2.4.x86_64.rpm',
+          asset: 'botassist-whatsapp-4.2.4.x86_64.rpm',
+        },
+      ],
+    },
+  });
+});
+
+test('release manifest renders stable metadata from notes with fallback badge', () => {
+  const { renderManifest } = loadReleaseManifestModule();
+  const manifest = renderManifest({
+    repo: 'N1ghthill/botassist-whatsapp',
+    tag: 'v4.2.4',
+    includeAssets: false,
+  });
+
+  assert.strictEqual(manifest.version, '4.2.4');
+  assert.strictEqual(manifest.channel, 'latest');
+  assert.strictEqual(manifest.isPrerelease, false);
+  assert.strictEqual(manifest.badge, 'Release estavel');
+  assert.strictEqual(manifest.title, 'Saneamento de dependencias e fechamento do patch de release');
+  assert.ok(Array.isArray(manifest.cards));
+  assert.ok(manifest.cards.length >= 1);
+  assert.deepStrictEqual(manifest.requirements, {
+    windows: 'Windows 10/11 64-bit',
+    mac: 'macOS 12+ (Monterey)',
+    linux: 'Linux x64 moderno',
+  });
+});
+
 test('release verifier requires rpm in linux feed when release publishes rpm asset', () => {
   const { verifyLinuxFeedCoverage } = loadReleaseVerifyModule();
   const assetMap = new Map([
@@ -665,6 +736,42 @@ test('release verifier requires rpm in linux feed when release publishes rpm ass
       assetMap
     );
   }, /Feed Linux nao lista artefato \.rpm/);
+});
+
+test('release verifier validates manifest version and referenced downloads', () => {
+  const { verifyManifestDownloads, verifyManifestVersion } = loadReleaseVerifyModule();
+  const assetMap = new Map([
+    ['BotAssist-WhatsApp-Setup-4.2.4.exe', { name: 'BotAssist-WhatsApp-Setup-4.2.4.exe' }],
+    ['BotAssist-WhatsApp-4.2.4-arm64.dmg', { name: 'BotAssist-WhatsApp-4.2.4-arm64.dmg' }],
+    ['BotAssist-WhatsApp-4.2.4.AppImage', { name: 'BotAssist-WhatsApp-4.2.4.AppImage' }],
+    ['botassist-whatsapp_4.2.4_amd64.deb', { name: 'botassist-whatsapp_4.2.4_amd64.deb' }],
+  ]);
+  const manifest = {
+    version: '4.2.4',
+    downloads: {
+      windows: {
+        url: 'https://example.com/BotAssist-WhatsApp-Setup-4.2.4.exe',
+        path: 'BotAssist-WhatsApp-Setup-4.2.4.exe',
+      },
+      mac: {
+        url: 'https://example.com/BotAssist-WhatsApp-4.2.4-arm64.dmg',
+        path: 'BotAssist-WhatsApp-4.2.4-arm64.dmg',
+      },
+      linux: {
+        url: 'https://example.com/BotAssist-WhatsApp-4.2.4.AppImage',
+        path: 'BotAssist-WhatsApp-4.2.4.AppImage',
+        alternatives: [
+          {
+            url: 'https://example.com/botassist-whatsapp_4.2.4_amd64.deb',
+            path: 'botassist-whatsapp_4.2.4_amd64.deb',
+          },
+        ],
+      },
+    },
+  };
+
+  verifyManifestVersion(manifest, 'v4.2.4');
+  verifyManifestDownloads(manifest, assetMap);
 });
 
 test('signing readiness accepts imported certificates and notarization API credentials', () => {

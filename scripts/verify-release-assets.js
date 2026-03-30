@@ -8,6 +8,7 @@ const { execFileSync } = require('child_process')
 const { getReleaseChannelInfo, normalizeReleaseRef } = require('../src/shared/releaseChannel')
 
 const DEFAULT_REPO = 'N1ghthill/botassist-whatsapp'
+const RELEASE_MANIFEST_FILE = 'release-manifest.json'
 
 function parseArgs(argv) {
   const args = {
@@ -120,6 +121,10 @@ function buildAssetMap(assets) {
 function buildRequiredFeedNames(tag) {
   const channelInfo = getReleaseChannelInfo(tag)
   return ['latest.yml', 'latest-mac.yml', channelInfo.feedFile]
+}
+
+function parseReleaseManifest(content) {
+  return JSON.parse(String(content || ''))
 }
 
 function ensureReleaseTypeMatches(tag, releaseInfo) {
@@ -240,6 +245,43 @@ function verifyFeedVersion(feedName, parsedFeed, tag) {
   }
 }
 
+function verifyManifestVersion(manifest, tag) {
+  const expectedVersion = normalizeReleaseRef(tag)
+  if (String(manifest?.version || '').trim() !== expectedVersion) {
+    throw new Error(
+      `release-manifest.json aponta para versao ${String(manifest?.version || '').trim()}, esperado ${expectedVersion}`
+    )
+  }
+}
+
+function verifyManifestDownloadEntry(entry, assetMap, label) {
+  if (!entry || typeof entry !== 'object') {
+    throw new Error(`release-manifest.json nao contem download primario de ${label}`)
+  }
+
+  const pathValue = String(entry.path || entry.asset || '').trim()
+  const urlValue = String(entry.url || '').trim()
+  if (!pathValue || !urlValue) {
+    throw new Error(`release-manifest.json possui download invalido de ${label}`)
+  }
+  if (!assetMap.has(pathValue)) {
+    throw new Error(`release-manifest.json referencia asset inexistente para ${label}: ${pathValue}`)
+  }
+}
+
+function verifyManifestDownloads(manifest, assetMap) {
+  const downloads = manifest?.downloads || {}
+
+  verifyManifestDownloadEntry(downloads.windows, assetMap, 'Windows')
+  verifyManifestDownloadEntry(downloads.mac, assetMap, 'macOS')
+  verifyManifestDownloadEntry(downloads.linux, assetMap, 'Linux')
+
+  const alternatives = Array.isArray(downloads?.linux?.alternatives) ? downloads.linux.alternatives : []
+  for (const alternative of alternatives) {
+    verifyManifestDownloadEntry(alternative, assetMap, 'Linux')
+  }
+}
+
 function verifyLinuxFeedCoverage(parsedFeed, assetMap) {
   const expectedSuffixes = ['.AppImage', '.deb']
   const hasRpmAsset = Array.from(assetMap.keys()).some((name) => name.endsWith('.rpm'))
@@ -313,15 +355,22 @@ async function main() {
 
     const assetMap = buildAssetMap(releaseInfo.assets)
     const feedNames = buildRequiredFeedNames(args.tag)
+    const metadataAssetNames = [...feedNames, RELEASE_MANIFEST_FILE]
     const linuxFeedName = feedNames[feedNames.length - 1]
 
-    ensureAssetsExist(feedNames, assetMap, 'Feeds obrigatorios')
+    ensureAssetsExist(metadataAssetNames, assetMap, 'Arquivos de metadata obrigatorios')
     await withRetries(
-      'Baixar feeds da release',
-      () => downloadReleaseAssets(args.tag, args.repo, tempDir, feedNames),
+      'Baixar metadata da release',
+      () => downloadReleaseAssets(args.tag, args.repo, tempDir, metadataAssetNames),
       args
     )
-    verifyDownloadedAssetDigests(tempDir, assetMap, feedNames)
+    verifyDownloadedAssetDigests(tempDir, assetMap, metadataAssetNames)
+
+    const parsedManifest = parseReleaseManifest(
+      fs.readFileSync(path.join(tempDir, RELEASE_MANIFEST_FILE), 'utf8')
+    )
+    verifyManifestVersion(parsedManifest, args.tag)
+    verifyManifestDownloads(parsedManifest, assetMap)
 
     const parsedFeeds = new Map()
     for (const feedName of feedNames) {
@@ -375,6 +424,9 @@ if (require.main === module) {
 module.exports = {
   buildRequiredFeedNames,
   parseArgs,
+  parseReleaseManifest,
   parseUpdaterFeed,
+  verifyManifestDownloads,
+  verifyManifestVersion,
   verifyLinuxFeedCoverage,
 }

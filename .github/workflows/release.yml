@@ -184,5 +184,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Render release manifest
+        run: node scripts/render-release-manifest.js --tag "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --include-assets --output release-manifest.json
+
+      - name: Upload release manifest
+        run: gh release upload "${RELEASE_TAG}" release-manifest.json --clobber
+
       - name: Verify published release assets and feeds
         run: npm run release:verify -- --tag "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}"
