@@ -18,6 +18,7 @@
     "format:check": "prettier --check \"src/**/*.{js,css,html,json,md}\"",
     "test": "node scripts/test.js",
     "smoke:packaged": "node scripts/smoke-packaged.js",
+    "release:manifest": "node scripts/render-release-manifest.js",
     "release:notes": "node scripts/render-release-notes.js",
     "release:signing:check": "node scripts/check-signing-readiness.js",
     "release:signing:provision": "node scripts/provision-signing-secrets.js",
