@@ -10,6 +10,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Politica de grupos recomendada: allowlist
 - Owner definido por token/comando no WhatsApp (`!owner <token>`)
 - Build empacotado com Electron fuses para endurecer o runtime (`RunAsNode=false`, ASAR integrity, `NODE_OPTIONS` e `--inspect` desativados)
+- Renderer com sandbox do Electron habilitado por padrao
 - Renderer servido por protocolo dedicado `app://`, sem depender de `file://`
 - Navegacao inesperada e novas janelas bloqueadas no `BrowserWindow`; links externos abrem no navegador do sistema
 
@@ -23,6 +24,7 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Nao exponha segredos em prompts
 - Nao habilite tools em grupos sem necessidade
 - Configure owner por token antes de habilitar tools
+- Use `ELECTRON_SANDBOX=0` apenas como fallback temporario de diagnostico/compatibilidade
 
 ## Busca web segura
 

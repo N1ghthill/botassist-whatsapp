@@ -68,6 +68,18 @@ function loadReleaseChannelModule() {
   return require(modulePath);
 }
 
+function loadRuntimeSecurityModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'main', 'runtimeSecurity.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function loadPreloadModule() {
+  const modulePath = path.join(process.cwd(), 'src', 'preload.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadToolPoliciesModule() {
   const modulePath = path.join(process.cwd(), 'src', 'core', 'tooling', 'policies.js');
   delete require.cache[require.resolve(modulePath)];
@@ -127,6 +139,48 @@ function loadBotManagerModule(mockFork) {
     return require(modulePath);
   } finally {
     Module._load = originalLoad;
+  }
+}
+
+function loadUpdatesModule({ isPackaged = false, env = {}, autoUpdaterMock = {} } = {}) {
+  const modulePath = path.join(process.cwd(), 'src', 'main', 'updates.js');
+  delete require.cache[require.resolve(modulePath)];
+
+  const previousEnv = { ...process.env };
+  Object.assign(process.env, env);
+
+  const originalLoad = Module._load;
+  Module._load = function patchedLoad(request, parent, isMain) {
+    if (request === 'electron') {
+      return {
+        app: {
+          isPackaged,
+          getVersion: () => '4.2.4',
+        },
+      };
+    }
+    if (request === 'electron-updater') {
+      return {
+        autoUpdater: {
+          autoDownload: false,
+          autoInstallOnAppQuit: false,
+          allowPrerelease: false,
+          channel: 'latest',
+          on: () => {},
+          checkForUpdates: async () => {},
+          quitAndInstall: () => {},
+          ...autoUpdaterMock,
+        },
+      };
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    return require(modulePath);
+  } finally {
+    Module._load = originalLoad;
+    process.env = previousEnv;
   }
 }
 
@@ -474,6 +528,49 @@ test('release channel utility maps prerelease semver to RPM-safe version metadat
     version: '4.2.0',
     release: '0.beta.4',
     isPrerelease: true,
+  });
+});
+
+test('runtime security enables Electron sandbox by default and accepts explicit opt-out', () => {
+  const { resolveElectronSandboxEnabled } = loadRuntimeSecurityModule();
+
+  assert.strictEqual(resolveElectronSandboxEnabled({}), true);
+  assert.strictEqual(resolveElectronSandboxEnabled({ ELECTRON_SANDBOX: '1' }), true);
+  assert.strictEqual(resolveElectronSandboxEnabled({ ELECTRON_SANDBOX: 'true' }), true);
+  assert.strictEqual(resolveElectronSandboxEnabled({ ELECTRON_SANDBOX: '0' }), false);
+  assert.strictEqual(resolveElectronSandboxEnabled({ ELECTRON_SANDBOX: 'false' }), false);
+  assert.strictEqual(resolveElectronSandboxEnabled({ ELECTRON_SANDBOX: 'off' }), false);
+});
+
+test('runtime security renders QR code data URLs via main-safe helper', async () => {
+  const { renderQrCodeDataUrl } = loadRuntimeSecurityModule();
+  const dataUrl = await renderQrCodeDataUrl('conteudo-qr', { width: 128, margin: 1 });
+
+  assert.ok(dataUrl.startsWith('data:image/png;base64,'));
+});
+
+test('updates smoke mode supports install request even when app is not packaged', async () => {
+  const updates = loadUpdatesModule({
+    isPackaged: false,
+    env: { BOTASSIST_SMOKE_MOCK_UPDATES: '1' },
+  });
+
+  await updates.checkForUpdates();
+  updates.quitAndInstallUpdate();
+
+  assert.strictEqual(updates.getUpdateState().status, 'install-requested');
+});
+
+test('preload IPC contract stays aligned with shared IPC contract', () => {
+  const preloadContracts = loadPreloadModule();
+  const sharedContracts = require(path.join(process.cwd(), 'src', 'shared', 'ipcContracts.js'));
+
+  ['QR_TO_DATA_URL', 'GET_SETTINGS', 'SET_SETTINGS', 'CHECK_FOR_UPDATES'].forEach((key) => {
+    assert.strictEqual(preloadContracts.IPC_INVOKE[key], sharedContracts.IPC_INVOKE[key]);
+  });
+
+  ['BOT_LOG', 'QR_CODE', 'PRELOAD_READY', 'PRELOAD_ERROR'].forEach((key) => {
+    assert.strictEqual(preloadContracts.IPC_EVENTS[key], sharedContracts.IPC_EVENTS[key]);
   });
 });
 

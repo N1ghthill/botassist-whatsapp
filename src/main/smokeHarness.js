@@ -4,6 +4,7 @@ const path = require('path');
 function createSmokeHarness({ app }) {
   const reportPath = String(process.env.BOTASSIST_SMOKE_REPORT_PATH || '').trim();
   const allowedPath = String(process.env.BOTASSIST_SMOKE_ALLOWED_PATH || '').trim();
+  const expectSandboxed = String(process.env.BOTASSIST_SMOKE_EXPECT_SANDBOXED || '1') !== '0';
   const timeoutMs = 30000;
 
   async function runRendererSmoke(mainWindow) {
@@ -39,6 +40,7 @@ function createSmokeHarness({ app }) {
           const initial = {
             protocol: window.location.protocol,
             rendererReady,
+            sandboxed: Boolean(window.electronAPI?.sandboxed),
             setupVisible: isVisible('setupOverlay'),
             setupStepText: document.getElementById('setupStepText')?.textContent || '',
           };
@@ -93,6 +95,9 @@ function createSmokeHarness({ app }) {
     }
     if (!payload?.initial?.rendererReady) {
       assertions.push('Renderer nao sinalizou prontidao antes do smoke test.');
+    }
+    if (expectSandboxed && !payload?.initial?.sandboxed) {
+      assertions.push('Renderer deveria subir com sandbox habilitado por padrao.');
     }
     if (!payload?.initial?.setupVisible) {
       assertions.push('Setup wizard deveria abrir em userData vazio.');

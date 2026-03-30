@@ -86,7 +86,6 @@ function getUpdateState() {
 }
 
 function quitAndInstallUpdate() {
-  if (!app.isPackaged) return;
   if (SMOKE_MOCK_UPDATES) {
     sendUpdateEvent({
       status: 'install-requested',
@@ -94,6 +93,7 @@ function quitAndInstallUpdate() {
     });
     return;
   }
+  if (!app.isPackaged) return;
   autoUpdater.quitAndInstall(false, true);
 }
 

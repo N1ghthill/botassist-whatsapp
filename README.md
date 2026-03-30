@@ -89,6 +89,7 @@ Por padrao, operacoes mutaveis, `shell.exec` e `email.read` ficam no fluxo de ap
 - Acoes de tools geram auditoria local em `userData/logs/tools_audit.log`
 - `keytar` e usado para segredos quando o ambiente permite
 - O binario empacotado usa fuses do Electron para desativar `RunAsNode`, bloquear `NODE_OPTIONS`/`--inspect` e exigir carga por `app.asar` com validacao de integridade
+- O renderer sobe com sandbox do Electron habilitado por padrao; `ELECTRON_SANDBOX=0` fica como fallback temporario de diagnostico
 - O renderer empacotado carrega por `app://botassist/*`, sem depender de `file://`
 - Links externos abrem no navegador padrao e navegacoes inesperadas sao bloqueadas no `BrowserWindow`
 
