@@ -129,6 +129,12 @@ npm run release:notes -- --tag vX.Y.Z --title-only
 npm run release:verify -- --tag vX.Y.Z
 ```
 
+Governanca de CI:
+
+- workflows versionados usam GitHub Actions pinadas por commit SHA
+- comentarios `# vN` ao lado do SHA preservam a major de referencia para o Dependabot
+- PRs de update de actions so devem ser mergeados com CI/release verdes
+
 Builds:
 
 ```bash
