@@ -87,6 +87,7 @@ async function main() {
       BOTASSIST_SMOKE_REPORT_PATH: reportPath,
       BOTASSIST_SMOKE_MOCK_UPDATES: '1',
       BOTASSIST_SMOKE_ALLOWED_PATH: allowedPath,
+      BOTASSIST_SMOKE_EXPECT_SANDBOXED: launch.args.includes('--no-sandbox') ? '0' : '1',
       BOTASSIST_USER_DATA_DIR: userDataPath,
     },
   });

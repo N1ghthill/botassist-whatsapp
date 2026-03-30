@@ -17,6 +17,7 @@ const IPC_INVOKE = Object.freeze({
   GET_APP_VERSION: 'get-app-version',
   GET_UPDATE_STATE: 'get-update-state',
   CHECK_FOR_UPDATES: 'check-for-updates',
+  QR_TO_DATA_URL: 'qr-to-data-url',
   TEST_TOOLS: 'test-tools',
   QUIT_AND_INSTALL_UPDATE: 'quit-and-install-update',
   WINDOW_MINIMIZE: 'window-minimize',

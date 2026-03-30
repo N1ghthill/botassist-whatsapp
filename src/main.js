@@ -14,6 +14,7 @@ const { createBotManager } = require('./main/botManager');
 const { createUserDataManager } = require('./main/userData');
 const { getAssetPath, fileExists } = require('./main/paths');
 const { createSmokeHarness } = require('./main/smokeHarness');
+const { renderQrCodeDataUrl, resolveElectronSandboxEnabled } = require('./main/runtimeSecurity');
 const { runToolsDiagnostics } = require('./main/toolsDiagnostics');
 const { IPC_EVENTS, IPC_INVOKE } = require('./shared/ipcContracts');
 
@@ -92,9 +93,10 @@ function createWindow() {
   const iconPath = [getAssetPath('icon-window.png'), getAssetPath('icon.png')].find(fileExists);
   const preloadPath = path.join(__dirname, 'preload.js');
   const indexUrl = buildAppUrl('/src/renderer/index.html');
-  const enableSandbox = process.env.ELECTRON_SANDBOX === '1';
+  const enableSandbox = resolveElectronSandboxEnabled(process.env);
   const isMac = process.platform === 'darwin';
   console.log('[main] preload:', preloadPath, 'exists=', fileExists(preloadPath));
+  console.log('[main] renderer sandbox enabled =', enableSandbox);
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -306,6 +308,10 @@ ipcMain.handle(IPC_INVOKE.GET_UPDATE_STATE, () => {
 
 ipcMain.handle(IPC_INVOKE.CHECK_FOR_UPDATES, async () => {
   return updates.checkForUpdates();
+});
+
+ipcMain.handle(IPC_INVOKE.QR_TO_DATA_URL, async (event, text, options) => {
+  return renderQrCodeDataUrl(text, options);
 });
 
 ipcMain.handle(IPC_INVOKE.TEST_TOOLS, async () => {

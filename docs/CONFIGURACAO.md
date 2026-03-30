@@ -11,6 +11,10 @@ As configuracoes sao gerenciadas pela UI e persistidas em `settings.json` dentro
 
 Recursos avancados (tools, memoria, grupos, email) sao opt-in e ficam desativados por padrao.
 
+## Flags de runtime do app
+
+- `ELECTRON_SANDBOX=0`: desativa temporariamente o sandbox do renderer para diagnostico/compatibilidade. O padrao recomendado e manter o sandbox habilitado.
+
 ## Comportamento situacional nativo
 
 Mesmo sem tool, o prompt do sistema recebe contexto local do host:

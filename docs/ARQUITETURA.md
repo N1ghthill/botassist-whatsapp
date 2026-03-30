@@ -6,7 +6,7 @@ Visao tecnica do BotAssist.
 
 - `src/main.js`: processo principal do Electron
 - `src/main/appProtocol.js`: protocolo seguro `app://botassist/*`
-- `src/preload.js`: bridge segura (`contextBridge`)
+- `src/preload.js`: bridge segura (`contextBridge`) para renderer sandboxed
 - `src/main/smokeHarness.js`: smoke test interno do app empacotado
 - `src/renderer/*`: UI (HTML/CSS/JS)
 - `src/shared/settingsSchema.js`: schema/defaults compartilhados entre camadas
@@ -85,6 +85,7 @@ Quando habilitado, o modelo pode chamar tools com politicas de seguranca:
 - `src/renderer/profile-settings.js` concentra perfis, roteamento e serializacao do formulario.
 - `src/renderer/setup-wizard.js` concentra onboarding, owner token e fluxo guiado inicial.
 - `src/renderer/shell-ui.js` concentra tema, update UI, hints de provider e chrome da janela.
+- O preload expoe apenas uma facade IPC para o renderer; geracao de QR e outras operacoes privilegiadas ficam no processo principal.
 - O renderer sinaliza prontidao (`document.documentElement.dataset.appReady = "1"`) para o smoke test empacotado.
 
 ## Busca web
@@ -118,6 +119,7 @@ Eventos principais:
 
 - API Key com `keytar` (quando disponivel)
 - Binario empacotado com Electron fuses para `RunAsNode=false`, ASAR integrity e bloqueio de `NODE_OPTIONS` / `--inspect`
+- Renderer com `sandbox: true` por padrao, com opt-out explicito via `ELECTRON_SANDBOX=0` apenas para diagnostico
 - `GrantFileProtocolExtraPrivileges` fica desligado porque o app usa `app://` em vez de `file://`
 - Navegacao externa bloqueada por padrao no `BrowserWindow`, com abertura explicita apenas para `http(s)` no navegador do sistema
 - Paths com validacao por caminho real (symlink-safe)
