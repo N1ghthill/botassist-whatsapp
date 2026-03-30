@@ -126,6 +126,7 @@ Validacoes locais:
 ```bash
 npm test
 npm run lint
+npm run release:signing:check -- --format json
 npm run release:notes -- --tag vX.Y.Z --title-only
 npm run release:verify -- --tag vX.Y.Z
 ```
@@ -156,7 +157,7 @@ O projeto agora separa canais:
 - `vX.Y.Z-beta.N`: beta
 - `vX.Y.Z-rc.N`: release candidate
 
-O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md), a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md) e a verificacao pos-publicacao usa `npm run release:verify`.
+O updater segue o mesmo canal da versao instalada. O processo operacional esta em [docs/ATUALIZACOES.md](docs/ATUALIZACOES.md), a checklist em [docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md), o preflight de certificados usa `npm run release:signing:check` e a verificacao pos-publicacao usa `npm run release:verify`.
 
 ## Capturas
 

@@ -1,0 +1,37 @@
+name: Signing Readiness
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+
+      - name: Resolve signing readiness
+        env:
+          WINDOWS_CSC_LINK: ${{ secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK || secrets.CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+          MAC_CSC_NAME: ${{ secrets.MAC_CSC_NAME || secrets.CSC_NAME }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          REQUIRE_SIGNED_RELEASES: ${{ vars.REQUIRE_SIGNED_RELEASES }}
+        run: node scripts/check-signing-readiness.js --format json

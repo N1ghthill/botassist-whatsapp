@@ -110,18 +110,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Rebuild native deps for Electron
-        run: npx electron-builder install-app-deps
-
-      - name: Install rpm tooling (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm
-
       - name: Resolve signing readiness
-        shell: bash
         env:
           WINDOWS_CSC_LINK: ${{ secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
           WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
@@ -135,82 +124,17 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           REQUIRE_SIGNED_RELEASES: ${{ vars.REQUIRE_SIGNED_RELEASES }}
-        run: |
-          windows_ready=false
-          mac_sign_ready=false
-          mac_notarization_ready=false
+        run: node scripts/check-signing-readiness.js
 
-          export_env() {
-            local key="$1"
-            local value="$2"
-            if [[ -z "${value}" ]]; then
-              return 0
-            fi
-            {
-              echo "${key}<<EOF"
-              echo "${value}"
-              echo "EOF"
-            } >> "$GITHUB_ENV"
-          }
+      - name: Install dependencies
+        run: npm ci
 
-          if [[ -n "${WINDOWS_CSC_LINK}" && -n "${WINDOWS_CSC_KEY_PASSWORD}" ]]; then
-            windows_ready=true
-          fi
+      - name: Rebuild native deps for Electron
+        run: npx electron-builder install-app-deps
 
-          if [[ -n "${MAC_CSC_LINK}" && -n "${MAC_CSC_KEY_PASSWORD}" ]]; then
-            mac_sign_ready=true
-          elif [[ -n "${MAC_CSC_NAME}" ]]; then
-            mac_sign_ready=true
-          fi
-
-          if [[ -n "${APPLE_API_KEY}" && -n "${APPLE_API_KEY_ID}" && -n "${APPLE_API_ISSUER}" ]]; then
-            mac_notarization_ready=true
-          elif [[ -n "${APPLE_ID}" && -n "${APPLE_APP_SPECIFIC_PASSWORD}" && -n "${APPLE_TEAM_ID}" ]]; then
-            mac_notarization_ready=true
-          fi
-
-          {
-            echo "## Signing readiness"
-            echo "- Windows signing: ${windows_ready}"
-            echo "- macOS signing: ${mac_sign_ready}"
-            echo "- macOS notarization: ${mac_notarization_ready}"
-            echo "- Require signed releases: ${REQUIRE_SIGNED_RELEASES:-false}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [[ "${RUNNER_OS}" == "Windows" ]]; then
-            export_env CSC_LINK "${WINDOWS_CSC_LINK}"
-            export_env CSC_KEY_PASSWORD "${WINDOWS_CSC_KEY_PASSWORD}"
-          fi
-
-          if [[ "${RUNNER_OS}" == "macOS" ]]; then
-            if [[ "${mac_sign_ready}" != "true" ]]; then
-              echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-            fi
-            export_env CSC_LINK "${MAC_CSC_LINK}"
-            export_env CSC_KEY_PASSWORD "${MAC_CSC_KEY_PASSWORD}"
-            export_env CSC_NAME "${MAC_CSC_NAME}"
-            export_env APPLE_API_KEY "${APPLE_API_KEY}"
-            export_env APPLE_API_KEY_ID "${APPLE_API_KEY_ID}"
-            export_env APPLE_API_ISSUER "${APPLE_API_ISSUER}"
-            export_env APPLE_ID "${APPLE_ID}"
-            export_env APPLE_APP_SPECIFIC_PASSWORD "${APPLE_APP_SPECIFIC_PASSWORD}"
-            export_env APPLE_TEAM_ID "${APPLE_TEAM_ID}"
-          fi
-
-          if [[ "${REQUIRE_SIGNED_RELEASES}" == "true" ]]; then
-            if [[ "${windows_ready}" != "true" ]]; then
-              echo "Windows signing nao esta configurado." >&2
-              exit 1
-            fi
-            if [[ "${mac_sign_ready}" != "true" ]]; then
-              echo "macOS signing nao esta configurado." >&2
-              exit 1
-            fi
-            if [[ "${mac_notarization_ready}" != "true" ]]; then
-              echo "macOS notarization nao esta configurada." >&2
-              exit 1
-            fi
-          fi
+      - name: Install rpm tooling (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
 
       - name: Build (Linux AppImage + deb)
         if: runner.os == 'Linux'

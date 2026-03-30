@@ -123,6 +123,12 @@ function loadReleaseVerifyModule() {
   return require(modulePath);
 }
 
+function loadSigningReadinessModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'check-signing-readiness.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadBotManagerModule(mockFork) {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'botManager.js');
   delete require.cache[require.resolve(modulePath)];
@@ -642,6 +648,61 @@ test('release verifier requires rpm in linux feed when release publishes rpm ass
       assetMap
     );
   }, /Feed Linux nao lista artefato \.rpm/);
+});
+
+test('signing readiness accepts imported certificates and notarization API credentials', () => {
+  const { buildGithubEnvEntries, resolveSigningReadiness } = loadSigningReadinessModule();
+  const env = {
+    WIN_CSC_LINK: 'base64-win-cert',
+    WIN_CSC_KEY_PASSWORD: 'win-password',
+    MAC_CSC_LINK: 'base64-mac-cert',
+    MAC_CSC_KEY_PASSWORD: 'mac-password',
+    MAC_CSC_NAME: 'Developer ID Application: BotAssist',
+    APPLE_API_KEY: 'api-key',
+    APPLE_API_KEY_ID: 'ABC123',
+    APPLE_API_ISSUER: 'issuer-id',
+  };
+
+  const readiness = resolveSigningReadiness(env);
+
+  assert.strictEqual(readiness.windows.ready, true);
+  assert.strictEqual(readiness.macSigning.ready, true);
+  assert.strictEqual(readiness.macNotarization.ready, true);
+  assert.strictEqual(readiness.readyForSignedRelease, true);
+  assert.deepStrictEqual(buildGithubEnvEntries('Windows', readiness, env), [
+    ['CSC_LINK', 'base64-win-cert'],
+    ['CSC_KEY_PASSWORD', 'win-password'],
+  ]);
+  assert.deepStrictEqual(buildGithubEnvEntries('macOS', readiness, env), [
+    ['CSC_LINK', 'base64-mac-cert'],
+    ['CSC_KEY_PASSWORD', 'mac-password'],
+    ['CSC_NAME', 'Developer ID Application: BotAssist'],
+    ['APPLE_API_KEY', 'api-key'],
+    ['APPLE_API_KEY_ID', 'ABC123'],
+    ['APPLE_API_ISSUER', 'issuer-id'],
+  ]);
+});
+
+test('signing readiness does not treat CSC_NAME alone as macOS-ready', () => {
+  const { buildFailureMessages, buildSummary, resolveSigningReadiness } =
+    loadSigningReadinessModule();
+  const readiness = resolveSigningReadiness({
+    MAC_CSC_NAME: 'Developer ID Application: BotAssist',
+  });
+
+  assert.strictEqual(readiness.windows.ready, false);
+  assert.strictEqual(readiness.macSigning.ready, false);
+  assert.strictEqual(readiness.macSigning.identitySelectorOnly, true);
+  assert.strictEqual(readiness.macNotarization.ready, false);
+  assert.deepStrictEqual(buildFailureMessages(readiness), [
+    'Windows signing nao esta configurado.',
+    'macOS signing nao esta configurado.',
+    'macOS notarization nao esta configurada.',
+  ]);
+  assert.match(
+    buildSummary(readiness, { runnerOs: 'macOS', requireSignedReleases: true }),
+    /identity selector/
+  );
 });
 
 test('linux feed patch can derive beta feed from latest-linux.yml', () => {
