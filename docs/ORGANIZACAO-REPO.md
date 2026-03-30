@@ -26,7 +26,7 @@ Este documento define o mapa de pastas e o intuito de cada area do projeto.
 - `docs/*` - Documentacao funcional/tecnica, release notes e troubleshooting.
 - `scripts/*` - Automacao local (build Linux, manutencao e testes de smoke).
 - `assets/*` - Icones, logos, fontes e recursos estaticos usados no app.
-- `.github/workflows/*` - CI e pipeline de release.
+- `.github/workflows/*` - CI e pipeline de release, com GitHub Actions pinadas por SHA.
 
 ## Regras de organizacao
 - Codigo executavel do app fica apenas em `src/`.
