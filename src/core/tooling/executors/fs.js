@@ -73,7 +73,7 @@ async function toolFsRead(args = {}, context = {}) {
 async function toolFsWrite(args = {}, context = {}) {
   const filePath = resolveFilePath(args.path, context.baseDir);
   if (!filePath) throw new Error('Caminho invalido.');
-  if (!isPathAllowed(filePath, context.allowedWritePaths)) {
+  if (!isPathAllowed(filePath, context.allowedWritePaths, { emptyListAllows: false })) {
     throw new Error('Caminho nao permitido.');
   }
   const content = String(args.content ?? '');
@@ -86,7 +86,7 @@ async function toolFsWrite(args = {}, context = {}) {
 async function toolFsDelete(args = {}, context = {}) {
   const targetPath = resolveFilePath(args.path, context.baseDir);
   if (!targetPath) throw new Error('Caminho invalido.');
-  if (!isPathAllowed(targetPath, context.allowedWritePaths)) {
+  if (!isPathAllowed(targetPath, context.allowedWritePaths, { emptyListAllows: false })) {
     throw new Error('Caminho nao permitido.');
   }
   const recursive = Boolean(args.recursive);
@@ -98,8 +98,10 @@ async function toolFsMove(args = {}, context = {}) {
   const source = resolveFilePath(args.source, context.baseDir);
   const destination = resolveFilePath(args.destination, context.baseDir);
   if (!source || !destination) throw new Error('Caminho invalido.');
-  if (!isPathAllowed(source, context.allowedWritePaths)) throw new Error('Origem nao permitida.');
-  if (!isPathAllowed(destination, context.allowedWritePaths)) {
+  if (!isPathAllowed(source, context.allowedWritePaths, { emptyListAllows: false })) {
+    throw new Error('Origem nao permitida.');
+  }
+  if (!isPathAllowed(destination, context.allowedWritePaths, { emptyListAllows: false })) {
     throw new Error('Destino nao permitido.');
   }
   const overwrite = Boolean(args.overwrite);
@@ -116,7 +118,7 @@ async function toolFsCopy(args = {}, context = {}) {
   const destination = resolveFilePath(args.destination, context.baseDir);
   if (!source || !destination) throw new Error('Caminho invalido.');
   if (!isPathAllowed(source, context.allowedReadPaths)) throw new Error('Origem nao permitida.');
-  if (!isPathAllowed(destination, context.allowedWritePaths)) {
+  if (!isPathAllowed(destination, context.allowedWritePaths, { emptyListAllows: false })) {
     throw new Error('Destino nao permitido.');
   }
   const recursive = Boolean(args.recursive);

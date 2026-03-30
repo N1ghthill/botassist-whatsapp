@@ -19,11 +19,7 @@ const {
   resolveProviderConfig,
   runProviderCompletion,
 } = require('./provider');
-const {
-  buildSessionStore,
-  buildSummaryPrompt,
-  mergeHistoryForPrompt,
-} = require('./sessionStore');
+const { buildSessionStore, buildSummaryPrompt, mergeHistoryForPrompt } = require('./sessionStore');
 const {
   extractMentionedJids,
   extractTextMessage,

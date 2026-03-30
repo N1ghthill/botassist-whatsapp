@@ -27,7 +27,7 @@ O BotAssist nasceu como um app pessoal, mas hoje a proposta do repo e mais clara
 - Roteamento de perfis por usuario e por grupo
 - Ferramentas opt-in para web, arquivos, shell e email
 - Politicas de acesso para grupos, allowlists, cooldown e tamanho maximo de resposta
-- `shell.exec` com allowlist/denylist por comando-base e execucao sem shell intermediario
+- `shell.exec` com allowlist/denylist por comando-base, sem shell intermediario, sem override de ambiente e sem path explicito quando a allowlist estiver ativa
 - Persistencia de configuracao com `keytar` quando disponivel
 - Auto-update via GitHub Releases para `stable`, `beta` e `rc`
 
@@ -78,13 +78,14 @@ Hoje o app suporta:
 - `shell.exec`
 - `email.read`
 
-Por padrao, operacoes mutaveis e `shell.exec` ficam no fluxo de aprovacao por owner.
+Por padrao, operacoes mutaveis, `shell.exec` e `email.read` ficam no fluxo de aprovacao por owner.
 
 ## Seguranca
 
 - Owner e definido pelo metodo recomendado de token via WhatsApp
 - Em grupos, o bot pode operar com mencao obrigatoria e allowlist
 - Tools usam validacao de path, dominio, extensao e limites de tamanho
+- Escrita/remocao so funcionam com `allowedWritePaths` explicito; vazio significa bloqueado
 - Acoes de tools geram auditoria local em `userData/logs/tools_audit.log`
 - `keytar` e usado para segredos quando o ambiente permite
 - O binario empacotado usa fuses do Electron para desativar `RunAsNode`, bloquear `NODE_OPTIONS`/`--inspect` e exigir carga por `app.asar` com validacao de integridade

@@ -42,7 +42,11 @@ async function handleAccessCommand(context, deps) {
     clearPairingEntry,
   } = deps;
 
-  if (!isGroup && command.isCommand && (command.command === 'owner' || command.command === 'setowner')) {
+  if (
+    !isGroup &&
+    command.isCommand &&
+    (command.command === 'owner' || command.command === 'setowner')
+  ) {
     const providedToken = normalizeOwnerClaimToken(command.rawArgs);
     if (!providedToken) {
       await sendTaggedMessage({
@@ -390,7 +394,9 @@ async function handleUtilityCommand(context, deps) {
       lines.push(`Require owner: ${access.tools?.requireOwner ? 'sim' : 'não'}`);
     }
     if (!isOwner && access.tools?.requireOwner) {
-      lines.push(`Dica: gere um token no app e envie ${prefix}owner <token> no DM para virar owner.`);
+      lines.push(
+        `Dica: gere um token no app e envie ${prefix}owner <token> no DM para virar owner.`
+      );
     }
     await sendTaggedMessage({
       sendMessage,
@@ -500,7 +506,11 @@ async function handleUtilityCommand(context, deps) {
     return true;
   }
 
-  if (isOwner && command.isCommand && (command.command === 'limparmemoria' || command.command === 'resetmemoria')) {
+  if (
+    isOwner &&
+    command.isCommand &&
+    (command.command === 'limparmemoria' || command.command === 'resetmemoria')
+  ) {
     const ok = clearSessionState(remoteJid);
     await sendTaggedMessage({
       sendMessage,

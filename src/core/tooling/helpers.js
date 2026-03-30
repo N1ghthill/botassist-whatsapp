@@ -88,9 +88,8 @@ function resolveFilePath(input, baseDir) {
 }
 
 function resolveRealPath(filePath) {
-  const realpathSync = typeof fs.realpathSync.native === 'function'
-    ? fs.realpathSync.native
-    : fs.realpathSync;
+  const realpathSync =
+    typeof fs.realpathSync.native === 'function' ? fs.realpathSync.native : fs.realpathSync;
   return realpathSync(filePath);
 }
 
@@ -131,7 +130,8 @@ function isSubPath(parent, target) {
 }
 
 function isPathAllowed(targetPath, allowedPaths, options = {}) {
-  if (!Array.isArray(allowedPaths) || allowedPaths.length === 0) return true;
+  const emptyListAllows = options.emptyListAllows !== false;
+  if (!Array.isArray(allowedPaths) || allowedPaths.length === 0) return emptyListAllows;
   const normalizedTarget = resolvePathForPolicy(targetPath, {
     allowMissing: options.allowMissingTarget !== false,
   });

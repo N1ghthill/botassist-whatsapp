@@ -61,8 +61,7 @@ const electronAPI = {
   onQRCode: (callback) => ipcRenderer?.on(IPC_EVENTS.QR_CODE, (event, data) => callback(data)),
   onBotStatus: (callback) =>
     ipcRenderer?.on(IPC_EVENTS.BOT_STATUS, (event, data) => callback(data)),
-  onBotError: (callback) =>
-    ipcRenderer?.on(IPC_EVENTS.BOT_ERROR, (event, data) => callback(data)),
+  onBotError: (callback) => ipcRenderer?.on(IPC_EVENTS.BOT_ERROR, (event, data) => callback(data)),
   onBotExit: (callback) => ipcRenderer?.on(IPC_EVENTS.BOT_EXIT, (event, data) => callback(data)),
   onOpenSettings: (callback) => ipcRenderer?.on(IPC_EVENTS.OPEN_SETTINGS, () => callback()),
   onOpenPrivacy: (callback) => ipcRenderer?.on(IPC_EVENTS.OPEN_PRIVACY, () => callback()),

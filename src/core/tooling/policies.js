@@ -21,9 +21,7 @@ function buildToolContext(settings, dataDir, meta = {}) {
   const allowedReadPaths = tools.allowedPaths
     .map((entry) => resolveFilePath(entry, baseDir))
     .filter(Boolean);
-  const writeSource =
-    tools.allowedWritePaths.length > 0 ? tools.allowedWritePaths : tools.allowedPaths;
-  const allowedWritePaths = writeSource
+  const allowedWritePaths = tools.allowedWritePaths
     .map((entry) => resolveFilePath(entry, baseDir))
     .filter(Boolean);
   const audit = tools.enabled ? createToolAuditLogger(dataDir, meta) : null;

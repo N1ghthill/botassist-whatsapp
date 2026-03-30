@@ -46,7 +46,7 @@
   const DEFAULT_TOOL_SETTINGS = {
     enabled: false,
     mode: 'auto',
-    autoAllow: ['web.search', 'web.open', 'fs.list', 'fs.read', 'email.read'],
+    autoAllow: ['web.search', 'web.open', 'fs.list', 'fs.read'],
     requireOwner: true,
     allowInGroups: false,
     allowedPaths: [],
@@ -234,7 +234,11 @@
       blockedDomains: normalizeDomainList(merged.blockedDomains),
       blockedExtensions: blockedExtensions.length
         ? blockedExtensions
-        : [...(fallback && fallback.blockedExtensions ? fallback.blockedExtensions : DEFAULT_TOOL_SETTINGS.blockedExtensions)],
+        : [
+            ...(fallback && fallback.blockedExtensions
+              ? fallback.blockedExtensions
+              : DEFAULT_TOOL_SETTINGS.blockedExtensions),
+          ],
       maxFileSizeMb: clampNumber(
         merged.maxFileSizeMb,
         1,
@@ -250,7 +254,11 @@
       commandAllowlist: normalizeTextList(merged.commandAllowlist),
       commandDenylist: commandDenylist.length
         ? commandDenylist
-        : [...(fallback && fallback.commandDenylist ? fallback.commandDenylist : DEFAULT_TOOL_SETTINGS.commandDenylist)],
+        : [
+            ...(fallback && fallback.commandDenylist
+              ? fallback.commandDenylist
+              : DEFAULT_TOOL_SETTINGS.commandDenylist),
+          ],
     };
   }
 
@@ -421,7 +429,9 @@
     const users = base.users && typeof base.users === 'object' ? base.users : {};
     const groups = base.groups && typeof base.groups === 'object' ? base.groups : {};
     const profileIds = new Set(
-      Array.isArray(profiles) ? profiles.map((profile) => String((profile && profile.id) || '')) : []
+      Array.isArray(profiles)
+        ? profiles.map((profile) => String((profile && profile.id) || ''))
+        : []
     );
     const hasProfileIds = profileIds.size > 0;
 

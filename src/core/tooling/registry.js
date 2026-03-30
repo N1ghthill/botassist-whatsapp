@@ -205,7 +205,7 @@ const TOOL_REGISTRY = Object.freeze([
     key: 'email.read',
     internalName: 'email_read',
     displayName: 'Ler email',
-    approval: 'auto',
+    approval: 'owner',
     description: 'Le emails recentes via IMAP.',
     parameters: {
       type: 'object',

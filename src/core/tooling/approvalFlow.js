@@ -4,7 +4,10 @@ function createApprovalId() {
   return `auth_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function createToolApprovalEntry(base = {}, { now = Date.now(), ttlMs = DEFAULT_TOOL_APPROVAL_TTL_MS } = {}) {
+function createToolApprovalEntry(
+  base = {},
+  { now = Date.now(), ttlMs = DEFAULT_TOOL_APPROVAL_TTL_MS } = {}
+) {
   return {
     ...base,
     id: String(base.id || createApprovalId()),
@@ -25,7 +28,9 @@ function buildApprovalPrompt(entry, summarizeToolCallForApproval) {
     lines.push(`- ${preview}`);
   }
   lines.push(`ID: ${entry?.id || '-'}`);
-  lines.push(`Responda com ${prefix}aprovar ${entry?.id || '-'} ou ${prefix}negar ${entry?.id || '-'}.`);
+  lines.push(
+    `Responda com ${prefix}aprovar ${entry?.id || '-'} ou ${prefix}negar ${entry?.id || '-'}.`
+  );
   lines.push('Apenas o owner pode aprovar.');
   lines.push('Expira em 15 minutos.');
   return (botTag ? `${botTag} ` : '') + lines.join('\n');
@@ -71,7 +76,8 @@ async function handleToolApprovalCommand({
     return true;
   }
 
-  const entry = typeof getPendingToolApproval === 'function' ? getPendingToolApproval(approvalId) : null;
+  const entry =
+    typeof getPendingToolApproval === 'function' ? getPendingToolApproval(approvalId) : null;
   if (!entry) {
     await sendMessage?.(
       remoteJid,
@@ -121,7 +127,10 @@ async function handleToolApprovalCommand({
   }
 
   try {
-    const approvedToolMessages = await runApprovedToolCalls(entry.pendingCalls || [], entry.toolContext);
+    const approvedToolMessages = await runApprovedToolCalls(
+      entry.pendingCalls || [],
+      entry.toolContext
+    );
     const followUpMessages = [
       ...(entry.messages || []),
       entry.assistantMessage,

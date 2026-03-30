@@ -93,10 +93,7 @@ async function runSingleTool(call, context) {
         role: 'tool',
         tool_call_id: call.id,
         name: tool.internalName,
-        content: formatToolResult(
-          { error: 'Argumentos invalidos.' },
-          context.tools.maxOutputChars
-        ),
+        content: formatToolResult({ error: 'Argumentos invalidos.' }, context.tools.maxOutputChars),
       },
       canonicalName,
       internalName: tool.internalName,

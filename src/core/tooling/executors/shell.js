@@ -12,6 +12,10 @@ const {
 const UNSUPPORTED_SHELL_SYNTAX_PATTERN = /(?:&&|\|\||[|;<>`]|[$][(]|[\r\n])/;
 const ENV_ASSIGNMENT_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*=(.*)$/;
 
+function hasExplicitExecutablePath(value) {
+  return /[\\/]/.test(String(value || ''));
+}
+
 function tokenizeCommand(command) {
   const tokens = [];
   let current = '';
@@ -216,12 +220,18 @@ async function toolShellExec(args = {}, context = {}) {
     throw new Error('Comando bloqueado por padrao de seguranca.');
   }
   const parsedCommand = parseCommand(command);
+  if (Object.keys(parsedCommand.env).length > 0) {
+    throw new Error('Atribuicoes de ambiente nao sao suportadas neste executor.');
+  }
 
   const denylist = new Set(normalizeCommandRules(context.tools?.commandDenylist));
   if (denylist.has(parsedCommand.commandBase)) {
     throw new Error('Comando bloqueado pela denylist.');
   }
   const allowlist = new Set(normalizeCommandRules(context.tools?.commandAllowlist));
+  if (allowlist.size > 0 && hasExplicitExecutablePath(parsedCommand.executable)) {
+    throw new Error('Use apenas o nome base do executavel quando a allowlist estiver ativa.');
+  }
   if (allowlist.size > 0 && !allowlist.has(parsedCommand.commandBase)) {
     throw new Error('Comando nao permitido pela allowlist.');
   }
@@ -254,6 +264,7 @@ async function toolShellExec(args = {}, context = {}) {
 }
 
 module.exports = {
+  hasExplicitExecutablePath,
   normalizeCommandBase,
   parseCommand,
   toolShellExec,

@@ -44,10 +44,7 @@ function extractRawRequestPath(requestUrl) {
 function isInsideRoot(filePath) {
   const resolvedRoot = path.resolve(APP_ROOT_DIR);
   const resolvedTarget = path.resolve(filePath);
-  return (
-    resolvedTarget === resolvedRoot ||
-    resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`)
-  );
+  return resolvedTarget === resolvedRoot || resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`);
 }
 
 function resolveAppFilePath(requestUrl) {
