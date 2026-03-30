@@ -35,7 +35,7 @@
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
     "mailparser": "^3.9.6",
-    "pino": "^9.14.0",
+    "pino": "^10.3.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
