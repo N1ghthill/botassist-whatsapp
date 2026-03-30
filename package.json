@@ -20,6 +20,7 @@
     "smoke:packaged": "node scripts/smoke-packaged.js",
     "release:notes": "node scripts/render-release-notes.js",
     "release:signing:check": "node scripts/check-signing-readiness.js",
+    "release:signing:provision": "node scripts/provision-signing-secrets.js",
     "release:verify": "node scripts/verify-release-assets.js",
     "reset": "node scripts/maintenance.js reset",
     "backup": "node scripts/maintenance.js backup",

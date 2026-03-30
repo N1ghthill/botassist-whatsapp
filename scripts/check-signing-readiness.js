@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 function hasValue(value) {
   return String(value || '').trim().length > 0;
@@ -78,6 +79,21 @@ function parseArgs(argv) {
   return args;
 }
 
+function detectAppleApiKeySource(value) {
+  const normalized = String(value || '');
+  if (!hasValue(normalized)) return '';
+  if (normalized.includes('-----BEGIN') || normalized.includes('\n') || normalized.includes('\r')) {
+    return 'content';
+  }
+  return 'path';
+}
+
+function sanitizeFileComponent(value) {
+  const normalized = String(value || '').trim();
+  const sanitized = normalized.replace(/[^0-9A-Za-z._-]+/g, '_').replace(/^_+|_+$/g, '');
+  return sanitized || 'botassist';
+}
+
 function resolveSigningReadiness(env = process.env) {
   const windowsLink = firstAvailable(env, 'WIN_CSC_LINK', 'CSC_LINK');
   const windowsPassword = firstAvailable(env, 'WIN_CSC_KEY_PASSWORD', 'CSC_KEY_PASSWORD');
@@ -115,12 +131,33 @@ function resolveSigningReadiness(env = process.env) {
     macNotarization: {
       ready: macNotarizationReady,
       mode: appleApiKeyReady ? 'app-store-connect-api-key' : appleIdReady ? 'apple-id' : '',
+      appleApiKeySource: appleApiKeyReady ? detectAppleApiKeySource(env.APPLE_API_KEY) : '',
     },
     readyForSignedRelease: windowsReady && macSigningReady && macNotarizationReady,
   };
 }
 
-function buildGithubEnvEntries(runnerOs, readiness, env = process.env) {
+function prepareGithubRuntime(runnerOs, readiness, env = process.env) {
+  const runtime = {
+    appleApiKeyPath: '',
+  };
+
+  if (
+    runnerOs === 'macOS' &&
+    readiness.macNotarization.mode === 'app-store-connect-api-key' &&
+    readiness.macNotarization.appleApiKeySource === 'content'
+  ) {
+    const runnerTemp = hasValue(env.RUNNER_TEMP) ? String(env.RUNNER_TEMP) : os.tmpdir();
+    const keyId = sanitizeFileComponent(env.APPLE_API_KEY_ID || 'botassist');
+    const filePath = path.join(runnerTemp, `AuthKey_${keyId}.p8`);
+    fs.writeFileSync(filePath, String(env.APPLE_API_KEY), { encoding: 'utf8', mode: 0o600 });
+    runtime.appleApiKeyPath = filePath;
+  }
+
+  return runtime;
+}
+
+function buildGithubEnvEntries(runnerOs, readiness, env = process.env, runtime = {}) {
   const entries = [];
 
   if (runnerOs === 'Windows' && readiness.windows.ready) {
@@ -141,17 +178,26 @@ function buildGithubEnvEntries(runnerOs, readiness, env = process.env) {
       }
     }
 
-    const notarizationKeys = [
-      'APPLE_API_KEY',
-      'APPLE_API_KEY_ID',
-      'APPLE_API_ISSUER',
-      'APPLE_ID',
-      'APPLE_APP_SPECIFIC_PASSWORD',
-      'APPLE_TEAM_ID',
-    ];
-    for (const key of notarizationKeys) {
-      if (hasValue(env[key])) {
-        entries.push([key, env[key]]);
+    if (readiness.macNotarization.mode === 'app-store-connect-api-key') {
+      const appleApiKeyValue = hasValue(runtime.appleApiKeyPath)
+        ? runtime.appleApiKeyPath
+        : env.APPLE_API_KEY;
+      if (hasValue(appleApiKeyValue)) {
+        entries.push(['APPLE_API_KEY', appleApiKeyValue]);
+      }
+      if (hasValue(env.APPLE_API_KEY_ID)) {
+        entries.push(['APPLE_API_KEY_ID', env.APPLE_API_KEY_ID]);
+      }
+      if (hasValue(env.APPLE_API_ISSUER)) {
+        entries.push(['APPLE_API_ISSUER', env.APPLE_API_ISSUER]);
+      }
+    }
+
+    if (readiness.macNotarization.mode === 'apple-id') {
+      for (const key of ['APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID']) {
+        if (hasValue(env[key])) {
+          entries.push([key, env[key]]);
+        }
       }
     }
   }
@@ -190,6 +236,15 @@ function buildSummary(readiness, options = {}) {
         : ' (faltando APPLE_API_* ou APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID)'
     }`
   );
+  if (readiness.macNotarization.mode === 'app-store-connect-api-key') {
+    lines.push(
+      `- macOS API key source: ${
+        readiness.macNotarization.appleApiKeySource === 'content'
+          ? 'conteudo do .p8 materializado no runner'
+          : 'caminho de arquivo'
+      }`
+    );
+  }
   lines.push(`- Require signed releases: ${options.requireSignedReleases ? 'true' : 'false'}`);
   lines.push(
     `- Ready for signed release: ${readiness.readyForSignedRelease ? 'true' : 'false'}`
@@ -231,7 +286,13 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const readiness = resolveSigningReadiness(process.env);
   const summary = buildSummary(readiness, args);
-  const githubEnvEntries = buildGithubEnvEntries(args.runnerOs, readiness, process.env);
+  const githubRuntime = prepareGithubRuntime(args.runnerOs, readiness, process.env);
+  const githubEnvEntries = buildGithubEnvEntries(
+    args.runnerOs,
+    readiness,
+    process.env,
+    githubRuntime
+  );
 
   if (args.writeGithubEnv && process.env.GITHUB_ENV) {
     writeGithubEnv(process.env.GITHUB_ENV, githubEnvEntries);
@@ -278,8 +339,11 @@ module.exports = {
   buildFailureMessages,
   buildGithubEnvEntries,
   buildSummary,
+  detectAppleApiKeySource,
   normalizeRunnerOs,
   parseArgs,
   parseBoolean,
+  prepareGithubRuntime,
   resolveSigningReadiness,
+  sanitizeFileComponent,
 };

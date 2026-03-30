@@ -10,6 +10,7 @@
 4. Rode o preflight de assinatura/notarizacao:
    - `npm run release:signing:check -- --format json`
    - Se a release precisa sair assinada: `REQUIRE_SIGNED_RELEASES=true npm run release:signing:check`
+   - Se ainda faltar provisionar segredos/variavel no GitHub, use `npm run release:signing:provision -- --dry-run`
 5. Rode `npm test`.
 6. Rode `npm run lint` (quando aplicavel).
 7. Gere a build do sistema alvo (`npm run build:win`, `npm run build:mac`, `npm run build:linux`).

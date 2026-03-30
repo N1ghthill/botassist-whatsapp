@@ -129,6 +129,12 @@ function loadSigningReadinessModule() {
   return require(modulePath);
 }
 
+function loadSigningProvisionModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'provision-signing-secrets.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadBotManagerModule(mockFork) {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'botManager.js');
   delete require.cache[require.resolve(modulePath)];
@@ -703,6 +709,121 @@ test('signing readiness does not treat CSC_NAME alone as macOS-ready', () => {
     buildSummary(readiness, { runnerOs: 'macOS', requireSignedReleases: true }),
     /identity selector/
   );
+});
+
+test('signing readiness materializes APPLE_API_KEY content into a temp file on macOS', () => {
+  withTempDir((dir) => {
+    const { buildGithubEnvEntries, prepareGithubRuntime, resolveSigningReadiness } =
+      loadSigningReadinessModule();
+    const env = {
+      RUNNER_TEMP: dir,
+      APPLE_API_KEY: '-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\n',
+      APPLE_API_KEY_ID: 'ABC123',
+      APPLE_API_ISSUER: 'issuer-id',
+    };
+
+    const readiness = resolveSigningReadiness(env);
+    const runtime = prepareGithubRuntime('macOS', readiness, env);
+
+    assert.ok(runtime.appleApiKeyPath.endsWith(path.join('', 'AuthKey_ABC123.p8')));
+    assert.strictEqual(fs.readFileSync(runtime.appleApiKeyPath, 'utf8'), env.APPLE_API_KEY);
+    assert.deepStrictEqual(buildGithubEnvEntries('macOS', readiness, env, runtime), [
+      ['CSC_IDENTITY_AUTO_DISCOVERY', 'false'],
+      ['APPLE_API_KEY', runtime.appleApiKeyPath],
+      ['APPLE_API_KEY_ID', 'ABC123'],
+      ['APPLE_API_ISSUER', 'issuer-id'],
+    ]);
+  });
+});
+
+test('signing provision plan encodes cert files and reads passwords from environment variables', () => {
+  withTempDir((dir) => {
+    const { buildProvisionPlan } = loadSigningProvisionModule();
+    const winCert = path.join(dir, 'windows.p12');
+    const macCert = path.join(dir, 'macos.p12');
+    const apiKey = path.join(dir, 'AuthKey_ABC123.p8');
+
+    fs.writeFileSync(winCert, 'win-cert-binary');
+    fs.writeFileSync(macCert, 'mac-cert-binary');
+    fs.writeFileSync(apiKey, '-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\n');
+
+    const plan = buildProvisionPlan(
+      {
+        repo: 'N1ghthill/botassist-whatsapp',
+        dryRun: true,
+        runReadinessWorkflow: false,
+        requireSignedReleases: 'keep',
+        windowsCertFile: winCert,
+        windowsCertPasswordEnv: 'WIN_CERT_PASSWORD',
+        macCertFile: macCert,
+        macCertPasswordEnv: 'MAC_CERT_PASSWORD',
+        macCertName: 'Developer ID Application: BotAssist',
+        appleApiKeyFile: apiKey,
+        appleApiKeyId: 'ABC123',
+        appleApiIssuer: 'issuer-id',
+        appleId: '',
+        appleAppSpecificPasswordEnv: '',
+        appleTeamId: '',
+      },
+      {
+        WIN_CERT_PASSWORD: 'win-password',
+        MAC_CERT_PASSWORD: 'mac-password',
+      },
+      { secretNames: new Set() }
+    );
+
+    assert.strictEqual(plan.operations.length, 8);
+    assert.strictEqual(
+      plan.operations.find((operation) => operation.name === 'WIN_CSC_LINK').value,
+      Buffer.from('win-cert-binary').toString('base64')
+    );
+    assert.strictEqual(
+      plan.operations.find((operation) => operation.name === 'MAC_CSC_LINK').value,
+      Buffer.from('mac-cert-binary').toString('base64')
+    );
+    assert.strictEqual(
+      plan.operations.find((operation) => operation.name === 'APPLE_API_KEY').value,
+      '-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\n'
+    );
+    assert.strictEqual(plan.projectedReadiness.readyForSignedRelease, true);
+  });
+});
+
+test('signing provision blocks enabling required releases when projected readiness is incomplete', () => {
+  withTempDir((dir) => {
+    const { buildProvisionPlan } = loadSigningProvisionModule();
+    const winCert = path.join(dir, 'windows.p12');
+
+    fs.writeFileSync(winCert, 'win-cert-binary');
+
+    assert.throws(
+      () =>
+        buildProvisionPlan(
+          {
+            repo: 'N1ghthill/botassist-whatsapp',
+            dryRun: true,
+            runReadinessWorkflow: false,
+            requireSignedReleases: 'true',
+            windowsCertFile: winCert,
+            windowsCertPasswordEnv: 'WIN_CERT_PASSWORD',
+            macCertFile: '',
+            macCertPasswordEnv: '',
+            macCertName: '',
+            appleApiKeyFile: '',
+            appleApiKeyId: '',
+            appleApiIssuer: '',
+            appleId: '',
+            appleAppSpecificPasswordEnv: '',
+            appleTeamId: '',
+          },
+          {
+            WIN_CERT_PASSWORD: 'win-password',
+          },
+          { secretNames: new Set() }
+        ),
+      /Nao e seguro ativar REQUIRE_SIGNED_RELEASES=true/
+    );
+  });
 });
 
 test('linux feed patch can derive beta feed from latest-linux.yml', () => {
