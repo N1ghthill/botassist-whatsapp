@@ -573,6 +573,17 @@ test('updates smoke mode supports install request even when app is not packaged'
   assert.strictEqual(updates.getUpdateState().status, 'install-requested');
 });
 
+test('runtime pino import supports silent logger instantiation', async () => {
+  const imported = await import('pino');
+  const pino = imported.default || imported;
+  const logger = pino({ level: 'silent' });
+
+  assert.ok(logger);
+  assert.strictEqual(typeof logger.info, 'function');
+  assert.strictEqual(typeof logger.error, 'function');
+  assert.strictEqual(logger.level, 'silent');
+});
+
 test('preload IPC contract stays aligned with shared IPC contract', () => {
   const preloadContracts = loadPreloadModule();
   const sharedContracts = require(path.join(process.cwd(), 'src', 'shared', 'ipcContracts.js'));
