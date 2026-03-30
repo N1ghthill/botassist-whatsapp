@@ -47,6 +47,7 @@ function openExternalSafely(targetUrl) {
 
 function applyLaunchOnStartup(value) {
   try {
+    if (process.env.BOTASSIST_SMOKE_REPORT_PATH) return;
     if (typeof app.setLoginItemSettings !== 'function') return;
     const enabled = Boolean(value);
     app.setLoginItemSettings({ openAtLogin: enabled });
