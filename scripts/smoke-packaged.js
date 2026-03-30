@@ -116,6 +116,36 @@ async function waitForExit(child) {
   });
 }
 
+async function waitForReport(reportPath, timeoutMs = 45000, pollMs = 250) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(reportPath)) {
+      return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  throw new Error(`Smoke report nao foi gerado em ${timeoutMs}ms.`);
+}
+
+async function stopChildAfterReport(child, waitForExitPromise, graceMs = 5000) {
+  if (!child || child.exitCode !== null) {
+    return waitForExitPromise;
+  }
+
+  child.kill();
+  return await Promise.race([
+    waitForExitPromise,
+    new Promise((resolve) =>
+      setTimeout(() => {
+        if (child.exitCode === null) {
+          child.kill('SIGKILL');
+        }
+        resolve(waitForExitPromise);
+      }, graceMs)
+    ),
+  ]);
+}
+
 async function main() {
   const binaryPath = resolvePackagedBinary();
   if (!fs.existsSync(binaryPath)) {
@@ -144,14 +174,9 @@ async function main() {
     },
   });
 
-  const result = await waitForExit(child);
-  if (!fs.existsSync(reportPath)) {
-    throw new Error(
-      `Smoke report nao foi gerado. code=${result.code ?? 'n/a'} signal=${result.signal ?? 'n/a'}`
-    );
-  }
-
-  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+  const exitPromise = waitForExit(child);
+  const report = await waitForReport(reportPath);
+  const result = await stopChildAfterReport(child, exitPromise);
   if (!report?.ok) {
     console.error(JSON.stringify(report, null, 2));
     throw new Error('Smoke packaged falhou.');
