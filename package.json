@@ -37,7 +37,7 @@
     "groq-sdk": "^0.7.0",
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
-    "mailparser": "^3.9.6",
+    "mailparser": "^3.9.8",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4"
   },
