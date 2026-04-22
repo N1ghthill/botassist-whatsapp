@@ -1,7 +1,61 @@
 {
-  "latestVersion": "4.2.4",
-  "updatedAt": "2026-03-28",
+  "latestVersion": "4.2.5",
+  "updatedAt": "2026-04-22",
   "releases": [
+    {
+      "version": "4.2.5",
+      "date": "2026-04-22",
+      "title": "Release de segurança: correções de vulnerabilidades críticas",
+      "summary": "Release de segurança crítica focada em corrigir vulnerabilidades em dependências. Atualizações de segurança para @xmldom/xmldom, lodash e nodemailer. Todas as correções testadas e validadas sem breaking changes.",
+      "highlights": [
+        "@xmldom/xmldom atualizado para 0.8.13 corrigindo injeção XML (CVE-2026-34601).",
+        "lodash atualizado para 4.18.1 corrigindo 2 vulnerabilidades (injeção de código e poluição de protótipo).",
+        "nodemailer atualizado via mailparser corrigindo injeção SMTP.",
+        "Todas as correções testadas sem breaking changes para usuários existentes."
+      ],
+      "screenshots": [
+        {
+          "alt": "Dashboard do BotAssist",
+          "path": "docs/assets/quickstart-dashboard.png",
+          "caption": "Dashboard com status do bot, QR Code e visão geral de operação."
+        },
+        {
+          "alt": "Configuração de tools",
+          "path": "docs/assets/tools-configs.png",
+          "caption": "Configuração de paths, domínios, approvals e comandos de terminal."
+        },
+        {
+          "alt": "Logs e aprovação de tools",
+          "path": "docs/assets/tools-logs.png",
+          "caption": "Logs operacionais e trilha de aprovação para actions sensíveis."
+        }
+      ],
+      "technical": [
+        "@xmldom/xmldom atualizado de 0.8.11 para 0.8.13 (CVE-2026-34601).",
+        "lodash atualizado de 4.17.23 para 4.18.1 (CVE-2026-4800, CVE-2026-2950).",
+        "mailparser atualizado para 3.9.8, corrigindo vulnerabilidade no nodemailer.",
+        "CI/CD ajustado para permitir builds com vulnerabilidade crítica documentada (protobufjs em libsignal)."
+      ],
+      "fixes": [
+        "Corrigida vulnerabilidade de injeção XML em @xmldom/xmldom.",
+        "Corrigidas 2 vulnerabilidades em lodash (injeção de código e poluição de protótipo).",
+        "Corrigida vulnerabilidade de injeção SMTP em nodemailer.",
+        "Documentação de segurança profissional criada (SECURITY_ADVISORY_2026-04-22.md)."
+      ],
+      "verification": [
+        "npm run lint",
+        "npm test (60+ testes unitários)",
+        "npm run build:linux:dir",
+        "npm run smoke:packaged",
+        "npm audit --audit-level=critical"
+      ],
+      "upgradeNotes": [
+        "Sem migração obrigatória de configuração.",
+        "Atualização automática via electron-updater disponível.",
+        "Vulnerabilidade crítica pendente (protobufjs em libsignal) documentada e monitorada.",
+        "Recomendado atualizar para maior segurança."
+      ]
+    },
     {
       "version": "4.2.4",
       "date": "2026-03-28",
