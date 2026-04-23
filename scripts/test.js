@@ -147,6 +147,12 @@ function loadSigningProvisionModule() {
   return require(modulePath);
 }
 
+function loadSecurityAuditModule() {
+  const modulePath = path.join(process.cwd(), 'scripts', 'check-security-audit.js');
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
 function loadBotManagerModule(mockFork) {
   const modulePath = path.join(process.cwd(), 'src', 'main', 'botManager.js');
   delete require.cache[require.resolve(modulePath)];
@@ -826,6 +832,76 @@ test('release verifier validates manifest version and referenced downloads', () 
 
   verifyManifestVersion(manifest, 'v4.2.4');
   verifyManifestDownloads(manifest, assetMap);
+});
+
+test('security audit gate accepts only the documented baileys critical chain', () => {
+  const { validateAudit } = loadSecurityAuditModule();
+  const summary = validateAudit({
+    vulnerabilities: {
+      '@whiskeysockets/baileys': {
+        name: '@whiskeysockets/baileys',
+        severity: 'critical',
+        via: ['@whiskeysockets/libsignal-node'],
+      },
+      '@whiskeysockets/libsignal-node': {
+        name: '@whiskeysockets/libsignal-node',
+        severity: 'critical',
+        via: ['protobufjs'],
+      },
+      protobufjs: {
+        name: 'protobufjs',
+        severity: 'critical',
+        via: [{ source: 'GHSA-xq3m-2v4x-88gg', name: 'protobufjs' }],
+      },
+    },
+    metadata: {
+      vulnerabilities: {
+        critical: 3,
+      },
+    },
+  });
+
+  assert.deepStrictEqual(summary.allowedCriticals, [
+    '@whiskeysockets/baileys',
+    '@whiskeysockets/libsignal-node',
+    'protobufjs',
+  ]);
+});
+
+test('security audit gate fails when a new critical vulnerability appears', () => {
+  const { validateAudit } = loadSecurityAuditModule();
+
+  assert.throws(() => {
+    validateAudit({
+      vulnerabilities: {
+        '@whiskeysockets/baileys': {
+          name: '@whiskeysockets/baileys',
+          severity: 'critical',
+          via: ['@whiskeysockets/libsignal-node'],
+        },
+        '@whiskeysockets/libsignal-node': {
+          name: '@whiskeysockets/libsignal-node',
+          severity: 'critical',
+          via: ['protobufjs'],
+        },
+        protobufjs: {
+          name: 'protobufjs',
+          severity: 'critical',
+          via: [{ source: 'GHSA-xq3m-2v4x-88gg', name: 'protobufjs' }],
+        },
+        minimist: {
+          name: 'minimist',
+          severity: 'critical',
+          via: ['GHSA-new-critical'],
+        },
+      },
+      metadata: {
+        vulnerabilities: {
+          critical: 4,
+        },
+      },
+    });
+  }, /fora da allowlist documentada/);
 });
 
 test('signing readiness accepts imported certificates and notarization API credentials', () => {

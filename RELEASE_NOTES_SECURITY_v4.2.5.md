@@ -53,15 +53,16 @@ Esta release corrige múltiplas vulnerabilidades críticas identificadas em depe
 ### Dependências Atualizadas:
 ```json
 {
-  "@xmldom/xmldom": "0.8.12 → 0.9.9",
-  "lodash": "4.17.23 → 4.18.0",
-  "nodemailer": "8.0.4 → 8.0.5"
+  "@xmldom/xmldom": "0.8.11 -> 0.8.13",
+  "lodash": "4.17.23 -> 4.18.1",
+  "mailparser": "3.9.6 -> 3.9.8",
+  "nodemailer": "8.0.4 -> 8.0.5"
 }
 ```
 
 ### Scripts de Build:
-- Adicionada verificação automática de segurança no CI/CD
-- `npm audit` agora é executado em todas as builds
+- Adicionada verificacao automatica de seguranca no CI/CD
+- O pipeline valida `npm audit --json` com allowlist explicita apenas para a cadeia critica transitiva documentada (`@whiskeysockets/baileys -> @whiskeysockets/libsignal-node -> protobufjs`)
 
 ## 🔧 Instalação e Atualização
 
@@ -94,8 +95,8 @@ Esta release corrige múltiplas vulnerabilidades críticas identificadas em depe
 
 ### Análise de Vulnerabilidades:
 - Auditoria completa com `npm audit`
-- Correções aplicadas via `npm audit fix --force`
-- Verificação de integridade pós-correção
+- Atualizacoes aplicadas com bump controlado de dependencias no lockfile
+- Verificacao de integridade pos-correcao
 
 ### Processo de Validação:
 1. Atualização de dependências

@@ -1,7 +1,56 @@
 {
-  "latestVersion": "4.2.5",
+  "latestVersion": "4.2.6",
   "updatedAt": "2026-04-22",
   "releases": [
+    {
+      "version": "4.2.6",
+      "date": "2026-04-22",
+      "title": "Alinhamento operacional da release de segurança",
+      "summary": "Patch estavel focado em promover a correcao de seguranca para a linha publicada com versao coerente, gate de audit rastreavel no CI e documentacao alinhada ao estado real da release.",
+      "highlights": [
+        "CI deixa de ignorar vulnerabilidades criticas novas e passa a aceitar apenas a cadeia transitiva documentada do baileys/libsignal/protobufjs.",
+        "Versao do app, lockfile e changelog estruturado sobem para 4.2.6 sem reescrever a release publicada v4.2.5.",
+        "Documentacao de seguranca e release passa a refletir o estado real do npm audit e do processo de validacao.",
+        "Patch revalidado localmente com testes automatizados e gate de audit dedicado."
+      ],
+      "screenshots": [
+        {
+          "alt": "Dashboard do BotAssist",
+          "path": "docs/assets/quickstart-dashboard.png",
+          "caption": "Dashboard com status do bot, QR Code e visão geral de operação."
+        },
+        {
+          "alt": "Configuração de tools",
+          "path": "docs/assets/tools-configs.png",
+          "caption": "Configuração de paths, domínios, approvals e comandos de terminal."
+        },
+        {
+          "alt": "Logs e aprovação de tools",
+          "path": "docs/assets/tools-logs.png",
+          "caption": "Logs operacionais e trilha de aprovação para actions sensíveis."
+        }
+      ],
+      "technical": [
+        "Adicionado scripts/check-security-audit.js para validar npm audit --json com allowlist explicita apenas para a cadeia critica transitiva conhecida.",
+        ".github/workflows/ci.yml deixa de usar npm audit com || true e volta a falhar para vulnerabilidades criticas nao documentadas.",
+        "package.json e package-lock.json sobem a versao publicada para 4.2.6.",
+        "README, indice da documentacao e notas estruturadas passam a refletir a linha estavel publicada."
+      ],
+      "fixes": [
+        "Eliminado blind spot no CI que mascarava qualquer vulnerabilidade critica nova.",
+        "Corrigido drift entre versao do app, release notes estruturadas e comunicacao publica.",
+        "Corrigidas notas de seguranca que afirmavam uma validacao mais forte do que a realmente executada."
+      ],
+      "verification": [
+        "npm test",
+        "node scripts/check-security-audit.js"
+      ],
+      "upgradeNotes": [
+        "Sem migracao obrigatoria de configuracao.",
+        "Atualizacao recomendada para usuarios que acompanharam a prerelease v4.2.5.",
+        "A cadeia critica transitiva em protobufjs via baileys/libsignal continua documentada e monitorada."
+      ]
+    },
     {
       "version": "4.2.5",
       "date": "2026-04-22",
@@ -34,7 +83,7 @@
         "@xmldom/xmldom atualizado de 0.8.11 para 0.8.13 (CVE-2026-34601).",
         "lodash atualizado de 4.17.23 para 4.18.1 (CVE-2026-4800, CVE-2026-2950).",
         "mailparser atualizado para 3.9.8, corrigindo vulnerabilidade no nodemailer.",
-        "CI/CD ajustado para permitir builds com vulnerabilidade crítica documentada (protobufjs em libsignal)."
+        "CI/CD ajustado para validar npm audit com allowlist explicita apenas para a cadeia critica transitiva documentada (protobufjs em libsignal)."
       ],
       "fixes": [
         "Corrigida vulnerabilidade de injeção XML em @xmldom/xmldom.",
@@ -47,7 +96,7 @@
         "npm test (60+ testes unitários)",
         "npm run build:linux:dir",
         "npm run smoke:packaged",
-        "npm audit --audit-level=critical"
+        "node scripts/check-security-audit.js"
       ],
       "upgradeNotes": [
         "Sem migração obrigatória de configuração.",

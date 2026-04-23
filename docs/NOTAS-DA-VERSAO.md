@@ -3,6 +3,38 @@
 Este arquivo concentra as notas de release em formato humano.
 Para integracoes (site/app), use tambem `docs/notas-da-versao.json`.
 
+## 4.2.6 - 2026-04-22
+
+### Resumo
+
+Patch estavel focado em consolidar a release de seguranca na linha publicada, sem reescrever a `v4.2.5`, alinhando versao do app, CI e documentacao ao estado real do projeto.
+
+### Highlights
+
+- O CI volta a falhar para vulnerabilidades criticas novas e aceita apenas a cadeia transitiva ja documentada em `baileys/libsignal/protobufjs`.
+- `package.json`, `package-lock.json` e `docs/notas-da-versao.json` sobem juntos para `4.2.6`.
+- A documentacao publica deixa de afirmar uma validacao mais forte do que a realmente executada no pipeline anterior.
+- Patch revalidado com `npm test` e `node scripts/check-security-audit.js`.
+
+### Tecnico
+
+- `scripts/check-security-audit.js` passa a validar a saida do `npm audit --json` com allowlist explicita para a cadeia critica transitiva conhecida.
+- `.github/workflows/ci.yml` remove o `|| true` do audit e substitui o passo por gate dedicado.
+- `README.md`, `docs/INDEX.md`, `SECURITY_ADVISORY_2026-04-22.md` e `RELEASE_NOTES_SECURITY_v4.2.5.md` foram alinhados ao estado real da release.
+- A linha estavel publicada passa a ser `v4.2.6`, mantendo `v4.2.5` como prerelease historica.
+
+### Correcoes
+
+- Eliminado blind spot operacional no pipeline de CI.
+- Corrigido drift entre versao do app, release notes estruturadas e comunicacao publica.
+- Corrigido o processo de release para promover a correcao de seguranca sem sobrescrever tag ja publicada.
+
+### Upgrade notes
+
+- Sem migracao obrigatoria de configuracao.
+- Usuarios em `v4.2.5` devem migrar para `v4.2.6`.
+- A cadeia critica transitiva em `protobufjs` continua documentada e monitorada ate upstream corrigir.
+
 ## 4.2.4 - 2026-03-28
 
 ### Resumo

@@ -4,8 +4,9 @@
 
 **Data da Análise:** 22 de Abril de 2026  
 **Versão Afetada:** BotAssist v4.2.4  
+**Versão Corrigida Parcialmente:** BotAssist v4.2.6  
 **Severidade:** Crítica a Média  
-**Status:** 80% Corrigido (1 vulnerabilidade pendente)
+**Status:** Correcoes aplicadas com 1 cadeia critica transitiva pendente
 
 ## Vulnerabilidades Identificadas
 
@@ -23,33 +24,33 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - **Versão Vulnerável:** < 0.8.12 ou 0.9.0-0.9.8
 - **Versão Corrigida:** 0.8.12+
 - **Impacto:** Injeção XML via serialização insegura de CDATA
-- **Status:** **CORRIGIDO** via npm audit fix
+- **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 3. ALTA: lodash - Injeção de Código (CVE-2026-4800)
 - **CVSS:** 8.1 (Alta)
 - **Versão Vulnerável:** <= 4.17.23
 - **Versão Corrigida:** 4.18.0+
 - **Impacto:** Injeção de código via `_.template` imports key names
-- **Status:** **CORRIGIDO** via npm audit fix
+- **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 4. MÉDIA: lodash - Poluição de Protótipo (CVE-2026-2950)
 - **CVSS:** 6.5 (Média)
 - **Versão Vulnerável:** <= 4.17.23
 - **Versão Corrigida:** 4.18.0+
 - **Impacto:** Poluição de protótipo via `_.unset` e `_.omit`
-- **Status:** **CORRIGIDO** via npm audit fix
+- **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 5. MÉDIA: nodemailer (GHSA-vvjj-xcjg-gr5g)
 - **CVSS:** 4.9 (Média)
 - **Versão Vulnerável:** <= 8.0.4
 - **Versão Corrigida:** 8.0.5+
 - **Impacto:** Injeção de comando SMTP via CRLF em opção `name`
-- **Status:** **CORRIGIDO** via npm audit fix
+- **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ## Ações Tomadas
 
 ### ✅ Corrigidas (4/5 vulnerabilidades):
-1. Executado `npm audit fix --force` para atualizar dependências diretas
+1. Dependencias vulneraveis atualizadas manualmente no lockfile com versoes corrigidas
 2. Verificação de integridade com `npm test`, `npm run lint`, `npm run format:check`
 3. Todas as correções passaram nos testes automatizados
 
@@ -69,6 +70,7 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - ✅ Linting e formatação OK
 - ✅ Build do projeto funcional
 - ✅ Smoke tests passam
+- ✅ `npm audit --json` continua limitado a 1 cadeia critica transitiva ja documentada (`@whiskeysockets/baileys -> @whiskeysockets/libsignal-node -> protobufjs`)
 
 ## Recomendações
 
@@ -78,12 +80,12 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 
 ### Para Desenvolvimento:
 1. **Dependabot:** Habilitar Dependabot alerts no GitHub para monitoramento contínuo
-2. **CI/CD:** Adicionar `npm audit` como etapa obrigatória no pipeline
+2. **CI/CD:** Manter `npm audit` como etapa obrigatoria no pipeline com allowlist explicita apenas para a cadeia transitiva conhecida
 3. **Version Pinning:** Considerar pinning de versões críticas em `package.json`
 
 ## Próximos Passos
 
-1. **Release de Segurança:** Preparar release v4.2.5 com todas as correções
+1. **Release de Segurança:** Publicar release v4.2.5 com as correcoes disponiveis e ressalva explicita da cadeia transitiva pendente
 2. **Comunicação:** Atualizar site e documentação com informações de segurança
 3. **Monitoramento:** Acompanhar atualização do baileys/libsignal para resolver vulnerabilidade pendente
 4. **Processo:** Estabelecer processo regular de auditoria de segurança (trimestral)
