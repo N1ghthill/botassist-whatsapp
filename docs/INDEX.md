@@ -4,9 +4,9 @@ Bem-vindo(a) ao conjunto de documentos oficiais do BotAssist.
 
 Estado atual do repositorio:
 
-- linha publicada no repo: `4.2.4`
-- release estavel publicada: `v4.2.4`
-- patch `4.2.4` fecha vulnerabilidades de producao e foi validado com `release:verify`
+- linha publicada no repo: `4.2.6`
+- release estavel publicada: `v4.2.6`
+- patch `4.2.6` consolida a release de seguranca com gate de audit rastreavel e documentacao alinhada
 - canal estavel continua separado de `beta` e `rc`
 - `README.md` e o ponto de entrada recomendado para quem chega no projeto
 

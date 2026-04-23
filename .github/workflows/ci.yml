@@ -47,16 +47,12 @@ jobs:
 
       - name: Security audit
         if: runner.os == 'Linux'
-        run: |
-          # Check for vulnerabilities but don't fail the build
-          # We have 1 critical vulnerability pending (protobufjs in libsignal)
-          # This is tracked in SECURITY_ADVISORY_2026-04-22.md
-          npm audit --audit-level=critical || true
-          echo "Security audit completed. Critical vulnerabilities documented."
+        run: node scripts/check-security-audit.js
 
       - name: Syntax checks
         run: |
           node --check scripts/check-signing-readiness.js
+          node --check scripts/check-security-audit.js
           node --check scripts/provision-signing-secrets.js
           node --check scripts/render-release-notes.js
           node --check scripts/smoke-packaged.js
