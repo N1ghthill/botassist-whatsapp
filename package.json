@@ -31,13 +31,13 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "@whiskeysockets/baileys": "^7.0.0-rc12",
     "dotenv": "^17.3.1",
     "electron-updater": "^6.8.3",
     "groq-sdk": "^0.7.0",
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
-    "mailparser": "^3.9.6",
+    "mailparser": "^3.9.11",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4"
   },
@@ -60,10 +60,18 @@
   "overrides": {
     "file-type": "21.3.3",
     "flatted": "3.4.2",
+    "form-data": "4.0.6",
+    "ip-address": "10.2.0",
+    "nodemailer": "9.0.1",
+    "protobufjs": "7.6.3",
+    "@protobufjs/utf8": "1.1.1",
     "music-metadata": "11.12.3",
+    "tar": "7.5.16",
+    "tmp": "0.2.7",
     "utf7": {
       "semver": "5.7.2"
-    }
+    },
+    "ws": "8.21.0"
   },
   "build": {
     "appId": "br.dev.ruas.botassist",
