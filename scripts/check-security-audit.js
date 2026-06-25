@@ -70,9 +70,9 @@ function validateAudit(report) {
     );
   }
 
-  if (criticalCount !== ALLOWED_CRITICAL_CHAIN.size) {
+  if (criticalCount > ALLOWED_CRITICAL_CHAIN.size) {
     throw new Error(
-      `npm audit retornou ${criticalCount} vulnerabilidades criticas; esperado ${ALLOWED_CRITICAL_CHAIN.size} na cadeia documentada.`
+      `npm audit retornou ${criticalCount} vulnerabilidades criticas; esperado no maximo ${ALLOWED_CRITICAL_CHAIN.size} na cadeia documentada.`
     );
   }
 
@@ -96,7 +96,10 @@ function main() {
   }
 
   const summary = validateAudit(report);
-  const message = `Security audit OK: somente a cadeia critica documentada permanece (${summary.allowedCriticals.join(', ')}).`;
+  const message =
+    summary.criticalCount === 0
+      ? 'Security audit OK: nenhuma vulnerabilidade critica encontrada.'
+      : `Security audit OK: somente a cadeia critica documentada permanece (${summary.allowedCriticals.join(', ')}).`;
   process.stdout.write(`${message}\n`);
 }
 

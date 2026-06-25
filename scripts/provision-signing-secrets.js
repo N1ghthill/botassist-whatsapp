@@ -441,7 +441,9 @@ if (require.main === module) {
   try {
     main();
   } catch (error) {
-    console.error(error?.message || String(error));
+    process.stderr.write(
+      'Falha ao provisionar secrets de assinatura. Verifique argumentos, variaveis de ambiente e permissoes do gh.\n'
+    );
     process.exitCode = 1;
   }
 }

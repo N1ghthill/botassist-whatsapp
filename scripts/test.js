@@ -834,6 +834,25 @@ test('release verifier validates manifest version and referenced downloads', () 
   verifyManifestDownloads(manifest, assetMap);
 });
 
+test('security audit gate accepts a clean critical audit', () => {
+  const { validateAudit } = loadSecurityAuditModule();
+  const summary = validateAudit({
+    vulnerabilities: {},
+    metadata: {
+      vulnerabilities: {
+        critical: 0,
+      },
+    },
+  });
+
+  assert.strictEqual(summary.criticalCount, 0);
+  assert.deepStrictEqual(summary.allowedCriticals, [
+    '@whiskeysockets/baileys',
+    '@whiskeysockets/libsignal-node',
+    'protobufjs',
+  ]);
+});
+
 test('security audit gate accepts only the documented baileys critical chain', () => {
   const { validateAudit } = loadSecurityAuditModule();
   const summary = validateAudit({
