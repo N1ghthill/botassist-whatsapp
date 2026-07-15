@@ -1,19 +1,41 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: '10:00'
+      timezone: America/Bahia
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "security"
+    groups:
+      electron-runtime:
+        patterns:
+          - electron
+          - electron-builder
+          - electron-updater
+          - app-builder-lib
+      whatsapp-runtime:
+        patterns:
+          - '@whiskeysockets/*'
+      ai-provider:
+        patterns:
+          - groq-sdk
+      native-integrations:
+        patterns:
+          - keytar
+          - imap
+          - mailparser
+    ignore:
+      - dependency-name: '@whiskeysockets/baileys'
+        update-types:
+          - version-update:semver-major
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: '10:30'
+      timezone: America/Bahia
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "ci"

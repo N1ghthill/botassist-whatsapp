@@ -4,12 +4,16 @@ As configuracoes sao gerenciadas pela UI e persistidas em `settings.json` dentro
 
 ## Fluxo rapido (core)
 
-1. Cole sua API Key da Groq na tela de Configuracoes.
+1. Escolha o provedor de IA e cole a API Key na tela de Configuracoes.
 2. Clique em `Salvar`.
 3. Inicie o bot e escaneie o QR Code.
 4. Gere token de owner no app e envie `!owner <token>` no DM do bot.
 
 Recursos avancados (tools, memoria, grupos, email) sao opt-in e ficam desativados por padrao.
+
+O botao `Abrir Setup Inicial` mostra estados operacionais para API Key/modelo, conexao/QR e owner.
+Quando a API Key usa o cofre do sistema, o setup indica isso; quando cai em fallback local, tambem
+fica explicito.
 
 ## Flags de runtime do app
 
@@ -35,7 +39,7 @@ Campos do perfil:
 
 - `id`: identificador interno
 - `name`: nome do agente
-- `provider`: `groq` (unico neste build)
+- `provider`: `groq` ou `openai-compatible`
 - `model`: modelo (ex.: `llama-3.3-70b-versatile`)
 - `systemPrompt`: instrucao principal do agente
 - `botTag`: prefixo opcional das respostas
@@ -47,11 +51,20 @@ Campos globais relacionados:
 - `persona`: legado (compatibilidade)
 - `systemPrompt`: instrucoes extras globais
 
-### API key
+### Provedor e API key
 
 - Configure pela UI.
 - Com `keytar` disponivel, a chave fica no cofre do sistema.
-- Variavel de ambiente alternativa: `GROQ_API_KEY`.
+- Groq usa `GROQ_API_KEY` como variavel de ambiente alternativa.
+- OpenAI-compatible usa `OPENAI_COMPATIBLE_API_KEY` ou `OPENAI_API_KEY`.
+- OpenAI-compatible tambem exige `openaiCompatibleBaseUrl` ou `OPENAI_COMPATIBLE_BASE_URL`.
+
+### Email IMAP
+
+- Configure pela UI em `Tools > Email (IMAP)`.
+- Com `keytar` disponivel, a senha IMAP fica no cofre do sistema.
+- Sem cofre do sistema, o fallback fica no `settings.json`.
+- O renderer nunca recebe a senha em claro; ele recebe apenas o estado `emailPasswordSet`.
 
 ### Acesso
 
@@ -76,6 +89,12 @@ Substitua pelo token exibido na interface. Se expirar, gere um novo token.
 
 - `autoStart`: inicia o bot quando o app abre.
 - `launchOnStartup`: inicia o app com o sistema operacional.
+
+### Backup e restauracao
+
+A tela `Manutencao` permite criar backup da pasta `userData` e restaurar uma pasta de backup. A
+restauracao valida se existem `settings.json`, `auth`, `sessions` ou `logs`, pede confirmacao e
+para o bot antes de substituir os dados locais.
 
 ### Grupos (anti-ban)
 
@@ -104,6 +123,9 @@ As chaves sao preservadas como texto e validadas contra IDs de perfil existentes
 - `historyEnabled`: ativa memoria
 - `historyMaxMessages`: limite de mensagens por sessao
 - `historySummaryEnabled`: compactacao automatica por resumo
+
+A sessao de memoria e separada por conversa e perfil ativo. O comando `!limparmemoria` apaga
+apenas a memoria da conversa no perfil em uso.
 
 ### Limites de resposta
 

@@ -23,6 +23,8 @@ const STRING_SETTING_KEYS = [
   'persona',
   'provider',
   'apiKey',
+  'openaiCompatibleApiKey',
+  'openaiCompatibleBaseUrl',
   'ownerNumber',
   'ownerJid',
   'ownerClaimTokenHash',
@@ -113,6 +115,12 @@ function createRuntimeSettingsStore({
 
     if (!merged.provider) merged.provider = env.BOTASSIST_PROVIDER || '';
     if (!merged.apiKey) merged.apiKey = env.GROQ_API_KEY || '';
+    if (!merged.openaiCompatibleApiKey) {
+      merged.openaiCompatibleApiKey = env.OPENAI_COMPATIBLE_API_KEY || env.OPENAI_API_KEY || '';
+    }
+    if (!merged.openaiCompatibleBaseUrl) {
+      merged.openaiCompatibleBaseUrl = env.OPENAI_COMPATIBLE_BASE_URL || '';
+    }
 
     for (const key of STRING_SETTING_KEYS) {
       if (merged[key] == null) merged[key] = DEFAULT_SETTINGS[key];
@@ -139,6 +147,9 @@ function createRuntimeSettingsStore({
       homeDir: os.homedir(),
     });
     merged.email = normalizeEmailSettings(merged.email, DEFAULT_SETTINGS.email);
+    if (!merged.email.imapPassword) {
+      merged.email.imapPassword = String(env.BOTASSIST_EMAIL_IMAP_PASSWORD || '');
+    }
 
     if (!hasDmPolicy) merged.dmPolicy = '';
     if (!hasGroupPolicy) merged.groupPolicy = '';

@@ -2,12 +2,6 @@
 
 const { spawnSync } = require('child_process');
 
-const ALLOWED_CRITICAL_CHAIN = new Map([
-  ['@whiskeysockets/baileys', ['@whiskeysockets/libsignal-node']],
-  ['@whiskeysockets/libsignal-node', ['protobufjs']],
-  ['protobufjs', ['protobufjs']],
-]);
-
 function parseAudit(stdout) {
   const content = String(stdout || '').trim();
   if (!content) {
@@ -24,27 +18,16 @@ function normalizeVia(via) {
   return '';
 }
 
-function collectUnexpectedCriticals(report) {
+function collectVulnerabilities(report) {
   const vulnerabilities = report?.vulnerabilities || {};
-  return Object.entries(vulnerabilities).filter(([, entry]) => {
-    if (entry?.severity !== 'critical') return false;
-    const allowedVia = ALLOWED_CRITICAL_CHAIN.get(entry.name);
-    if (!allowedVia) return true;
-    const actualVia = Array.isArray(entry.via)
-      ? entry.via.map(normalizeVia).filter(Boolean).sort()
-      : [];
-    return (
-      actualVia.length !== allowedVia.length ||
-      actualVia.some((item, index) => item !== allowedVia[index])
-    );
-  });
+  return Object.entries(vulnerabilities).filter(([, entry]) => entry);
 }
 
-function formatUnexpectedCriticals(entries) {
+function formatVulnerabilities(entries) {
   return entries
     .map(([name, entry]) => {
       const via = Array.isArray(entry?.via) ? entry.via.map(normalizeVia).filter(Boolean) : [];
-      return `- ${name}: via ${via.join(', ') || 'desconhecido'}`;
+      return `- ${name} (${entry?.severity || 'unknown'}): via ${via.join(', ') || 'desconhecido'}`;
     })
     .join('\n');
 }
@@ -58,27 +41,21 @@ function runAudit() {
 }
 
 function validateAudit(report) {
-  const criticalCount = Number(report?.metadata?.vulnerabilities?.critical || 0);
-  const unexpectedCriticals = collectUnexpectedCriticals(report);
+  const counts = report?.metadata?.vulnerabilities || {};
+  const total = Number(counts.total || 0);
+  const vulnerabilities = collectVulnerabilities(report);
 
-  if (unexpectedCriticals.length > 0) {
+  if (total > 0 || vulnerabilities.length > 0) {
     throw new Error(
       [
-        'npm audit encontrou vulnerabilidades criticas fora da allowlist documentada.',
-        formatUnexpectedCriticals(unexpectedCriticals),
+        'npm audit encontrou vulnerabilidades em dependencias.',
+        formatVulnerabilities(vulnerabilities),
       ].join('\n')
     );
   }
 
-  if (criticalCount > ALLOWED_CRITICAL_CHAIN.size) {
-    throw new Error(
-      `npm audit retornou ${criticalCount} vulnerabilidades criticas; esperado no maximo ${ALLOWED_CRITICAL_CHAIN.size} na cadeia documentada.`
-    );
-  }
-
   return {
-    criticalCount,
-    allowedCriticals: Array.from(ALLOWED_CRITICAL_CHAIN.keys()),
+    total,
   };
 }
 
@@ -91,15 +68,14 @@ function main() {
   } catch (error) {
     const stderr = String(result.stderr || '').trim();
     throw new Error(
-      ['Falha ao interpretar a saida do npm audit.', error.message, stderr].filter(Boolean).join('\n')
+      ['Falha ao interpretar a saida do npm audit.', error.message, stderr]
+        .filter(Boolean)
+        .join('\n')
     );
   }
 
   const summary = validateAudit(report);
-  const message =
-    summary.criticalCount === 0
-      ? 'Security audit OK: nenhuma vulnerabilidade critica encontrada.'
-      : `Security audit OK: somente a cadeia critica documentada permanece (${summary.allowedCriticals.join(', ')}).`;
+  const message = `Security audit OK: npm audit sem vulnerabilidades (${summary.total}).`;
   process.stdout.write(`${message}\n`);
 }
 
@@ -113,8 +89,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  ALLOWED_CRITICAL_CHAIN,
-  collectUnexpectedCriticals,
+  collectVulnerabilities,
   normalizeVia,
   parseAudit,
   validateAudit,

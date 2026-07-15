@@ -5,6 +5,7 @@ const {
   getUserDataPath,
   getSettingsPath,
   getSettingsSnapshot,
+  loadSettings,
   saveSettings,
 } = require('./settings');
 
@@ -87,6 +88,61 @@ function copyDirRecursive(src, dest) {
     const to = path.join(dest, entry.name);
     if (entry.isDirectory()) copyDirRecursive(from, to);
     else if (entry.isFile()) fs.copyFileSync(from, to);
+  }
+}
+
+function validateBackupPath(backupPath, userDataPath = getUserDataPath()) {
+  const resolvedBackup = path.resolve(String(backupPath || ''));
+  const resolvedUserData = path.resolve(String(userDataPath || ''));
+  if (!resolvedBackup || !fs.existsSync(resolvedBackup)) {
+    return { ok: false, error: 'Backup não encontrado.', items: [] };
+  }
+  if (!fs.statSync(resolvedBackup).isDirectory()) {
+    return { ok: false, error: 'Selecione uma pasta de backup.', items: [] };
+  }
+  if (resolvedBackup === resolvedUserData) {
+    return {
+      ok: false,
+      error: 'A pasta de backup não pode ser a pasta de dados atual.',
+      items: [],
+    };
+  }
+
+  const candidates = [
+    { name: 'settings.json', type: 'file' },
+    { name: 'auth', type: 'directory' },
+    { name: 'sessions', type: 'directory' },
+    { name: 'logs', type: 'directory' },
+  ];
+  const items = candidates.filter((item) => {
+    const itemPath = path.join(resolvedBackup, item.name);
+    if (!fs.existsSync(itemPath)) return false;
+    const stat = fs.statSync(itemPath);
+    return item.type === 'file' ? stat.isFile() : stat.isDirectory();
+  });
+
+  if (!items.length) {
+    return {
+      ok: false,
+      error: 'Backup inválido: não encontrei settings.json, auth, sessions ou logs.',
+      items: [],
+    };
+  }
+
+  return { ok: true, backupPath: resolvedBackup, items };
+}
+
+function restoreBackupItems(backupPath, userDataPath, items) {
+  fs.mkdirSync(userDataPath, { recursive: true });
+  for (const item of items) {
+    const from = path.join(backupPath, item.name);
+    const to = path.join(userDataPath, item.name);
+    if (item.type === 'file') {
+      fs.copyFileSync(from, to);
+      continue;
+    }
+    if (fs.existsSync(to)) fs.rmSync(to, { recursive: true, force: true });
+    copyDirRecursive(from, to);
   }
 }
 
@@ -189,6 +245,56 @@ function createUserDataManager({ stopBot, stopBotAndWait, setBotStatus, getMainW
     return backupUserData(getMainWindow?.());
   }
 
+  async function restoreUserData() {
+    const selection = await dialog.showOpenDialog(getMainWindow?.(), {
+      title: 'Escolha a pasta do backup',
+      properties: ['openDirectory'],
+    });
+
+    if (selection.canceled || !selection.filePaths?.[0]) {
+      return { ok: false, canceled: true };
+    }
+
+    const validation = validateBackupPath(selection.filePaths[0], getUserDataPath());
+    if (!validation.ok) return validation;
+
+    const itemNames = validation.items.map((item) => item.name).join(', ');
+    const confirmation = await dialog.showMessageBox(getMainWindow?.(), {
+      type: 'warning',
+      title: 'Restaurar backup',
+      message: 'Isso vai substituir dados locais do BotAssist.',
+      detail: `Itens encontrados no backup: ${itemNames}. O bot sera parado antes da restauracao.`,
+      buttons: ['Cancelar', 'Restaurar backup'],
+      defaultId: 0,
+      cancelId: 0,
+    });
+
+    if (confirmation.response !== 1) return { ok: false, canceled: true };
+
+    try {
+      if (typeof stopBotAndWait === 'function') {
+        const stopped = await stopBotAndWait({ timeoutMs: 5000 });
+        if (stopped?.ok === false) {
+          return { ok: false, error: 'Timeout ao encerrar o bot. Tente novamente.' };
+        }
+      } else {
+        stopBot?.();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      restoreBackupItems(validation.backupPath, getUserDataPath(), validation.items);
+      loadSettings();
+      setBotStatus?.('offline');
+      return {
+        ok: true,
+        backupPath: validation.backupPath,
+        restored: validation.items.map((item) => item.name),
+      };
+    } catch (err) {
+      return { ok: false, error: err?.message || String(err) };
+    }
+  }
+
   async function clearHistory() {
     const sessionsPath = path.join(getUserDataPath(), 'sessions');
 
@@ -228,6 +334,7 @@ function createUserDataManager({ stopBot, stopBotAndWait, setBotStatus, getMainW
   return {
     getUserDataStats,
     backupUserData: backupUserDataWithWindow,
+    restoreUserData,
     resetSession,
     clearHistory,
   };
@@ -235,4 +342,6 @@ function createUserDataManager({ stopBot, stopBotAndWait, setBotStatus, getMainW
 
 module.exports = {
   createUserDataManager,
+  restoreBackupItems,
+  validateBackupPath,
 };

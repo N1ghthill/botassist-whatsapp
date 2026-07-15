@@ -6,13 +6,14 @@
 **Versão Afetada:** BotAssist v4.2.4  
 **Versão Corrigida Parcialmente:** BotAssist v4.2.6  
 **Severidade:** Crítica a Média  
-**Status:** Correcoes aplicadas com 1 cadeia critica transitiva pendente
+**Status:** Correcoes aplicadas; cadeia critica transitiva resolvida posteriormente em 2026-07-15
 
 ## Vulnerabilidades Identificadas
 
 Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidades em dependências do projeto:
 
 ### 1. CRÍTICA: protobufjs (CVE-2026-41242)
+
 - **CVSS:** 9.4 (Crítico)
 - **Versão Vulnerável:** < 7.5.5 ou >= 8.0.0, < 8.0.1
 - **Versão Atual:** 6.8.8 (via libsignal)
@@ -20,6 +21,7 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - **Status:** **PENDENTE** - Dependência transitiva do @whiskeysockets/baileys
 
 ### 2. ALTA: @xmldom/xmldom (CVE-2026-34601)
+
 - **CVSS:** 7.5 (Alta)
 - **Versão Vulnerável:** < 0.8.12 ou 0.9.0-0.9.8
 - **Versão Corrigida:** 0.8.12+
@@ -27,6 +29,7 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 3. ALTA: lodash - Injeção de Código (CVE-2026-4800)
+
 - **CVSS:** 8.1 (Alta)
 - **Versão Vulnerável:** <= 4.17.23
 - **Versão Corrigida:** 4.18.0+
@@ -34,6 +37,7 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 4. MÉDIA: lodash - Poluição de Protótipo (CVE-2026-2950)
+
 - **CVSS:** 6.5 (Média)
 - **Versão Vulnerável:** <= 4.17.23
 - **Versão Corrigida:** 4.18.0+
@@ -41,6 +45,7 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 - **Status:** **CORRIGIDO** via atualizacao controlada de dependencias
 
 ### 5. MÉDIA: nodemailer (GHSA-vvjj-xcjg-gr5g)
+
 - **CVSS:** 4.9 (Média)
 - **Versão Vulnerável:** <= 8.0.4
 - **Versão Corrigida:** 8.0.5+
@@ -50,37 +55,50 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 ## Ações Tomadas
 
 ### ✅ Corrigidas (4/5 vulnerabilidades):
+
 1. Dependencias vulneraveis atualizadas manualmente no lockfile com versoes corrigidas
 2. Verificação de integridade com `npm test`, `npm run lint`, `npm run format:check`
 3. Todas as correções passaram nos testes automatizados
 
 ### ❌ Pendente (1 vulnerabilidade):
+
 - `protobufjs@6.8.8` em `libsignal` (dependência do `@whiskeysockets/baileys@7.0.0-rc.9`)
 - **Ação Recomendada:** Monitorar atualizações do baileys/libsignal
+
+### ✅ Resolvida em 2026-07-15:
+
+- `@whiskeysockets/baileys` atualizado para `7.0.0-rc13`.
+- `libsignal` atualizado para `6.0.0`.
+- `protobufjs` atualizado para `7.6.5`.
+- `npm audit` passou a reportar `0` vulnerabilidades.
 
 ## Análise de Risco
 
 ### Risco Imediato: BAIXO
+
 - A vulnerabilidade crítica do `protobufjs` está em dependência transitiva usada apenas para comunicação WhatsApp
 - O vetor de ataque requer controle sobre definições protobuf, o que não é exposto na interface do BotAssist
 - As 4 vulnerabilidades de maior exposição foram corrigidas
 
 ### Testes Realizados:
+
 - ✅ Todos os 60+ testes unitários passam
 - ✅ Linting e formatação OK
 - ✅ Build do projeto funcional
 - ✅ Smoke tests passam
-- ✅ `npm audit --json` continua limitado a 1 cadeia critica transitiva ja documentada (`@whiskeysockets/baileys -> @whiskeysockets/libsignal-node -> protobufjs`)
+- ✅ Em 2026-07-15, `npm audit --json` passou a reportar `0` vulnerabilidades
 
 ## Recomendações
 
 ### Para Usuários:
+
 1. **Atualização Imediata:** Recomenda-se atualizar para a próxima release que incluirá estas correções
 2. **Monitoramento:** Usuários podem continuar usando v4.2.4 com risco limitado, mas devem atualizar quando disponível
 
 ### Para Desenvolvimento:
+
 1. **Dependabot:** Habilitar Dependabot alerts no GitHub para monitoramento contínuo
-2. **CI/CD:** Manter `npm audit` como etapa obrigatoria no pipeline com allowlist explicita apenas para a cadeia transitiva conhecida
+2. **CI/CD:** Manter `npm audit` como etapa obrigatoria no pipeline, sem allowlist ativa enquanto o audit estiver zerado
 3. **Version Pinning:** Considerar pinning de versões críticas em `package.json`
 
 ## Próximos Passos
@@ -93,16 +111,18 @@ Durante análise de segurança pós-viagem, foram identificadas 5 vulnerabilidad
 ## Contato de Segurança
 
 Para reportar vulnerabilidades de segurança:
+
 - **E-mail:** irving@ruas.dev.br
 - **Processo:** Seguir guidelines em SECURITY.md
 - **Resposta:** Dentro de 48 horas para vulnerabilidades críticas
 
 ## Histórico de Revisão
 
-| Data | Versão | Alterações | Responsável |
-|------|--------|------------|-------------|
-| 2026-04-22 | 1.0 | Análise inicial e correções | Assistente de Segurança |
-| 2026-04-22 | 1.1 | Documentação completa | Assistente de Segurança |
+| Data       | Versão | Alterações                                                                  | Responsável             |
+| ---------- | ------ | --------------------------------------------------------------------------- | ----------------------- |
+| 2026-04-22 | 1.0    | Análise inicial e correções                                                 | Assistente de Segurança |
+| 2026-04-22 | 1.1    | Documentação completa                                                       | Assistente de Segurança |
+| 2026-07-15 | 1.2    | Registro da resolucao da cadeia Baileys/libsignal/protobufjs e audit zerado | Codex                   |
 
 ---
 

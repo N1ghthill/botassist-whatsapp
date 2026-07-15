@@ -40,6 +40,9 @@ async function handleAccessCommand(context, deps) {
     getPairingEntry,
     ensurePairingEntry,
     clearPairingEntry,
+    isAccessAttemptLimited,
+    recordAccessAttemptFailure,
+    clearAccessAttemptFailures,
   } = deps;
 
   if (
@@ -70,6 +73,18 @@ async function handleAccessCommand(context, deps) {
       return true;
     }
 
+    const accessKey = pairingId || senderPhone || senderJid || remoteJid;
+    if (isAccessAttemptLimited?.('owner', accessKey)) {
+      await sendTaggedMessage({
+        sendMessage,
+        remoteJid,
+        botTag,
+        text: 'Muitas tentativas invalidas. Aguarde alguns minutos antes de tentar novamente.',
+        quotedMessage: message,
+      });
+      return true;
+    }
+
     if (isOwner) {
       await sendTaggedMessage({
         sendMessage,
@@ -83,6 +98,7 @@ async function handleAccessCommand(context, deps) {
 
     const tokenCheck = verifyOwnerClaimToken(settings, providedToken);
     if (!tokenCheck.ok) {
+      recordAccessAttemptFailure?.('owner', accessKey);
       if (tokenCheck.reason === 'expired') {
         requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.CLEAR_OWNER_TOKEN);
       }
@@ -107,6 +123,7 @@ async function handleAccessCommand(context, deps) {
       ownerJid: senderJid || '',
     });
     requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.CLEAR_OWNER_TOKEN);
+    clearAccessAttemptFailures?.('owner', accessKey);
 
     const phoneLabel = senderPhone ? senderPhone : 'n/a';
     await sendTaggedMessage({
@@ -132,12 +149,25 @@ async function handleAccessCommand(context, deps) {
     if (!allowlisted) {
       const providedCode = parsePairingCommand(text, prefix);
       if (providedCode) {
+        const accessKey = pairingId || senderPhone || senderJid || remoteJid;
+        if (isAccessAttemptLimited?.('pairing', accessKey)) {
+          await sendTaggedMessage({
+            sendMessage,
+            remoteJid,
+            botTag,
+            text: 'Muitas tentativas invalidas. Aguarde alguns minutos antes de tentar novamente.',
+            quotedMessage: message,
+          });
+          return true;
+        }
+
         const entry = getPairingEntry(pairingId);
         if (entry && providedCode === entry.code) {
           const userRef = senderPhone || senderJid;
           if (userRef) {
             requestSettingsUpdate(SETTINGS_UPDATE_ACTIONS.ALLOWLIST_USER, { userRef });
           }
+          clearAccessAttemptFailures?.('pairing', accessKey);
           clearPairingEntry(pairingId);
           await sendTaggedMessage({
             sendMessage,
@@ -154,6 +184,7 @@ async function handleAccessCommand(context, deps) {
             text: 'Código inválido. Envie "pair CODIGO" ou aguarde um novo código.',
             quotedMessage: message,
           });
+          recordAccessAttemptFailure?.('pairing', accessKey);
         }
         return true;
       }
@@ -511,14 +542,14 @@ async function handleUtilityCommand(context, deps) {
     command.isCommand &&
     (command.command === 'limparmemoria' || command.command === 'resetmemoria')
   ) {
-    const ok = clearSessionState(remoteJid);
+    const ok = clearSessionState(context.sessionId || remoteJid);
     await sendTaggedMessage({
       sendMessage,
       remoteJid,
       botTag,
       text: ok
-        ? 'Memória desta conversa foi apagada.'
-        : 'Não foi possível apagar a memória desta conversa.',
+        ? 'Memória desta conversa neste perfil foi apagada.'
+        : 'Não foi possível apagar a memória desta conversa neste perfil.',
       quotedMessage: message,
     });
     return true;
@@ -548,7 +579,7 @@ async function handleUtilityCommand(context, deps) {
       lines.push(`${prefix}negar <id> — negar ação de ferramenta (owner)`);
     }
     if (isOwner) {
-      lines.push(`${prefix}limparmemoria — limpar memória desta conversa (owner)`);
+      lines.push(`${prefix}limparmemoria — limpar memória desta conversa no perfil ativo (owner)`);
     }
     lines.push('', 'Segurança: em grupos, eu só respondo quando você me menciona.');
     await sendTaggedMessage({

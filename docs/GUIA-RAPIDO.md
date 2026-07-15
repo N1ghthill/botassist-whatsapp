@@ -17,10 +17,10 @@ npm run dev
 ## 3) Configurar API Key
 
 1. Abra Configuracoes.
-2. Cole sua API Key da Groq.
+2. Escolha o provedor e cole a API Key.
 3. Clique em `Salvar`.
 
-Criar chave: https://groq.com/
+Groq: https://groq.com/
 
 ![Configurar API Key](assets/quickstart-configs.png)
 

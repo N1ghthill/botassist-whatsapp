@@ -189,7 +189,8 @@ Comece por:
 
 ## Contribuicao
 
-As contribuicoes sao bem-vindas. O melhor ponto de partida e [CONTRIBUTING.md](CONTRIBUTING.md) e [docs/INDEX.md](docs/INDEX.md).
+As contribuicoes sao bem-vindas. O melhor ponto de partida e [CONTRIBUTING.md](CONTRIBUTING.md),
+[docs/GOVERNANCA.md](docs/GOVERNANCA.md) e [docs/INDEX.md](docs/INDEX.md).
 
 ## Licenca
 

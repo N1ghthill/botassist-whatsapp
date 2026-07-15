@@ -1,1 +1,19 @@
 * @N1ghthill
+
+# Areas sensiveis
+/src/preload.js @N1ghthill
+/src/main.js @N1ghthill
+/src/main/ @N1ghthill
+/src/core/tooling/ @N1ghthill
+/src/core/bot.js @N1ghthill
+/src/core/messageCommands.js @N1ghthill
+/src/core/messageUtils.js @N1ghthill
+/src/shared/ @N1ghthill
+/.github/workflows/ @N1ghthill
+/scripts/check-security-audit.js @N1ghthill
+/scripts/check-signing-readiness.js @N1ghthill
+/scripts/provision-signing-secrets.js @N1ghthill
+/docs/SEGURANCA.md @N1ghthill
+/docs/TOOLS-POLICY.md @N1ghthill
+/docs/THREAT-MODEL-FEATURES.md @N1ghthill
+/docs/GOVERNANCA.md @N1ghthill

@@ -31,6 +31,7 @@ try {
 }
 
 const KEYTAR_SERVICE = 'botassist-whatsapp';
+const EMAIL_IMAP_PASSWORD_ACCOUNT = 'email_imap_password';
 const OWNER_CLAIM_TOKEN_TTL_MS = 10 * 60 * 1000;
 let settings = null;
 
@@ -77,6 +78,10 @@ function getProviderMeta(provider) {
 function buildProviderApiKeyRef(provider) {
   const meta = getProviderMeta(provider);
   return keytar ? `keytar:${meta.keytarAccount}` : 'settings.json';
+}
+
+function buildEmailPasswordRef() {
+  return keytar ? `keytar:${EMAIL_IMAP_PASSWORD_ACCOUNT}` : 'settings.json';
 }
 
 function ensureDirSync(dirPath) {
@@ -185,6 +190,9 @@ function sanitizeSettings(partial) {
     'provider',
     'apiKey',
     'apiKeyRef',
+    'openaiCompatibleApiKey',
+    'openaiCompatibleApiKeyRef',
+    'openaiCompatibleBaseUrl',
     'ownerNumber',
     'ownerJid',
     'ownerClaimTokenHash',
@@ -288,6 +296,9 @@ function saveSettings(partial) {
       const refValue = String(next[meta.apiKeyRefField] || '');
       if (refValue.startsWith('keytar:')) delete next[meta.apiKeyField];
     }
+    if (String(next.email?.imapPasswordRef || '').startsWith('keytar:')) {
+      next.email = { ...next.email, imapPassword: '' };
+    }
   }
   settings = next;
   try {
@@ -298,7 +309,11 @@ function saveSettings(partial) {
   return settings;
 }
 
-function getEnvKeyForProvider(_provider) {
+function getEnvKeyForProvider(provider) {
+  const normalized = normalizeProvider(provider);
+  if (normalized === 'openai-compatible') {
+    return process.env.OPENAI_COMPATIBLE_API_KEY || process.env.OPENAI_API_KEY || '';
+  }
   return process.env.GROQ_API_KEY || '';
 }
 
@@ -395,14 +410,121 @@ async function migrateLegacyApiKeyToKeytar() {
   }
 }
 
+async function getEmailImapPassword() {
+  const current = settings || loadSettings();
+  const email = normalizeEmailSettings(current?.email, DEFAULT_SETTINGS.email);
+  if (keytar) {
+    try {
+      const secret = await keytar.getPassword(KEYTAR_SERVICE, EMAIL_IMAP_PASSWORD_ACCOUNT);
+      if (secret) return secret;
+    } catch (err) {
+      console.error('Failed to read IMAP password from keytar:', err);
+    }
+  }
+  return email.imapPassword || '';
+}
+
+async function trySetEmailImapPasswordInKeytar(value) {
+  if (!keytar) return false;
+  const passwordValue = String(value || '');
+  if (!passwordValue) return false;
+  try {
+    await keytar.setPassword(KEYTAR_SERVICE, EMAIL_IMAP_PASSWORD_ACCOUNT, passwordValue);
+    return true;
+  } catch (err) {
+    console.error('Failed to save IMAP password to keytar:', err);
+    return false;
+  }
+}
+
+async function setEmailImapPassword(value) {
+  const passwordValue = String(value || '');
+  if (!passwordValue) return false;
+  const current = settings || loadSettings();
+  const savedInKeytar = await trySetEmailImapPasswordInKeytar(passwordValue);
+  if (savedInKeytar) {
+    saveSettings({
+      email: {
+        ...(current.email || {}),
+        imapPassword: '',
+        imapPasswordRef: buildEmailPasswordRef(),
+      },
+    });
+    return true;
+  }
+
+  saveSettings({
+    email: {
+      ...(current.email || {}),
+      imapPassword: passwordValue,
+      imapPasswordRef: 'settings.json',
+    },
+  });
+  return true;
+}
+
+async function clearEmailImapPassword() {
+  if (keytar) {
+    try {
+      await keytar.deletePassword(KEYTAR_SERVICE, EMAIL_IMAP_PASSWORD_ACCOUNT);
+    } catch (err) {
+      console.error('Failed to clear IMAP password from keytar:', err);
+    }
+  }
+  const current = settings || loadSettings();
+  saveSettings({
+    email: {
+      ...(current.email || {}),
+      imapPassword: '',
+      imapPasswordRef: '',
+    },
+  });
+  return true;
+}
+
+async function migrateLegacyEmailImapPasswordToKeytar() {
+  const current = settings || loadSettings();
+  const email = normalizeEmailSettings(current?.email, DEFAULT_SETTINGS.email);
+  const legacy = String(email.imapPassword || '');
+  if (!legacy) {
+    if (keytar && !String(email.imapPasswordRef || '').trim()) {
+      saveSettings({
+        email: {
+          ...email,
+          imapPasswordRef: buildEmailPasswordRef(),
+        },
+      });
+    }
+    return;
+  }
+
+  if (!keytar) {
+    saveSettings({
+      email: {
+        ...email,
+        imapPassword: legacy,
+        imapPasswordRef: 'settings.json',
+      },
+    });
+    return;
+  }
+
+  const ok = await trySetEmailImapPasswordInKeytar(legacy);
+  saveSettings({
+    email: {
+      ...email,
+      imapPassword: ok ? '' : legacy,
+      imapPasswordRef: ok ? buildEmailPasswordRef() : 'settings.json',
+    },
+  });
+}
+
 function generateOwnerClaimToken({ ttlMs = OWNER_CLAIM_TOKEN_TTL_MS } = {}) {
   const ttl = Math.max(
     60_000,
     Math.min(86_400_000, Math.floor(Number(ttlMs) || OWNER_CLAIM_TOKEN_TTL_MS))
   );
-  const token = Math.floor(Math.random() * 1_000_000)
-    .toString()
-    .padStart(6, '0');
+  const token = nodeCrypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
   const expiresAt = new Date(Date.now() + ttl).toISOString();
   saveSettings({
     ownerClaimTokenHash: hashOwnerClaimToken(token),
@@ -435,11 +557,13 @@ async function getSettingsForRenderer() {
   }
   const tools = normalizeToolsSettings(base?.tools, DEFAULT_SETTINGS.tools);
   const email = normalizeEmailSettings(base?.email, DEFAULT_SETTINGS.email);
-  const emailPasswordSet = Boolean(String(email.imapPassword || '').trim());
+  const emailPasswordValue = await getEmailImapPassword();
+  const emailPasswordSet = Boolean(String(emailPasswordValue || '').trim());
   const ownerClaimToken = getOwnerClaimTokenStatus(base);
   return {
     ...base,
     apiKey: '',
+    openaiCompatibleApiKey: '',
     ownerClaimTokenHash: '',
     ownerClaimToken,
     tools,
@@ -472,6 +596,10 @@ module.exports = {
   setGroqApiKey,
   hasGroqApiKey,
   migrateLegacyApiKeyToKeytar,
+  getEmailImapPassword,
+  setEmailImapPassword,
+  clearEmailImapPassword,
+  migrateLegacyEmailImapPasswordToKeytar,
   generateOwnerClaimToken,
   clearOwnerClaimToken,
   getOwnerClaimTokenStatus,

@@ -3,6 +3,7 @@ const {
   TOOL_DEFAULT_MAX_OUTPUT_CHARS,
   extractDomain,
   fetchWithTimeout,
+  isBlockedNetworkHost,
   isDomainAllowed,
   isValidHttpUrl,
   stripHtml,
@@ -42,6 +43,11 @@ async function fetchWebResource(url, context = {}) {
   let redirects = 0;
 
   while (redirects <= TOOL_WEB_MAX_REDIRECTS) {
+    const currentDomain = extractDomain(currentUrl);
+    if (isBlockedNetworkHost(currentDomain)) {
+      throw new Error(`Host bloqueado por seguranca: ${currentDomain || 'desconhecido'}.`);
+    }
+
     const response = await fetchWithTimeout(
       currentUrl,
       { redirect: 'manual' },
@@ -57,6 +63,9 @@ async function fetchWebResource(url, context = {}) {
     }
 
     const redirectDomain = extractDomain(redirectUrl);
+    if (isBlockedNetworkHost(redirectDomain)) {
+      throw new Error(`Host bloqueado apos redirecionamento: ${redirectDomain || 'desconhecido'}.`);
+    }
     if (!isDomainAllowed(redirectDomain, allowedDomains, blockedDomains)) {
       throw new Error(`Dominio nao permitido apos redirecionamento: ${redirectDomain}.`);
     }
@@ -173,6 +182,9 @@ async function toolWebOpen(args = {}, context = {}) {
   const domain = extractDomain(url);
   const allowedDomains = Array.isArray(context.allowedDomains) ? context.allowedDomains : [];
   const blockedDomains = Array.isArray(context.blockedDomains) ? context.blockedDomains : [];
+  if (isBlockedNetworkHost(domain)) {
+    throw new Error(`Host bloqueado por seguranca: ${domain || 'desconhecido'}.`);
+  }
   if (!isDomainAllowed(domain, allowedDomains, blockedDomains)) {
     throw new Error(`Dominio nao permitido: ${domain || 'desconhecido'}.`);
   }

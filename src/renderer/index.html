@@ -320,11 +320,12 @@
 
               <div class="form-group">
                 <label for="providerSelect">Provedor de IA</label>
-                <select id="providerSelect" class="form-control" disabled>
-                  <option value="groq">Groq (único)</option>
+                <select id="providerSelect" class="form-control">
+                  <option value="groq">Groq</option>
+                  <option value="openai-compatible">OpenAI-compatible</option>
                 </select>
                 <small class="hint">
-                  Este build usa exclusivamente o Groq para simplificar a configuração.
+                  Groq e endpoints compatíveis com OpenAI Chat Completions.
                 </small>
               </div>
 
@@ -702,6 +703,14 @@
                     </small>
                   </div>
 
+                  <div id="toolsSafetyPanel" class="tools-safety-panel span-2">
+                    <div class="tools-safety-header">
+                      <strong id="toolsSafetyTitle">Tools desativadas</strong>
+                      <span id="toolsSafetyBadge" class="tools-safety-badge">OK</span>
+                    </div>
+                    <ul id="toolsSafetyList"></ul>
+                  </div>
+
                   <div class="form-group span-2">
                     <button id="toolsTestBtn" class="btn btn-secondary" type="button">
                       <i class="fas fa-vial"></i> Testar ferramentas
@@ -798,9 +807,7 @@
                         rows="3"
                         placeholder="/caminho/seguro"
                       ></textarea>
-                      <small class="hint">
-                        Se vazio, usa a lista de leitura (padrão: pasta do usuário).
-                      </small>
+                      <small class="hint"> Se vazio, escrita/remocao fica bloqueada. </small>
                     </div>
 
                     <div class="form-group span-2">
@@ -945,7 +952,10 @@
                         Limpar
                       </button>
                     </div>
-                    <small class="hint"> Salva localmente. Deixe vazio para manter. </small>
+                    <small class="hint">
+                      Usa o cofre do sistema quando disponivel; fallback fica no settings.json.
+                      Deixe vazio para manter.
+                    </small>
                   </div>
 
                   <div class="form-group">
@@ -992,6 +1002,9 @@
               <i class="fas fa-download"></i> Backup dos dados
             </button>
             <button id="restoreDbBtn" class="btn btn-warning">
+              <i class="fas fa-upload"></i> Restaurar backup
+            </button>
+            <button id="openUserDataBtn" class="btn btn-secondary">
               <i class="fas fa-folder-open"></i> Abrir pasta de dados
             </button>
             <button id="clearHistoryBtn" class="btn btn-secondary">
@@ -1030,6 +1043,68 @@
                 <span class="stat-label">Tamanho da memória:</span>
                 <span class="stat-value" id="memorySize">0 MB</span>
               </div>
+            </div>
+          </div>
+
+          <div class="tools-audit-panel">
+            <div class="tools-audit-header">
+              <div>
+                <h4>Auditoria de tools</h4>
+                <p class="subtle-note">
+                  Últimos eventos gravados em <code>logs/tools_audit.log</code>.
+                </p>
+              </div>
+              <div class="tools-audit-actions">
+                <button id="refreshToolsAuditBtn" class="btn btn-secondary" type="button">
+                  <i class="fas fa-sync"></i> Atualizar
+                </button>
+                <button id="exportToolsAuditBtn" class="btn btn-secondary" type="button">
+                  <i class="fas fa-file-export"></i> Exportar
+                </button>
+              </div>
+            </div>
+            <div class="tools-audit-filters">
+              <input
+                id="toolsAuditToolFilter"
+                class="form-control"
+                type="text"
+                placeholder="Ferramenta"
+              />
+              <select id="toolsAuditStatusFilter" class="form-control">
+                <option value="">Todos os status</option>
+                <option value="ok">OK</option>
+                <option value="error">Erro</option>
+                <option value="blocked">Bloqueado</option>
+                <option value="pending">Pendente</option>
+              </select>
+              <input
+                id="toolsAuditChatFilter"
+                class="form-control"
+                type="text"
+                placeholder="Conversa ou solicitante"
+              />
+              <input id="toolsAuditFromFilter" class="form-control" type="datetime-local" />
+              <input id="toolsAuditToFilter" class="form-control" type="datetime-local" />
+            </div>
+            <div id="toolsAuditSummary" class="subtle-note">Nenhum evento carregado.</div>
+            <div class="tools-audit-table-wrap">
+              <table class="tools-audit-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tool</th>
+                    <th>Status</th>
+                    <th>Escopo</th>
+                    <th>Conversa</th>
+                    <th>Resumo</th>
+                  </tr>
+                </thead>
+                <tbody id="toolsAuditTableBody">
+                  <tr>
+                    <td colspan="6">Clique em Atualizar para carregar.</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1095,7 +1170,7 @@
                 <h4>Funcionalidades:</h4>
                 <ul>
                   <li>Conector WhatsApp via Baileys</li>
-                  <li>IA via Groq (Llama 3.3 70B)</li>
+                  <li>IA via Groq ou endpoint compatível</li>
                   <li>Multi-perfis (agentes)</li>
                   <li>Banco de dados (em breve)</li>
                   <li>Interface gráfica Electron</li>
@@ -1242,7 +1317,7 @@
             <div class="setup-panel">
               <h4>O que vamos fazer</h4>
               <ul class="setup-list">
-                <li>Configurar a API Key da Groq e escolher o modelo.</li>
+                <li>Configurar a API Key do provedor e escolher o modelo.</li>
                 <li>Conectar o WhatsApp via QR Code.</li>
                 <li>Gerar token no app e definir owner pelo WhatsApp.</li>
               </ul>
@@ -1250,18 +1325,19 @@
           </section>
 
           <section class="setup-step" data-step="2" style="display: none">
+            <div id="setupCredentialsState" class="setup-state-strip"></div>
             <div class="setup-grid">
               <div class="setup-panel">
-                <h4>API Key da Groq</h4>
+                <h4>API Key do provedor</h4>
                 <label for="setupApiKey">Cole sua chave</label>
                 <input
                   type="password"
                   id="setupApiKey"
                   class="form-control"
-                  placeholder="gsk_..."
+                  placeholder="Cole sua chave"
                 />
                 <small id="setupApiKeyHint" class="hint">
-                  Crie sua chave gratis em
+                  Para Groq, crie sua chave gratis em
                   <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
                     console.groq.com/keys
                   </a>
@@ -1300,6 +1376,7 @@
           <section class="setup-step" data-step="3" style="display: none">
             <h3>Conecte o WhatsApp</h3>
             <p>Inicie o bot para gerar o QR Code e escaneie com o WhatsApp.</p>
+            <div id="setupConnectionState" class="setup-state-strip"></div>
             <div class="setup-qr">
               <div id="setupQrCode" class="setup-qr-box"></div>
               <div class="setup-qr-meta">
@@ -1315,6 +1392,7 @@
           <section class="setup-step" data-step="4" style="display: none">
             <h3>Defina o owner com token</h3>
             <p>Para liberar comandos e ferramentas, use o metodo recomendado via WhatsApp.</p>
+            <div id="setupOwnerState" class="setup-state-strip"></div>
             <ol class="setup-list">
               <li>Clique em <strong>Gerar token</strong>.</li>
               <li>
@@ -1366,6 +1444,7 @@
     <script src="shell-ui.js"></script>
     <script src="profile-settings.js"></script>
     <script src="setup-wizard.js"></script>
+    <script src="maintenance.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

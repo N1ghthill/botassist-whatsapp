@@ -31,6 +31,8 @@ Este documento descreve praticas recomendadas para manter o BotAssist seguro.
 - Revise `tools.allowedDomains` e `tools.blockedDomains`
 - Use `web.search` apenas com filtros de dominio adequados ao seu contexto
 - `web.open` revalida redirecionamentos e limita o corpo antes de carregar respostas grandes em memoria
+- `web.open` bloqueia por padrao `localhost`, IPs de rede privada, link-local, multicast,
+  enderecos reservados e endpoints de metadata como `169.254.169.254`
 
 ## Ferramentas sensiveis
 
@@ -46,11 +48,14 @@ Boas praticas:
 - a allowlist/denylist de `shell.exec` vale por comando-base e a execucao ocorre sem shell intermediario
 - mantenha `tools.mode = auto` somente com auto-allow de leitura
 - audite `userData/logs/tools_audit.log`
+- logs passam por sanitizacao compartilhada para reduzir vazamento acidental de API key, senha IMAP
+  e token de owner
 
 ## Dados locais
 
 - Configuracoes e sessoes ficam no `userData` do Electron
 - API key usa `keytar` quando disponivel
+- Senha IMAP usa `keytar` quando disponivel; sem cofre do sistema, o fallback fica no `settings.json`
 - Recomendado backup periodico via aba Manutencao
 
 ## Runtime do bot

@@ -1,6 +1,8 @@
 const { utilityProcess } = require('electron');
 const path = require('path');
 const { BOT_EVENTS, IPC_EVENTS, SETTINGS_UPDATE_ACTIONS } = require('../shared/ipcContracts');
+const { createStructuredLog, normalizeLogLevel, sanitizeLogText } = require('../shared/logging');
+const { normalizeProvider } = require('../shared/settingsSchema');
 
 function forkBotProcess(modulePath, env) {
   if (utilityProcess && typeof utilityProcess.fork === 'function') {
@@ -50,7 +52,9 @@ function createBotManager({
   sendToRenderer,
   getSettingsPath,
   getUserDataDir,
+  getApiKeyForProvider,
   getGroqApiKey,
+  getEmailImapPassword,
   getSettingsSnapshot,
   updateSettings,
   updateTrayStatus,
@@ -80,9 +84,8 @@ function createBotManager({
     if (!payload || typeof payload !== 'object') return;
 
     if (payload.event === BOT_EVENTS.LOG) {
-      const message = String(payload.message ?? '');
-      const level = String(payload.level ?? 'info');
-      if (message) sendToRenderer?.(IPC_EVENTS.BOT_LOG, { message, level });
+      const log = createStructuredLog(payload.message ?? '', payload.level ?? 'info');
+      if (log.message) sendToRenderer?.(IPC_EVENTS.BOT_LOG, log);
       return;
     }
 
@@ -100,7 +103,7 @@ function createBotManager({
     }
 
     if (payload.event === BOT_EVENTS.ERROR) {
-      const message = String(payload.message ?? '');
+      const message = sanitizeLogText(payload.message ?? '');
       if (message) sendToRenderer?.(IPC_EVENTS.BOT_ERROR, message);
     }
 
@@ -215,8 +218,17 @@ function createBotManager({
       setBotStatus('starting');
 
       const botPath = path.join(__dirname, '..', 'core', 'bot.js');
-      const groqApiKey = await getGroqApiKey?.();
-      const provider = 'groq';
+      const settingsSnapshot = getSettingsSnapshot?.() || {};
+      const provider = normalizeProvider(
+        settingsSnapshot.provider || process.env.BOTASSIST_PROVIDER
+      );
+      const groqApiKey = getApiKeyForProvider
+        ? await getApiKeyForProvider('groq')
+        : await getGroqApiKey?.();
+      const openaiCompatibleApiKey = getApiKeyForProvider
+        ? await getApiKeyForProvider('openai-compatible')
+        : '';
+      const emailImapPassword = await getEmailImapPassword?.();
       const env = {
         ...process.env,
         BOTASSIST_CONFIG_PATH: getSettingsPath(),
@@ -224,6 +236,8 @@ function createBotManager({
         BOTASSIST_PROVIDER: provider,
       };
       if (groqApiKey) env.GROQ_API_KEY = groqApiKey;
+      if (openaiCompatibleApiKey) env.OPENAI_COMPATIBLE_API_KEY = openaiCompatibleApiKey;
+      if (emailImapPassword) env.BOTASSIST_EMAIL_IMAP_PASSWORD = emailImapPassword;
 
       botProcess = forkBotProcess(botPath, env);
 
@@ -261,12 +275,15 @@ function createBotManager({
             }
           }
 
-          sendToRenderer?.(IPC_EVENTS.BOT_LOG, { message: trimmed, level: 'info' });
+          sendToRenderer?.(
+            IPC_EVENTS.BOT_LOG,
+            createStructuredLog(trimmed, normalizeLogLevel('info'))
+          );
         }
       });
 
       botProcess.stderr?.on('data', (data) => {
-        const message = data.toString();
+        const message = sanitizeLogText(data.toString());
         console.error('Bot Error:', message);
         sendToRenderer?.(IPC_EVENTS.BOT_ERROR, message);
       });

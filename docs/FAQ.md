@@ -6,13 +6,15 @@ Nao. O projeto nao inclui analytics, rastreamento ou coleta de dados por padrao.
 
 ## O que preciso para usar?
 
-- API Key da Groq
+- API Key do provedor de IA
 - Ler o QR Code e conectar o WhatsApp
 - Definir owner com token no WhatsApp (`!owner <token>`) para liberar comandos sensiveis/tools
 
 ## Onde crio a API Key?
 
-https://groq.com/
+Groq: https://groq.com/
+
+Para OpenAI-compatible, use a Base URL e a chave do provedor escolhido.
 
 ## O bot funciona sem API Key?
 

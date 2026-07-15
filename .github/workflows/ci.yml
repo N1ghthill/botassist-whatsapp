@@ -66,8 +66,11 @@ jobs:
           node --check src/main/updates.js
           node --check src/main/userData.js
           node --check src/preload.js
+          node --check src/shared/logging.js
+          node --check src/core/accessFailures.js
           node --check src/core/bot.js
           node --check src/renderer/app.js
+          node --check src/renderer/maintenance.js
 
       - name: Package (dir only)
         run: npm run build:linux:dir

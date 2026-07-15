@@ -11,20 +11,28 @@ Estado atual do repositorio:
 - `README.md` e o ponto de entrada recomendado para quem chega no projeto
 
 ## Comece por aqui
+
 - `docs/GUIA-RAPIDO.md` — Primeiros passos com o bot
 - `docs/ONBOARDING-7-DIAS.md` — Plano de estudo para novos contribuidores
 - `docs/CONFIGURACAO.md` — Campos e exemplos de configuracao
 
 ## Recursos e modulos
+
 - `docs/MODULOS.md` — Core, avancado e experimental
 - `docs/TOOLS.md` — Ferramentas (web/arquivos/terminal/email)
+- `docs/TOOLS-POLICY.md` — Contrato obrigatorio para novas tools
 - `docs/SEGURANCA.md` — Boas praticas e defaults seguros
 - `docs/RECURSOS.md` — Checklist de recursos por modulo
 
 ## Referencia
+
 - `docs/ORGANIZACAO-REPO.md` — Mapa de pastas e responsabilidades
+- `docs/ROADMAP.md` — Roadmap tecnico e operacional priorizado
+- `docs/GOVERNANCA.md` — Politica de branch principal, PRs, revisoes e releases
 - `docs/FAQ.md` — Perguntas frequentes
 - `docs/ATUALIZACOES.md` — Processo de release e atualizacoes
+- `docs/DEPENDENCIAS.md` — Politica de atualizacao de dependencias
+- `docs/THREAT-MODEL-FEATURES.md` — Roteiro para features sensiveis
 - `docs/ASSINATURA-E-NOTARIZACAO.md` — Contrato de signing/notarizacao para CI e releases
 - `docs/NOTAS-DA-VERSAO.md` — Changelog editorial pronto para site/blog
 - `docs/notas-da-versao.json` — Fonte estruturada para app/site

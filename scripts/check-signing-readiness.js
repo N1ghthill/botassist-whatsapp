@@ -8,18 +8,19 @@ function hasValue(value) {
   return String(value || '').trim().length > 0;
 }
 
-function firstAvailable(env, primaryKey, fallbackKey) {
-  if (hasValue(env[primaryKey])) {
-    return { key: primaryKey, value: String(env[primaryKey]) };
-  }
-  if (hasValue(env[fallbackKey])) {
-    return { key: fallbackKey, value: String(env[fallbackKey]) };
+function firstAvailable(env, ...keys) {
+  for (const key of keys.flat()) {
+    if (hasValue(env[key])) {
+      return { key, value: String(env[key]) };
+    }
   }
   return { key: '', value: '' };
 }
 
 function normalizeRunnerOs(value) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!normalized) return 'Unknown';
   if (normalized === 'darwin' || normalized === 'macos' || normalized === 'mac') return 'macOS';
   if (normalized === 'win32' || normalized === 'windows') return 'Windows';
@@ -28,7 +29,9 @@ function normalizeRunnerOs(value) {
 }
 
 function parseBoolean(value, fallback = false) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!normalized) return fallback;
   if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
@@ -95,8 +98,13 @@ function sanitizeFileComponent(value) {
 }
 
 function resolveSigningReadiness(env = process.env) {
-  const windowsLink = firstAvailable(env, 'WIN_CSC_LINK', 'CSC_LINK');
-  const windowsPassword = firstAvailable(env, 'WIN_CSC_KEY_PASSWORD', 'CSC_KEY_PASSWORD');
+  const windowsLink = firstAvailable(env, 'WIN_CSC_LINK', 'WINDOWS_CSC_LINK', 'CSC_LINK');
+  const windowsPassword = firstAvailable(
+    env,
+    'WIN_CSC_KEY_PASSWORD',
+    'WINDOWS_CSC_KEY_PASSWORD',
+    'CSC_KEY_PASSWORD'
+  );
   const macLink = firstAvailable(env, 'MAC_CSC_LINK', 'CSC_LINK');
   const macPassword = firstAvailable(env, 'MAC_CSC_KEY_PASSWORD', 'CSC_KEY_PASSWORD');
   const macName = firstAvailable(env, 'MAC_CSC_NAME', 'CSC_NAME');
@@ -106,9 +114,7 @@ function resolveSigningReadiness(env = process.env) {
   const macIdentitySelectorOnly = hasValue(macName.value) && !macSigningReady;
 
   const appleApiKeyReady =
-    hasValue(env.APPLE_API_KEY) &&
-    hasValue(env.APPLE_API_KEY_ID) &&
-    hasValue(env.APPLE_API_ISSUER);
+    hasValue(env.APPLE_API_KEY) && hasValue(env.APPLE_API_KEY_ID) && hasValue(env.APPLE_API_ISSUER);
   const appleIdReady =
     hasValue(env.APPLE_ID) &&
     hasValue(env.APPLE_APP_SPECIFIC_PASSWORD) &&
@@ -246,9 +252,7 @@ function buildSummary(readiness, options = {}) {
     );
   }
   lines.push(`- Require signed releases: ${options.requireSignedReleases ? 'true' : 'false'}`);
-  lines.push(
-    `- Ready for signed release: ${readiness.readyForSignedRelease ? 'true' : 'false'}`
-  );
+  lines.push(`- Ready for signed release: ${readiness.readyForSignedRelease ? 'true' : 'false'}`);
   return lines.join('\n');
 }
 

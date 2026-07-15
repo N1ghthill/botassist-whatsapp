@@ -1,6 +1,9 @@
 const fs = require('fs');
+const net = require('net');
+const nodeCrypto = require('crypto');
 const os = require('os');
 const path = require('path');
+const { sanitizeLogText } = require('../../shared/logging');
 
 const TOOL_DEFAULT_MAX_OUTPUT_CHARS = 6000;
 const TOOL_SHELL_TIMEOUT_MS = 15000;
@@ -26,9 +29,7 @@ function ensureDirSync(dirPath) {
 }
 
 function sanitizeLogValue(value) {
-  return String(value || '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return sanitizeLogText(value).replace(/\s+/g, ' ').trim();
 }
 
 function createToolAuditLogger(dataDir, meta = {}) {
@@ -167,6 +168,67 @@ function extractDomain(value) {
   }
 }
 
+function parseIpv4Address(value) {
+  const parts = String(value || '').split('.');
+  if (parts.length !== 4) return null;
+  const bytes = [];
+  for (const part of parts) {
+    if (!/^\d+$/.test(part)) return null;
+    const byte = Number(part);
+    if (!Number.isInteger(byte) || byte < 0 || byte > 255) return null;
+    bytes.push(byte);
+  }
+  return bytes;
+}
+
+function isBlockedIpv4Address(value) {
+  const bytes = parseIpv4Address(value);
+  if (!bytes) return false;
+  const [a, b] = bytes;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  );
+}
+
+function isBlockedIpv6Address(value) {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .replace(/^\[/, '')
+    .replace(/\]$/, '');
+  if (!normalized) return false;
+  if (normalized === '::' || normalized === '::1') return true;
+  if (normalized.startsWith('fe80:')) return true;
+  if (/^f[cd][0-9a-f]{2}:/.test(normalized)) return true;
+  if (/^ff[0-9a-f]{2}:/.test(normalized)) return true;
+  if (normalized.startsWith('::ffff:')) {
+    return isBlockedIpv4Address(normalized.slice('::ffff:'.length));
+  }
+  return false;
+}
+
+function isBlockedNetworkHost(hostname) {
+  const host = String(hostname || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replace(/^\[/, '')
+    .replace(/\]$/, '');
+  if (!host) return true;
+  if (host === 'localhost' || host.endsWith('.localhost')) return true;
+  const ipVersion = net.isIP(host);
+  if (ipVersion === 4) return isBlockedIpv4Address(host);
+  if (ipVersion === 6) return isBlockedIpv6Address(host);
+  return false;
+}
+
 function domainMatches(domain, rule) {
   const normalizedDomain = String(domain || '')
     .toLowerCase()
@@ -188,7 +250,7 @@ function isDomainAllowed(domain, allowed = [], blocked = []) {
 }
 
 function createToolCallId() {
-  return `call_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return `call_${Date.now().toString(36)}_${nodeCrypto.randomBytes(6).toString('hex')}`;
 }
 
 function safeJsonParse(value) {
@@ -269,6 +331,7 @@ module.exports = {
   formatAddressList,
   formatToolResult,
   isDomainAllowed,
+  isBlockedNetworkHost,
   isPathAllowed,
   isSubPath,
   isValidHttpUrl,

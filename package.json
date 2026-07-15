@@ -31,21 +31,21 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
-    "@whiskeysockets/baileys": "^7.0.0-rc12",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "dotenv": "^17.3.1",
-    "electron-updater": "^6.8.3",
-    "groq-sdk": "^0.7.0",
+    "electron-updater": "^6.8.9",
+    "groq-sdk": "^1.3.0",
     "imap": "^0.8.19",
     "keytar": "^7.9.0",
-    "mailparser": "^3.9.11",
+    "mailparser": "^3.9.14",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@electron/asar": "^4.1.0",
+    "@electron/asar": "^4.2.0",
     "@eslint/js": "^9.39.4",
     "electron": "^41.1.0",
-    "electron-builder": "^26.8.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.4.0",
@@ -60,18 +60,18 @@
   "overrides": {
     "file-type": "21.3.3",
     "flatted": "3.4.2",
-    "form-data": "4.0.6",
-    "ip-address": "10.2.0",
-    "nodemailer": "9.0.1",
-    "protobufjs": "7.6.3",
-    "@protobufjs/utf8": "1.1.1",
     "music-metadata": "11.12.3",
-    "tar": "7.5.16",
-    "tmp": "0.2.7",
     "utf7": {
       "semver": "5.7.2"
     },
-    "ws": "8.21.0"
+    "form-data": "4.0.6",
+    "tmp": "0.2.7",
+    "tar": "7.5.20",
+    "js-yaml": "5.2.1",
+    "ws": "8.21.1",
+    "minimatch@10": {
+      "brace-expansion": "5.0.7"
+    }
   },
   "build": {
     "appId": "br.dev.ruas.botassist",

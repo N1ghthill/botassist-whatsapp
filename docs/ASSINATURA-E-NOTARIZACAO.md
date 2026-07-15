@@ -32,6 +32,7 @@ gh workflow run signing-readiness.yml
 
 - `WIN_CSC_LINK` e `WIN_CSC_KEY_PASSWORD`
 - Fallback: `CSC_LINK` e `CSC_KEY_PASSWORD`
+- Alias legado aceito pelo preflight: `WINDOWS_CSC_LINK` e `WINDOWS_CSC_KEY_PASSWORD`
 - `WIN_CSC_LINK` deve guardar o `.p12/.pfx` em base64
 
 ### macOS signing

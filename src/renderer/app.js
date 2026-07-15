@@ -29,6 +29,10 @@ const profileRoutingGroupsInput = document.getElementById('profileRoutingGroups'
 const toolsAdvancedToggle = document.getElementById('toolsAdvancedToggle');
 const toolsTestBtn = document.getElementById('toolsTestBtn');
 const toolsTestResult = document.getElementById('toolsTestResult');
+const toolsSafetyPanel = document.getElementById('toolsSafetyPanel');
+const toolsSafetyTitle = document.getElementById('toolsSafetyTitle');
+const toolsSafetyBadge = document.getElementById('toolsSafetyBadge');
+const toolsSafetyList = document.getElementById('toolsSafetyList');
 const emailImapPasswordInput = document.getElementById('emailImapPassword');
 const clearEmailPasswordBtn = document.getElementById('clearEmailPasswordBtn');
 const createProfileBtn = document.getElementById('createProfileBtn');
@@ -36,12 +40,6 @@ const duplicateProfileBtn = document.getElementById('duplicateProfileBtn');
 const deleteProfileBtn = document.getElementById('deleteProfileBtn');
 const exportProfilesBtn = document.getElementById('exportProfilesBtn');
 const importProfilesBtn = document.getElementById('importProfilesBtn');
-
-// Database
-const backupDbBtn = document.getElementById('backupDbBtn');
-const restoreDbBtn = document.getElementById('restoreDbBtn');
-const cleanDbBtn = document.getElementById('cleanDbBtn');
-const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
 // Logs
 const clearLogsBtn = document.getElementById('clearLogsBtn');
@@ -60,6 +58,9 @@ const qrMessage = document.getElementById('qrMessage');
 // Setup wizard
 const setupQrContainer = document.getElementById('setupQrCode');
 const setupGenerateOwnerTokenBtn = document.getElementById('setupGenerateOwnerTokenBtn');
+const setupCredentialsState = document.getElementById('setupCredentialsState');
+const setupConnectionState = document.getElementById('setupConnectionState');
+const setupOwnerState = document.getElementById('setupOwnerState');
 
 // Updates
 const appVersionEl = document.getElementById('appVersion');
@@ -83,8 +84,9 @@ if (!settingsSchema) {
 }
 const profileSettingsFactory = globalThis.BotAssistRendererProfileSettings;
 const setupWizardFactory = globalThis.BotAssistRendererSetupWizard;
+const maintenanceFactory = globalThis.BotAssistRendererMaintenance;
 const shellUIFactory = globalThis.BotAssistRendererShellUI;
-if (!profileSettingsFactory || !setupWizardFactory || !shellUIFactory) {
+if (!profileSettingsFactory || !setupWizardFactory || !maintenanceFactory || !shellUIFactory) {
   throw new Error('Renderer modules not loaded');
 }
 
@@ -95,6 +97,7 @@ const {
   ensureBracketedTag,
   ensureProfiles,
   normalizeProfile,
+  normalizeProvider,
 } = settingsSchema;
 
 // Application State
@@ -122,6 +125,212 @@ const setupState = {
   connected: false,
   ownerToken: null,
 };
+
+function readTextAreaLinesById(id) {
+  const element = document.getElementById(id);
+  return String(element?.value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function isCheckedById(id) {
+  return Boolean(document.getElementById(id)?.checked);
+}
+
+function buildToolsSafetyReport() {
+  const enabled = isCheckedById('toolsEnabled');
+  if (!enabled) {
+    return {
+      level: 'ok',
+      title: 'Tools desativadas',
+      badge: 'OK',
+      items: ['Ferramentas locais estao bloqueadas.'],
+    };
+  }
+
+  const items = [];
+  let score = 0;
+  const ownerNumber = String(document.getElementById('ownerNumber')?.value || '').trim();
+  const ownerJid = String(document.getElementById('ownerJid')?.value || '').trim();
+  const hasOwner = Boolean(ownerNumber || ownerJid || hasOwnerConfigured(appState.settings));
+  const requireOwner = isCheckedById('toolsRequireOwner');
+  const allowInGroups = isCheckedById('toolsAllowInGroups');
+  const allowedPaths = readTextAreaLinesById('toolsAllowedPaths');
+  const allowedWritePaths = readTextAreaLinesById('toolsAllowedWritePaths');
+  const allowedDomains = readTextAreaLinesById('toolsAllowedDomains');
+  const commandAllowlist = readTextAreaLinesById('toolsCommandAllowlist');
+  const autoAllow = Array.from(document.querySelectorAll('[data-tool-auto-allow]'))
+    .filter((input) => input.checked)
+    .map((input) => input.dataset.toolAutoAllow)
+    .filter(Boolean);
+  const sensitiveAuto = autoAllow.filter((name) =>
+    ['fs.write', 'fs.delete', 'fs.move', 'fs.copy', 'shell.exec', 'email.read'].includes(name)
+  );
+
+  if (!requireOwner) {
+    score += 3;
+    items.push('Ative "Somente owner" antes de liberar tools para terceiros.');
+  } else if (!hasOwner) {
+    score += 2;
+    items.push('Defina o owner antes de habilitar tools.');
+  }
+  if (allowInGroups) {
+    score += 2;
+    items.push('Evite tools em grupos; use apenas quando houver necessidade operacional.');
+  }
+  if (sensitiveAuto.length > 0) {
+    score += 3;
+    items.push(`Remova auto-allow de ferramentas sensiveis: ${sensitiveAuto.join(', ')}.`);
+  }
+  if (allowedPaths.length === 0) {
+    score += 1;
+    items.push('Defina pastas de leitura explicitas para evitar escopo amplo na home.');
+  }
+  if (allowedWritePaths.length === 0) {
+    items.push('Escrita/remocao esta bloqueada porque allowedWritePaths esta vazio.');
+  } else {
+    score += 2;
+    items.push('Revise pastas de escrita/remocao; qualquer mutacao exige cuidado.');
+  }
+  if (allowedDomains.length === 0) {
+    score += 1;
+    items.push('Defina dominios permitidos para reduzir acesso web aberto.');
+  }
+  if (
+    autoAllow.includes('shell.exec') ||
+    (!commandAllowlist.length && autoAllow.includes('shell.exec'))
+  ) {
+    score += 3;
+    items.push('Nao deixe shell.exec em auto-allow; use allowlist de comandos.');
+  } else if (!commandAllowlist.length) {
+    items.push('Configure allowlist de comandos antes de usar shell.exec.');
+  }
+  if (items.length === 0) items.push('Configuracao de tools esta conservadora.');
+
+  const level = score >= 4 ? 'danger' : score > 0 ? 'warning' : 'ok';
+  return {
+    level,
+    title:
+      level === 'danger'
+        ? 'Tools com risco alto'
+        : level === 'warning'
+          ? 'Tools exigem revisao'
+          : 'Tools conservadoras',
+    badge: level === 'danger' ? 'ALTO' : level === 'warning' ? 'REVISAR' : 'OK',
+    items,
+  };
+}
+
+function refreshToolsSafetyPanel() {
+  if (!toolsSafetyPanel || !toolsSafetyTitle || !toolsSafetyBadge || !toolsSafetyList) return;
+  const report = buildToolsSafetyReport();
+  toolsSafetyPanel.dataset.level = report.level;
+  toolsSafetyTitle.textContent = report.title;
+  toolsSafetyBadge.textContent = report.badge;
+  toolsSafetyList.innerHTML = '';
+  report.items.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    toolsSafetyList.appendChild(li);
+  });
+}
+
+function renderSetupState(container, items) {
+  if (!container) return;
+  container.innerHTML = '';
+  const normalizedItems = Array.isArray(items) ? items.filter(Boolean) : [];
+  normalizedItems.forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'setup-state-item';
+    row.dataset.level = item.level || 'ok';
+    const icon = document.createElement('i');
+    icon.className =
+      item.level === 'danger'
+        ? 'fas fa-times-circle'
+        : item.level === 'warning'
+          ? 'fas fa-exclamation-triangle'
+          : 'fas fa-check-circle';
+    const text = document.createElement('span');
+    text.textContent = item.text;
+    row.replaceChildren(icon, text);
+    container.appendChild(row);
+  });
+}
+
+function refreshSetupStatePanels() {
+  const activeProvider = normalizeProvider(appState.settings.provider);
+  const providerMeta = settingsSchema.PROVIDER_META?.[activeProvider] || {};
+  const providerLabel = providerMeta.label || activeProvider;
+  const providerKeyStatus = appState.settings.apiKeyStatus?.[activeProvider] || {};
+  const hasApiKey = Boolean(providerKeyStatus.hasApiKey);
+  const apiKeyRef = String(providerKeyStatus.apiKeyRef || '').trim();
+  const modelValue = String(getActiveProfile()?.model || appState.settings.model || '').trim();
+  const hasOwner = hasOwnerConfigured(appState.settings);
+  const ownerToken = appState.settings.ownerClaimToken || {};
+  const tokenActive = Boolean(ownerToken.active);
+  const tokenExpired = Boolean(ownerToken.expiresAt && !tokenActive);
+  const isConnected = appState.botStatus === 'online';
+  const isConnecting = appState.botStatus === 'starting' || appState.botStatus === 'restarting';
+  const hasQr = Boolean(lastQrText);
+
+  renderSetupState(setupCredentialsState, [
+    {
+      level: hasApiKey ? 'ok' : 'warning',
+      text: hasApiKey
+        ? apiKeyRef.startsWith('keytar:')
+          ? 'API Key configurada no cofre do sistema.'
+          : 'API Key configurada em fallback local.'
+        : `API Key ${providerLabel} ainda nao configurada; cole uma chave ou continue sem IA.`,
+    },
+    {
+      level: modelValue ? 'ok' : 'warning',
+      text: modelValue
+        ? `Modelo selecionado: ${modelValue}.`
+        : 'Selecione um modelo antes de seguir.',
+    },
+  ]);
+
+  renderSetupState(setupConnectionState, [
+    {
+      level: isConnected
+        ? 'ok'
+        : isConnecting
+          ? 'warning'
+          : appState.botStatus === 'error'
+            ? 'danger'
+            : 'warning',
+      text: isConnected
+        ? 'WhatsApp conectado.'
+        : isConnecting
+          ? 'Bot iniciando; aguarde o QR ou a conexao.'
+          : appState.botStatus === 'error'
+            ? 'Erro de conexao. Reinicie o bot ou resete a sessao se o QR nao voltar.'
+            : 'Inicie o bot para gerar o QR Code.',
+    },
+    {
+      level: hasQr || isConnected ? 'ok' : 'warning',
+      text: isConnected
+        ? 'QR Code nao e necessario enquanto a sessao estiver ativa.'
+        : hasQr
+          ? 'QR Code gerado; escaneie pelo WhatsApp.'
+          : 'Aguardando QR Code.',
+    },
+  ]);
+
+  renderSetupState(setupOwnerState, [
+    {
+      level: hasOwner ? 'ok' : tokenActive ? 'warning' : 'danger',
+      text: hasOwner
+        ? `Owner configurado: ${String(appState.settings.ownerNumber || appState.settings.ownerJid || '').trim()}.`
+        : tokenActive
+          ? `Token ativo ate ${formatIsoToLocale(ownerToken.expiresAt)}. Envie o comando no DM do bot.`
+          : tokenExpired
+            ? 'Token expirado. Gere um novo token antes de enviar o comando.'
+            : 'Owner ainda nao definido. Gere um token para liberar comandos sensiveis.',
+    },
+  ]);
+}
 
 const GROQ_FREE_MODELS = [
   {
@@ -222,6 +431,16 @@ const {
   updateSetupStepUI,
 } = setupWizard;
 
+const maintenance = maintenanceFactory.createModule({
+  addLog,
+  showNotification,
+  loadSettings,
+  updateBotStatus,
+  downloadJson,
+});
+const { getMaintenanceActionButtons, initMaintenance, refreshMaintenanceStats, refreshToolsAudit } =
+  maintenance;
+
 function disableElectronDependentUI(reason) {
   const targets = [
     startBtn,
@@ -229,9 +448,7 @@ function disableElectronDependentUI(reason) {
     restartBtn,
     saveSettingsBtn,
     resetSettingsBtn,
-    backupDbBtn,
-    restoreDbBtn,
-    cleanDbBtn,
+    ...getMaintenanceActionButtons(),
     checkUpdatesBtn,
     installUpdateBtn,
     toolsTestBtn,
@@ -346,6 +563,7 @@ saveSettingsBtn.addEventListener('click', () => {
       appState.settings.profiles = normalizedProfiles.profiles;
       appState.settings.activeProfileId = normalizedProfiles.activeProfileId;
       applySettingsToForm();
+      refreshToolsSafetyPanel();
       renderOwnerClaimUI();
       clearGroupAccessKeyRequested = false;
       clearEmailPasswordRequested = false;
@@ -441,16 +659,6 @@ resetSettingsBtn?.addEventListener('click', async () => {
   }
 });
 
-// Database Functions
-function formatBytes(bytes) {
-  const value = Number(bytes);
-  if (!Number.isFinite(value) || value <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const exponent = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
-  const num = value / Math.pow(1024, exponent);
-  return `${num.toFixed(num >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
-}
-
 function formatIsoToLocale(iso) {
   const value = String(iso || '').trim();
   if (!value) return 'Nunca';
@@ -458,128 +666,6 @@ function formatIsoToLocale(iso) {
   if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleString();
 }
-
-async function refreshMaintenanceStats() {
-  const userDataPathEl = document.getElementById('userDataPath');
-  const sizeEl = document.getElementById('dbSize');
-  const authEl = document.getElementById('dbConversations');
-  const settingsEl = document.getElementById('dbMessages');
-  const lastBackupEl = document.getElementById('lastBackup');
-  const memorySessionsEl = document.getElementById('memorySessions');
-  const memorySizeEl = document.getElementById('memorySize');
-
-  if (!window.electronAPI?.getUserDataStats) {
-    if (userDataPathEl) userDataPathEl.textContent = '-';
-    if (sizeEl) sizeEl.textContent = '-';
-    if (authEl) authEl.textContent = '-';
-    if (settingsEl) settingsEl.textContent = '-';
-    if (lastBackupEl) lastBackupEl.textContent = '-';
-    if (memorySessionsEl) memorySessionsEl.textContent = '-';
-    if (memorySizeEl) memorySizeEl.textContent = '-';
-    return;
-  }
-
-  try {
-    const stats = await window.electronAPI.getUserDataStats();
-    if (userDataPathEl) userDataPathEl.textContent = stats?.userDataPath || '-';
-    if (sizeEl) sizeEl.textContent = formatBytes(stats?.sizeBytes || 0);
-    if (authEl) authEl.textContent = stats?.hasAuth ? 'OK' : 'Não encontrado';
-    if (settingsEl) settingsEl.textContent = stats?.hasSettings ? 'OK' : 'Não encontrado';
-    if (lastBackupEl) lastBackupEl.textContent = formatIsoToLocale(stats?.lastBackupAt);
-    if (memorySessionsEl) memorySessionsEl.textContent = String(stats?.memorySessions ?? 0);
-    if (memorySizeEl) memorySizeEl.textContent = formatBytes(stats?.memorySizeBytes || 0);
-  } catch (error) {
-    addLog(`Erro ao ler dados do app: ${error.message}`, 'error');
-  }
-}
-
-backupDbBtn?.addEventListener('click', async () => {
-  try {
-    if (!window.electronAPI?.backupUserData) {
-      addLog('Backup não disponível (API do Electron ausente).', 'warning');
-      showNotification('Backup indisponível', 'warning');
-      return;
-    }
-
-    addLog('Criando backup dos dados...', 'info');
-    const result = await window.electronAPI.backupUserData();
-    if (result?.canceled) {
-      addLog('Backup cancelado.', 'info');
-      return;
-    }
-    if (!result?.ok) throw new Error(result?.error || 'Falha ao criar backup.');
-
-    addLog(`Backup criado em: ${result.backupPath}`, 'success');
-    showNotification('Backup criado!', 'success');
-    await refreshMaintenanceStats();
-  } catch (error) {
-    addLog(`Erro no backup: ${error.message}`, 'error');
-    showNotification('Erro ao criar backup', 'error');
-  }
-});
-
-restoreDbBtn?.addEventListener('click', async () => {
-  try {
-    if (!window.electronAPI?.openUserDataDir) {
-      showNotification('Ação indisponível', 'warning');
-      return;
-    }
-    const result = await window.electronAPI.openUserDataDir();
-    if (result && result.ok === false) throw new Error(result.error || 'Falha ao abrir pasta.');
-  } catch (error) {
-    addLog(`Erro ao abrir pasta: ${error.message}`, 'error');
-    showNotification('Erro ao abrir pasta', 'error');
-  }
-});
-
-cleanDbBtn?.addEventListener('click', async () => {
-  try {
-    if (!window.electronAPI?.resetSession) {
-      showNotification('Ação indisponível', 'warning');
-      return;
-    }
-
-    addLog('Resetando sessão...', 'warning');
-    const result = await window.electronAPI.resetSession();
-    if (result?.canceled) {
-      addLog('Reset de sessão cancelado.', 'info');
-      return;
-    }
-    if (!result?.ok) throw new Error(result?.error || 'Falha ao resetar sessão.');
-
-    addLog('Sessão resetada. Inicie o bot para gerar um novo QR Code.', 'success');
-    showNotification('Sessão resetada', 'success');
-    await refreshMaintenanceStats();
-    updateBotStatus('offline');
-  } catch (error) {
-    addLog(`Erro ao resetar sessão: ${error.message}`, 'error');
-    showNotification('Erro ao resetar sessão', 'error');
-  }
-});
-
-clearHistoryBtn?.addEventListener('click', async () => {
-  try {
-    if (!window.electronAPI?.clearHistory) {
-      showNotification('Ação indisponível', 'warning');
-      return;
-    }
-
-    addLog('Limpando memória das conversas...', 'warning');
-    const result = await window.electronAPI.clearHistory();
-    if (result?.canceled) {
-      addLog('Limpeza de memória cancelada.', 'info');
-      return;
-    }
-    if (!result?.ok) throw new Error(result?.error || 'Falha ao limpar memória.');
-
-    addLog('Memória apagada. Novas conversas serão aprendidas do zero.', 'success');
-    showNotification('Memória apagada', 'success');
-    await refreshMaintenanceStats();
-  } catch (error) {
-    addLog(`Erro ao limpar memória: ${error.message}`, 'error');
-    showNotification('Erro ao limpar memória', 'error');
-  }
-});
 
 // Logs Functions
 clearLogsBtn.addEventListener('click', () => {
@@ -702,6 +788,7 @@ function updateBotStatus(status) {
   }
 
   updateSetupConnectionStatus(normalized);
+  refreshSetupStatePanels();
 }
 
 function getStatusText(status) {
@@ -731,6 +818,7 @@ async function showQRCode(qrText) {
     };
     renderTo(qrCodeContainer);
     renderTo(setupQrContainer);
+    refreshSetupStatePanels();
     showQRBtn.style.display = 'none';
     if (qrMessage) qrMessage.style.display = 'none';
   } catch (error) {
@@ -783,7 +871,7 @@ async function loadSettings() {
   }
 
   appState.settings = normalizePolicySettings(appState.settings);
-  appState.settings.provider = 'groq';
+  appState.settings.provider = normalizeProvider(appState.settings.provider);
 
   const normalizedProfiles = ensureProfiles(appState.settings);
   appState.settings.profiles = normalizedProfiles.profiles;
@@ -797,10 +885,12 @@ async function loadSettings() {
   }
 
   applySettingsToForm();
+  refreshToolsSafetyPanel();
   if (hasOwnerConfigured(appState.settings)) {
     setupState.ownerToken = null;
   }
   renderOwnerClaimUI();
+  refreshSetupStatePanels();
   clearGroupAccessKeyRequested = false;
   clearEmailPasswordRequested = false;
 
@@ -823,9 +913,30 @@ async function init() {
   });
 
   loadToolsAdvancedPreference();
+  initMaintenance();
   toolsAdvancedToggle?.addEventListener('change', () => {
     setToolsAdvancedVisible(Boolean(toolsAdvancedToggle.checked));
+    refreshToolsSafetyPanel();
   });
+  document
+    .querySelectorAll(
+      [
+        '#toolsEnabled',
+        '#toolsRequireOwner',
+        '#toolsAllowInGroups',
+        '#toolsAllowedPaths',
+        '#toolsAllowedWritePaths',
+        '#toolsAllowedDomains',
+        '#toolsCommandAllowlist',
+        '[data-tool-auto-allow]',
+        '#ownerNumber',
+        '#ownerJid',
+      ].join(',')
+    )
+    .forEach((element) => {
+      element.addEventListener('input', refreshToolsSafetyPanel);
+      element.addEventListener('change', refreshToolsSafetyPanel);
+    });
 
   // Load settings
   populateModelPresets();
@@ -865,12 +976,15 @@ async function init() {
       {
         name: `Novo perfil ${count}`,
         persona: 'custom',
-        provider: 'groq',
+        provider: normalizeProvider(base?.provider || appState.settings.provider),
         model: base?.model || 'llama-3.3-70b-versatile',
         systemPrompt: DEFAULT_PROFILE_PROMPT,
         botTag: '',
       },
-      { provider: 'groq', model: base?.model }
+      {
+        provider: normalizeProvider(base?.provider || appState.settings.provider),
+        model: base?.model,
+      }
     );
     appState.settings.profiles = [...(appState.settings.profiles || []), newProfile];
     setActiveProfileId(newProfile.id);
@@ -1079,8 +1193,7 @@ async function init() {
   });
 
   providerSelect?.addEventListener('change', () => {
-    const provider = 'groq';
-    if (providerSelect) providerSelect.value = provider;
+    const provider = normalizeProvider(providerSelect.value);
     appState.settings.provider = provider;
     const active = getActiveProfile();
     if (active) active.provider = provider;
@@ -1283,6 +1396,7 @@ async function init() {
   document.getElementById('messagesToday').textContent = '0';
   document.getElementById('aiStatus').textContent = 'Desconectada';
   await refreshMaintenanceStats();
+  await refreshToolsAudit();
   document.documentElement.dataset.appReady = '1';
 }
 
