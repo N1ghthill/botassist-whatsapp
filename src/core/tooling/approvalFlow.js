@@ -1,7 +1,9 @@
+const nodeCrypto = require('crypto');
+
 const DEFAULT_TOOL_APPROVAL_TTL_MS = 15 * 60 * 1000;
 
 function createApprovalId() {
-  return `auth_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  return `auth_${Date.now().toString(36)}_${nodeCrypto.randomBytes(6).toString('hex')}`;
 }
 
 function createToolApprovalEntry(

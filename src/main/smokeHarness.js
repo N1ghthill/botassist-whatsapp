@@ -7,6 +7,18 @@ function createSmokeHarness({ app }) {
   const expectSandboxed = String(process.env.BOTASSIST_SMOKE_EXPECT_SANDBOXED || '1') !== '0';
   const timeoutMs = 30000;
 
+  async function captureFailureScreenshot(mainWindow) {
+    if (!reportPath || !mainWindow || mainWindow.isDestroyed?.()) return '';
+    try {
+      const image = await mainWindow.webContents.capturePage();
+      const screenshotPath = reportPath.replace(/\.json$/i, '.png');
+      fs.writeFileSync(screenshotPath, image.toPNG());
+      return screenshotPath;
+    } catch {
+      return '';
+    }
+  }
+
   async function runRendererSmoke(mainWindow) {
     if (!reportPath || !mainWindow) return;
 
@@ -58,6 +70,10 @@ function createSmokeHarness({ app }) {
             sandboxed: Boolean(window.electronAPI?.sandboxed),
             setupVisible: isVisible('setupOverlay'),
             setupStepText: document.getElementById('setupStepText')?.textContent || '',
+            setupCredentialsState:
+              document.getElementById('setupCredentialsState')?.textContent || '',
+            setupConnectionState: document.getElementById('setupConnectionState')?.textContent || '',
+            setupOwnerState: document.getElementById('setupOwnerState')?.textContent || '',
           };
 
           document.getElementById('setupNextBtn')?.click();
@@ -80,6 +96,12 @@ function createSmokeHarness({ app }) {
             })
           );
           const toolsResult = await withStep('testTools', () => window.electronAPI.testTools());
+          const toolsAudit = await withStep('readToolsAudit', () =>
+            window.electronAPI.readToolsAudit({ limit: 5 })
+          );
+          const userDataStats = await withStep('getUserDataStats', () =>
+            window.electronAPI.getUserDataStats()
+          );
 
           const updateState = await withStep(
             'checkForUpdates',
@@ -105,6 +127,8 @@ function createSmokeHarness({ app }) {
             ownerClaimTokenActive: Boolean(ownerSettings?.ownerClaimToken?.active),
             toolsEnabled: Boolean(toolsSettings?.tools?.enabled),
             toolsResult,
+            toolsAudit,
+            userDataStats,
             updateState,
             updateDom,
             installState,
@@ -133,11 +157,23 @@ function createSmokeHarness({ app }) {
     if (!String(payload?.stepAfterFirstClick || '').includes('Etapa 2')) {
       assertions.push('Setup wizard nao avancou da etapa 1 para a 2.');
     }
+    if (!String(payload?.initial?.setupCredentialsState || '').includes('API Key')) {
+      assertions.push('Setup wizard nao renderizou estado de API Key/modelo.');
+    }
+    if (!String(payload?.initial?.setupOwnerState || '').includes('Owner')) {
+      assertions.push('Setup wizard nao renderizou estado de owner.');
+    }
     if (!payload?.ownerToken?.token || !payload?.ownerClaimTokenActive) {
       assertions.push('Token de owner nao foi gerado corretamente.');
     }
     if (!payload?.toolsResult?.ok) {
       assertions.push('Teste read-only de tools nao retornou ok.');
+    }
+    if (payload?.toolsAudit?.ok !== true || !Array.isArray(payload?.toolsAudit?.entries)) {
+      assertions.push('Leitura da auditoria de tools nao retornou payload valido.');
+    }
+    if (!payload?.userDataStats?.userDataPath) {
+      assertions.push('Estatisticas de userData nao retornaram caminho de dados.');
     }
     if (payload?.updateState?.status !== 'downloaded') {
       assertions.push(
@@ -170,9 +206,13 @@ function createSmokeHarness({ app }) {
     if (!reportPath) return;
 
     let finished = false;
-    const finish = (report) => {
+    const finish = async (report) => {
       if (finished) return;
       finished = true;
+      if (!report.ok) {
+        const screenshotPath = await captureFailureScreenshot(mainWindow);
+        if (screenshotPath) report.screenshotPath = screenshotPath;
+      }
       writeReport(report);
       setTimeout(() => app.exit(report.ok ? 0 : 1), 100);
     };
@@ -188,10 +228,10 @@ function createSmokeHarness({ app }) {
       try {
         const result = await runRendererSmoke(mainWindow);
         clearTimeout(timeout);
-        finish(result);
+        await finish(result);
       } catch (error) {
         clearTimeout(timeout);
-        finish({
+        await finish({
           ok: false,
           error: error?.message || String(error),
           stack: error?.stack || '',

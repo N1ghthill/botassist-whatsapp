@@ -44,7 +44,7 @@ Se persistir:
 
 ## Bot conecta mas nao responde
 
-- Confirme API Key da Groq.
+- Confirme API Key, provider e modelo configurados.
 - Verifique bloqueio por owner/allowlist.
 - Em grupos: o bot precisa de mencao.
 
@@ -52,7 +52,7 @@ Se persistir:
 
 - Cole a chave novamente e salve.
 - Se usar keytar, reinicie o app.
-- Alternativa: `GROQ_API_KEY` no ambiente.
+- Alternativas: `GROQ_API_KEY`, `OPENAI_COMPATIBLE_API_KEY` ou `OPENAI_API_KEY` no ambiente.
 
 ## Nao responde em grupos
 

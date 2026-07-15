@@ -16,7 +16,9 @@ const { getAssetPath, fileExists } = require('./main/paths');
 const { createSmokeHarness } = require('./main/smokeHarness');
 const { renderQrCodeDataUrl, resolveElectronSandboxEnabled } = require('./main/runtimeSecurity');
 const { runToolsDiagnostics } = require('./main/toolsDiagnostics');
+const { readToolsAuditLog } = require('./main/toolsAudit');
 const { IPC_EVENTS, IPC_INVOKE } = require('./shared/ipcContracts');
+const { normalizeProvider } = require('./shared/settingsSchema');
 
 let mainWindow = null;
 let bot = null;
@@ -69,7 +71,9 @@ bot = createBotManager({
   sendToRenderer,
   getSettingsPath: settings.getSettingsPath,
   getUserDataDir: settings.getUserDataDir,
+  getApiKeyForProvider: settings.getApiKeyForProvider,
   getGroqApiKey: settings.getGroqApiKey,
+  getEmailImapPassword: settings.getEmailImapPassword,
   getSettingsSnapshot: settings.getSettingsSnapshot,
   updateSettings: settings.saveSettings,
   updateTrayStatus: updateTray,
@@ -184,10 +188,21 @@ ipcMain.handle(IPC_INVOKE.START_BOT, async (event, config) => {
     const incoming = config && typeof config === 'object' ? { ...config } : null;
     const apiKeyValue = incoming && 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
     if (incoming) delete incoming.apiKey;
+    const emailPasswordValue =
+      incoming?.email && Object.prototype.hasOwnProperty.call(incoming.email, 'imapPassword')
+        ? String(incoming.email.imapPassword || '')
+        : null;
+    if (incoming?.email) delete incoming.email.imapPassword;
 
     if (incoming) settings.saveSettings(incoming);
-    const provider = 'groq';
+    const provider = normalizeProvider(
+      incoming?.provider || settings.getSettingsSnapshot()?.provider || 'groq'
+    );
     if (apiKeyValue.trim()) await settings.setApiKeyForProvider(provider, apiKeyValue);
+    if (emailPasswordValue != null) {
+      if (emailPasswordValue) await settings.setEmailImapPassword(emailPasswordValue);
+      else await settings.clearEmailImapPassword();
+    }
     applyLaunchOnStartup(settings.getSettingsSnapshot()?.launchOnStartup);
 
     await bot.startBot();
@@ -219,9 +234,18 @@ ipcMain.handle(IPC_INVOKE.SET_SETTINGS, async (event, partial) => {
   const incoming = partial && typeof partial === 'object' ? { ...partial } : {};
   const apiKeyValue = 'apiKey' in incoming ? String(incoming.apiKey || '') : '';
   delete incoming.apiKey;
+  const emailPasswordValue =
+    incoming?.email && Object.prototype.hasOwnProperty.call(incoming.email, 'imapPassword')
+      ? String(incoming.email.imapPassword || '')
+      : null;
+  if (incoming?.email) delete incoming.email.imapPassword;
 
-  const provider = 'groq';
+  const provider = normalizeProvider(incoming.provider || settings.getSettingsSnapshot()?.provider);
   if (apiKeyValue.trim()) await settings.setApiKeyForProvider(provider, apiKeyValue);
+  if (emailPasswordValue != null) {
+    if (emailPasswordValue) await settings.setEmailImapPassword(emailPasswordValue);
+    else await settings.clearEmailImapPassword();
+  }
   settings.saveSettings(incoming);
   applyLaunchOnStartup(settings.getSettingsSnapshot()?.launchOnStartup);
   if (bot.hasProcess()) bot.restartBot();
@@ -286,6 +310,10 @@ ipcMain.handle(IPC_INVOKE.BACKUP_USERDATA, async () => {
   return userDataManager.backupUserData();
 });
 
+ipcMain.handle(IPC_INVOKE.RESTORE_USERDATA, async () => {
+  return userDataManager.restoreUserData();
+});
+
 ipcMain.handle(IPC_INVOKE.RESET_SESSION, async () => {
   return userDataManager.resetSession();
 });
@@ -320,6 +348,14 @@ ipcMain.handle(IPC_INVOKE.TEST_TOOLS, async () => {
     return runToolsDiagnostics(settings.getSettingsSnapshot());
   } catch (err) {
     return { ok: false, reason: 'erro interno', error: err?.message || String(err) };
+  }
+});
+
+ipcMain.handle(IPC_INVOKE.READ_TOOLS_AUDIT, async (event, options) => {
+  try {
+    return readToolsAuditLog(settings.getUserDataPath(), options);
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), entries: [] };
   }
 });
 
@@ -368,6 +404,7 @@ app.whenReady().then(async () => {
   settings.loadSettings();
   try {
     await settings.migrateLegacyApiKeyToKeytar();
+    await settings.migrateLegacyEmailImapPasswordToKeytar();
   } catch (err) {
     console.error('Secret migration failed:', err);
   }

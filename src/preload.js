@@ -23,6 +23,7 @@ const IPC_INVOKE = Object.freeze({
   IMPORT_PROFILES: 'import-profiles',
   GET_USERDATA_STATS: 'get-userdata-stats',
   BACKUP_USERDATA: 'backup-userdata',
+  RESTORE_USERDATA: 'restore-userdata',
   RESET_SESSION: 'reset-session',
   CLEAR_HISTORY: 'clear-history',
   OPEN_USERDATA_DIR: 'open-userdata-dir',
@@ -31,6 +32,7 @@ const IPC_INVOKE = Object.freeze({
   CHECK_FOR_UPDATES: 'check-for-updates',
   QR_TO_DATA_URL: 'qr-to-data-url',
   TEST_TOOLS: 'test-tools',
+  READ_TOOLS_AUDIT: 'read-tools-audit',
   QUIT_AND_INSTALL_UPDATE: 'quit-and-install-update',
   WINDOW_MINIMIZE: 'window-minimize',
   WINDOW_TOGGLE_MAXIMIZE: 'window-toggle-maximize',
@@ -81,6 +83,7 @@ const electronAPI = {
   // Maintenance (userData)
   getUserDataStats: () => invoke(IPC_INVOKE.GET_USERDATA_STATS),
   backupUserData: () => invoke(IPC_INVOKE.BACKUP_USERDATA),
+  restoreUserData: () => invoke(IPC_INVOKE.RESTORE_USERDATA),
   resetSession: () => invoke(IPC_INVOKE.RESET_SESSION),
   openUserDataDir: () => invoke(IPC_INVOKE.OPEN_USERDATA_DIR),
   clearHistory: () => invoke(IPC_INVOKE.CLEAR_HISTORY),
@@ -91,6 +94,7 @@ const electronAPI = {
   checkForUpdates: () => invoke(IPC_INVOKE.CHECK_FOR_UPDATES),
   quitAndInstallUpdate: () => invoke(IPC_INVOKE.QUIT_AND_INSTALL_UPDATE),
   testTools: () => invoke(IPC_INVOKE.TEST_TOOLS),
+  readToolsAudit: (options) => invoke(IPC_INVOKE.READ_TOOLS_AUDIT, options),
 
   // Window controls
   windowMinimize: () => invoke(IPC_INVOKE.WINDOW_MINIMIZE),

@@ -3,6 +3,8 @@
 As tools permitem que o bot interaja com web, arquivos, terminal e email.
 Elas sao opt-in e ficam desativadas por padrao.
 
+Novas tools devem seguir `docs/TOOLS-POLICY.md` antes da implementacao.
+
 ## Como ativar
 
 1. Abra `Configuracoes > Ferramentas (Tools)`.
@@ -72,7 +74,9 @@ Se `allowedWritePaths` vazio: escrita/remocao ficam bloqueadas.
 - `tools.allowedDomains`: allowlist de dominios
 - `tools.blockedDomains`: bloqueio explicito
 
-Se `allowedDomains` vazio, qualquer dominio pode ser usado (menos bloqueados).
+Se `allowedDomains` vazio, dominios publicos podem ser usados, exceto os bloqueados explicitamente.
+Mesmo assim, `web.open` continua bloqueando por padrao `localhost`, IPs privados, link-local,
+multicast, enderecos reservados e endpoints de metadata.
 
 ## Extensoes e tamanho maximo
 
@@ -96,12 +100,24 @@ Se `allowedDomains` vazio, qualquer dominio pode ser usado (menos bloqueados).
 3. Defina mailbox (ex.: `INBOX`) e limite.
 
 O bot apenas le emails.
+A senha IMAP usa o cofre do sistema quando `keytar` esta disponivel. Se o cofre nao estiver
+acessivel, o fallback fica no `settings.json`.
 
 ## Auditoria
 
 Cada execucao de tool gera registro em:
 
 - `userData/logs/tools_audit.log`
+
+A tela `Manutencao > Auditoria de tools` le esse arquivo pela UI, com filtros por ferramenta,
+status, conversa/solicitante e intervalo de data. A exportacao gera JSON com apenas os campos ja
+auditados: data, requester/chat, escopo, role, tool, status, resumo e erro.
+
+## Diagnostico de seguranca
+
+A tela de configuracoes mostra um resumo de risco das tools antes de salvar. O botao `Testar
+ferramentas` valida uma pasta permitida e retorna avisos como falta de owner, tools em grupos,
+auto-allow sensivel, escrita bloqueada e web sem allowlist de dominios.
 
 ## Boas praticas
 

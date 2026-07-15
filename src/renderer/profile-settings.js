@@ -31,6 +31,7 @@
       const ownerNumberInput = doc.getElementById('ownerNumber');
       const ownerJidInput = doc.getElementById('ownerJid');
       const apiKeyInput = doc.getElementById('apiKey');
+      const apiBaseUrlInput = doc.getElementById('apiBaseUrl');
       const autoStartInput = doc.getElementById('autoStart');
       const launchOnStartupInput = doc.getElementById('launchOnStartup');
       const profileSelect = doc.getElementById('profileSelect');
@@ -91,6 +92,7 @@
         normalizeInteractionSettings,
         normalizeProfile,
         normalizeProfileState,
+        normalizeProvider,
         normalizeToolsSettings,
         resolveDmPolicy,
         resolveGroupPolicy,
@@ -371,11 +373,12 @@
         if (profilePromptInput) profilePromptInput.value = profile.systemPrompt || '';
         const botTagInput = doc.getElementById('botTag');
         if (botTagInput) botTagInput.value = profile.botTag || '';
-        appState.settings.provider = 'groq';
+        const provider = normalizeProvider(profile.provider || appState.settings.provider);
+        appState.settings.provider = provider;
         appState.settings.model = profile.model || appState.settings.model;
         appState.settings.botTag = profile.botTag || appState.settings.botTag;
-        if (providerSelect) providerSelect.value = 'groq';
-        updateProviderUI('groq');
+        if (providerSelect) providerSelect.value = provider;
+        updateProviderUI(provider);
         if (modelInput) modelInput.value = profile.model || 'llama-3.3-70b-versatile';
         syncModelPresetSelection(modelInput?.value);
       }
@@ -394,7 +397,7 @@
             name,
             systemPrompt,
             botTag,
-            provider: 'groq',
+            provider: normalizeProvider(providerSelect?.value || appState.settings.provider),
             model: modelInput?.value || base.model,
           },
           base
@@ -621,7 +624,7 @@
         appState.settings.profiles = profiles;
         appState.settings.activeProfileId = updatedProfile.id;
 
-        const provider = 'groq';
+        const provider = normalizeProvider(providerSelect?.value || updatedProfile.provider);
         const dmPolicy = dmPolicySelect?.value || appState.settings.dmPolicy || 'open';
         const groupPolicy = groupPolicySelect?.value || appState.settings.groupPolicy || 'disabled';
         const groupAccessKeyValue = groupAccessKeyInput?.value ?? '';
@@ -629,6 +632,7 @@
           persona: updatedProfile.persona || 'custom',
           provider,
           apiKey: apiKeyInput?.value || '',
+          openaiCompatibleBaseUrl: apiBaseUrlInput?.value || '',
           ownerNumber: ownerNumberInput?.value || '',
           ownerJid: ownerJidInput?.value,
           botTag: updatedProfile.botTag,

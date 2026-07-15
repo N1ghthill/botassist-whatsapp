@@ -7,13 +7,26 @@
     root.BotAssistSettingsSchema = exported;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createSettingsSchema() {
-  const PROVIDERS = ['groq'];
+  const PROVIDERS = ['groq', 'openai-compatible'];
   const PROVIDER_META = {
     groq: {
       label: 'Groq',
       apiKeyField: 'apiKey',
       apiKeyRefField: 'apiKeyRef',
       keytarAccount: 'groq_apiKey',
+      keyPlaceholder: 'Sua chave da Groq',
+      showBaseUrl: false,
+    },
+    'openai-compatible': {
+      label: 'OpenAI-compatible',
+      apiKeyField: 'openaiCompatibleApiKey',
+      apiKeyRefField: 'openaiCompatibleApiKeyRef',
+      keytarAccount: 'openai_compatible_apiKey',
+      baseUrlField: 'openaiCompatibleBaseUrl',
+      keyPlaceholder: 'Chave do provedor compatível',
+      baseUrlPlaceholder: 'https://servidor.exemplo/v1',
+      baseUrlHint: 'Use a URL base do endpoint compatível com /chat/completions.',
+      showBaseUrl: true,
     },
   };
 
@@ -67,6 +80,7 @@
     imapSecure: true,
     imapUser: '',
     imapPassword: '',
+    imapPasswordRef: '',
     mailbox: 'INBOX',
     maxMessages: 5,
   };
@@ -88,6 +102,9 @@
     provider: 'groq',
     apiKey: '',
     apiKeyRef: '',
+    openaiCompatibleApiKey: '',
+    openaiCompatibleApiKeyRef: '',
+    openaiCompatibleBaseUrl: '',
     ownerNumber: '',
     ownerJid: '',
     ownerClaimTokenHash: '',
@@ -129,8 +146,11 @@
     return cloneJsonValue(DEFAULT_EMAIL_SETTINGS);
   }
 
-  function normalizeProvider(_value) {
-    return 'groq';
+  function normalizeProvider(value) {
+    const raw = String(value || '')
+      .trim()
+      .toLowerCase();
+    return PROVIDERS.includes(raw) ? raw : 'groq';
   }
 
   function normalizeDmPolicy(value) {
@@ -277,6 +297,7 @@
       imapSecure: merged.imapSecure !== false,
       imapUser: String(merged.imapUser || '').trim(),
       imapPassword: String(merged.imapPassword || ''),
+      imapPasswordRef: String(merged.imapPasswordRef || '').trim(),
       mailbox: String(merged.mailbox || 'INBOX').trim() || 'INBOX',
       maxMessages: clampNumber(
         merged.maxMessages,
@@ -313,7 +334,7 @@
       id: String(input.id || fallback.id || createProfileId()),
       name,
       persona: String(input.persona || fallback.persona || 'custom'),
-      provider: 'groq',
+      provider: normalizeProvider(input.provider || fallback.provider),
       model: String(input.model || fallback.model || DEFAULT_SETTINGS.model),
       systemPrompt: String(promptValue),
       botTag: ensureBracketedTag(name, input.botTag || fallback.botTag),
@@ -378,7 +399,7 @@
     return {
       ...base,
       persona: active.persona || base.persona,
-      provider: 'groq',
+      provider: normalizeProvider(active.provider || base.provider),
       model: active.model || base.model,
       botTag: active.botTag || base.botTag,
     };

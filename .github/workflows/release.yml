@@ -112,8 +112,8 @@ jobs:
 
       - name: Resolve signing readiness
         env:
-          WINDOWS_CSC_LINK: ${{ secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
-          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK || secrets.CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
           MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK || secrets.CSC_LINK }}
           MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
           MAC_CSC_NAME: ${{ secrets.MAC_CSC_NAME || secrets.CSC_NAME }}

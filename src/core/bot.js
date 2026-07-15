@@ -12,6 +12,7 @@ const {
   resolveGroupPolicy,
 } = require('../shared/settingsSchema');
 const { BOT_EVENTS } = require('../shared/ipcContracts');
+const { createStructuredLog, sanitizeLogText } = require('../shared/logging');
 const {
   buildToolUnsupportedKey,
   getProviderLabel,
@@ -33,6 +34,7 @@ const {
   stripLeadingMentions,
 } = require('./messageUtils');
 const { handleAccessCommand, handleUtilityCommand } = require('./messageCommands');
+const { createAccessFailureTracker } = require('./accessFailures');
 const {
   buildToolContext,
   getToolAccess,
@@ -105,7 +107,7 @@ function requestSettingsUpdate(action, payload = {}) {
 }
 
 function log(message, level = 'info') {
-  emit(BOT_EVENTS.LOG, { level, message });
+  emit(BOT_EVENTS.LOG, createStructuredLog(message, level));
 }
 
 function ensureDirSync(dirPath) {
@@ -222,6 +224,13 @@ function applyProfileOverride(settings, profile) {
   };
 }
 
+function buildProfileSessionId(remoteJid, profile) {
+  const chatId = String(remoteJid || '').trim();
+  const profileId = String(profile?.id || '').trim();
+  if (!profileId) return chatId;
+  return `profile:${profileId}|chat:${chatId}`;
+}
+
 function getOwnerClaimTokenStatus(settings) {
   const hash = String(settings?.ownerClaimTokenHash || '').trim();
   const expiresAtRaw = String(settings?.ownerClaimTokenExpiresAt || '').trim();
@@ -270,9 +279,7 @@ function verifyOwnerClaimToken(settings, providedToken) {
 
 function generatePairingCode() {
   const max = 10 ** PAIRING_CODE_LENGTH;
-  const code = Math.floor(Math.random() * max)
-    .toString()
-    .padStart(PAIRING_CODE_LENGTH, '0');
+  const code = nodeCrypto.randomInt(0, max).toString().padStart(PAIRING_CODE_LENGTH, '0');
   return code;
 }
 
@@ -438,11 +445,13 @@ async function main() {
   let reconnectTimer = null;
   let shuttingDown = false;
   const lastReplyAtByChat = new Map();
+  const accessFailureTracker = createAccessFailureTracker();
   const cleanupReplyMap = () => {
     const now = Date.now();
     for (const [jid, last] of lastReplyAtByChat.entries()) {
       if (now - last > REPLY_MAP_TTL_MS) lastReplyAtByChat.delete(jid);
     }
+    accessFailureTracker.cleanupExpired();
   };
   const cleanupTimer =
     REPLY_MAP_CLEAN_INTERVAL_MS > 0
@@ -564,6 +573,7 @@ async function main() {
           senderPhone,
         });
         const scopedSettings = applyProfileOverride(settings, profile);
+        const sessionId = buildProfileSessionId(remoteJid, profile);
         const providerConfig = resolveProviderConfig(scopedSettings);
         const provider = providerConfig.provider;
         const providerLabel = getProviderLabel(provider);
@@ -642,6 +652,7 @@ async function main() {
           ownerConfig,
           ownerJid,
           toolContext,
+          sessionId,
           pairingId,
         };
 
@@ -653,6 +664,9 @@ async function main() {
           getPairingEntry,
           ensurePairingEntry,
           clearPairingEntry: (id) => pendingPairings.delete(String(id || '').trim()),
+          isAccessAttemptLimited: accessFailureTracker.isLimited,
+          recordAccessAttemptFailure: accessFailureTracker.recordFailure,
+          clearAccessAttemptFailures: accessFailureTracker.clear,
         });
         if (accessHandled) continue;
 
@@ -714,7 +728,6 @@ async function main() {
           Math.min(200, Math.floor(Number(settings.historyMaxMessages || 12) || 12))
         );
         const historySummaryEnabled = settings.historySummaryEnabled !== false;
-        const sessionId = remoteJid;
         const session = historyEnabled ? loadSessionState(sessionId) : null;
         const historyMessages = historyEnabled
           ? (session?.messages || []).slice(-historyMaxMessages)
@@ -889,7 +902,7 @@ async function main() {
 
 function fatal(err) {
   const message = err?.stack || err?.message || String(err);
-  emit(BOT_EVENTS.ERROR, { message });
+  emit(BOT_EVENTS.ERROR, { message: sanitizeLogText(message) });
   log(message, 'error');
   process.exit(1);
 }

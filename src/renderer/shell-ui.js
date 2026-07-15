@@ -33,6 +33,7 @@
     const apiKeyHintEl = doc.getElementById('apiKeyHint');
     const groqLinkHintEl = doc.getElementById('groqLinkHint');
     const apiBaseUrlGroup = doc.getElementById('apiBaseUrlGroup');
+    const apiBaseUrlInput = doc.getElementById('apiBaseUrl');
     const apiBaseUrlHint = doc.getElementById('apiBaseUrlHint');
     const windowMaxIcon = doc.getElementById('windowMaxIcon');
     const headerContextMenu = doc.getElementById('headerContextMenu');
@@ -66,6 +67,8 @@
 
     function formatToolsTestResult(result) {
       if (!result) return 'Resultado indisponível.';
+      const warnings = Array.isArray(result.warnings) ? result.warnings.filter(Boolean) : [];
+      const warningText = warnings.length ? `\n\nAvisos:\n- ${warnings.join('\n- ')}` : '';
       if (result.ok) {
         const entries = Array.isArray(result.entries) ? result.entries : [];
         const lines = entries.map((entry) => {
@@ -76,12 +79,12 @@
         if (result.truncated) {
           lines.push(`…e mais ${result.truncated} itens`);
         }
-        return `OK - Acesso confirmado\nPasta testada: ${result.path}\n\n${lines.join('\n') || '(vazio)'}`;
+        return `OK - Acesso confirmado\nPasta testada: ${result.path}\n\n${lines.join('\n') || '(vazio)'}${warningText}`;
       }
 
       const reason = result.reason || 'erro';
       const error = result.error ? `\nDetalhe: ${result.error}` : '';
-      return `Falha: ${reason}${error}`;
+      return `Falha: ${reason}${error}${warningText}`;
     }
 
     function getTheme() {
@@ -128,12 +131,43 @@
       }
     }
 
-    function getProviderInfo() {
-      return {
-        label: 'Groq',
-        keyPlaceholder: 'Sua chave da Groq',
-        showBaseUrl: false,
-      };
+    function getSettingsSchema() {
+      return root?.BotAssistSettingsSchema || {};
+    }
+
+    function normalizeProvider(provider) {
+      const schema = getSettingsSchema();
+      if (typeof schema.normalizeProvider === 'function') return schema.normalizeProvider(provider);
+      return String(provider || '').trim() || 'groq';
+    }
+
+    function getProviderInfo(provider) {
+      const schema = getSettingsSchema();
+      const normalized = normalizeProvider(provider);
+      return (
+        schema.PROVIDER_META?.[normalized] || {
+          label: 'Groq',
+          keyPlaceholder: 'Sua chave da Groq',
+          showBaseUrl: false,
+        }
+      );
+    }
+
+    function syncProviderOptions() {
+      if (!providerSelect) return;
+      const schema = getSettingsSchema();
+      const providers = Array.isArray(schema.PROVIDERS) ? schema.PROVIDERS : ['groq'];
+      const current = normalizeProvider(providerSelect.value || appState.settings.provider);
+      providerSelect.replaceChildren(
+        ...providers.map((provider) => {
+          const option = doc.createElement('option');
+          option.value = provider;
+          option.textContent = getProviderInfo(provider).label || provider;
+          return option;
+        })
+      );
+      providerSelect.value = providers.includes(current) ? current : 'groq';
+      providerSelect.disabled = false;
     }
 
     function updateApiKeyHint(provider) {
@@ -170,9 +204,10 @@
       apiKeyHintEl.textContent = 'Cole sua chave e clique em “Salvar Configurações”.';
     }
 
-    function updateProviderUI(_provider) {
-      const info = getProviderInfo();
-      const normalized = 'groq';
+    function updateProviderUI(provider) {
+      syncProviderOptions();
+      const normalized = normalizeProvider(provider || appState.settings.provider);
+      const info = getProviderInfo(normalized);
       if (apiKeyLabel) apiKeyLabel.textContent = `API Key ${info.label}`;
 
       if (apiKeyInput) {
@@ -186,19 +221,22 @@
       updateApiKeyHint(normalized);
 
       if (apiBaseUrlGroup) {
-        apiBaseUrlGroup.style.display = 'none';
+        apiBaseUrlGroup.style.display = info.showBaseUrl ? '' : 'none';
+      }
+      if (apiBaseUrlInput && info.baseUrlField) {
+        apiBaseUrlInput.value = appState.settings[info.baseUrlField] || '';
+        apiBaseUrlInput.placeholder = info.baseUrlPlaceholder || 'https://servidor.exemplo/v1';
       }
       if (apiBaseUrlHint) {
-        apiBaseUrlHint.textContent = '';
+        apiBaseUrlHint.textContent = info.showBaseUrl ? info.baseUrlHint || '' : '';
       }
 
       if (groqLinkHintEl) {
-        groqLinkHintEl.style.display = '';
+        groqLinkHintEl.style.display = normalized === 'groq' ? '' : 'none';
       }
 
       if (providerSelect) {
-        providerSelect.value = 'groq';
-        providerSelect.disabled = true;
+        providerSelect.value = normalized;
       }
     }
 

@@ -44,6 +44,29 @@ function runToolsDiagnostics(settings = {}) {
   if (!tools.enabled) {
     return { ok: false, reason: 'ferramentas desativadas' };
   }
+  const warnings = [];
+  const autoAllow = Array.isArray(tools.autoAllow) ? tools.autoAllow : [];
+  const mutableAuto = autoAllow.filter((name) =>
+    ['fs.write', 'fs.delete', 'fs.move', 'fs.copy', 'shell.exec', 'email.read'].includes(name)
+  );
+  const hasOwner = Boolean(
+    String(settings.ownerNumber || '').trim() || String(settings.ownerJid || '').trim()
+  );
+  if (tools.requireOwner === false) {
+    warnings.push('Ferramentas sem restricao de owner.');
+  } else if (!hasOwner) {
+    warnings.push('Ferramentas exigem owner, mas nenhum owner esta configurado.');
+  }
+  if (tools.allowInGroups) warnings.push('Ferramentas liberadas em grupos.');
+  if (mutableAuto.length > 0) {
+    warnings.push(`Ferramentas sensiveis em auto-allow: ${mutableAuto.join(', ')}.`);
+  }
+  if (!Array.isArray(tools.allowedWritePaths) || tools.allowedWritePaths.length === 0) {
+    warnings.push('Escrita/remocao esta bloqueada porque allowedWritePaths esta vazio.');
+  }
+  if (!Array.isArray(tools.allowedDomains) || tools.allowedDomains.length === 0) {
+    warnings.push('Web sem allowlist de dominios; hosts locais e privados continuam bloqueados.');
+  }
 
   const homeDir = os.homedir();
   const baseDir = homeDir;
@@ -53,7 +76,12 @@ function runToolsDiagnostics(settings = {}) {
 
   const testPath = pickTestPath(effectiveAllowed, homeDir);
   if (!testPath) {
-    return { ok: false, reason: 'nenhuma pasta válida encontrada', allowedPaths: effectiveAllowed };
+    return {
+      ok: false,
+      reason: 'nenhuma pasta válida encontrada',
+      allowedPaths: effectiveAllowed,
+      warnings,
+    };
   }
 
   if (!isPathAllowed(testPath, effectiveAllowed)) {
@@ -62,18 +90,26 @@ function runToolsDiagnostics(settings = {}) {
       reason: 'caminho não permitido',
       path: testPath,
       allowedPaths: effectiveAllowed,
+      warnings,
     };
   }
 
   try {
     const result = listDir(testPath, 80);
-    return { ok: true, path: testPath, entries: result.entries, truncated: result.truncated };
+    return {
+      ok: true,
+      path: testPath,
+      entries: result.entries,
+      truncated: result.truncated,
+      warnings,
+    };
   } catch (err) {
     return {
       ok: false,
       reason: 'erro ao listar pasta',
       error: err?.message || String(err),
       path: testPath,
+      warnings,
     };
   }
 }

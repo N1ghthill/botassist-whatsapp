@@ -1,24 +1,45 @@
-## Contexto
+## Resumo
 
-Descreva o problema/oportunidade e a motivação desta PR.
+-
 
-## O que mudou
+## Tipo de mudanca
 
-- 
+- [ ] Bugfix
+- [ ] Feature
+- [ ] Seguranca
+- [ ] Release/distribuicao
+- [ ] Documentacao
 
-## Como testar
+## Areas sensiveis
 
-1. 
-2. 
-3. 
+Marque tudo que se aplica:
 
-## Checklist
+- [ ] Secrets/API keys/senhas
+- [ ] Owner/pairing/allowlists
+- [ ] Tools/filesystem/shell/email/web
+- [ ] WhatsApp auth/sessao
+- [ ] IPC/preload/Electron security
+- [ ] Auto-update/release/signing
 
-- [ ] Li e validei o impacto da mudança
-- [ ] Atualizei docs (se aplicável)
-- [ ] Adicionei/ajustei testes (se aplicável)
-- [ ] Rodei validações locais (lint/test/build)
+## Threat model
 
-## Evidências
+Obrigatorio quando qualquer area sensivel for marcada.
 
-Inclua prints/logs/links relevantes.
+- Riscos:
+- Mitigacoes:
+- Testes:
+- Risco residual:
+
+## Validacao
+
+- [ ] `npm test`
+- [ ] `npm run lint`
+- [ ] `npm run format:check`
+- [ ] `node scripts/check-security-audit.js`
+- [ ] Build/smoke quando aplicavel
+
+## Documentacao
+
+- [ ] Docs atualizadas
+- [ ] Roadmap atualizado quando aplicavel
+- [ ] Nao aplicavel

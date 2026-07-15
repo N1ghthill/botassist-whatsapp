@@ -83,6 +83,15 @@
       );
     }
 
+    function getActiveProviderKeyStatus() {
+      const schema = root?.BotAssistSettingsSchema || {};
+      const provider =
+        typeof schema.normalizeProvider === 'function'
+          ? schema.normalizeProvider(appState.settings.provider)
+          : 'groq';
+      return appState.settings.apiKeyStatus?.[provider] || {};
+    }
+
     function getOwnerIdentityLabel(settings = appState.settings) {
       const ownerNumber = String(settings?.ownerNumber || '').trim();
       const ownerJid = String(settings?.ownerJid || '').trim();
@@ -147,7 +156,7 @@
 
     function shouldShowSetupWizard() {
       if (!setupOverlay) return false;
-      const hasApiKey = Boolean(appState.settings.apiKeyStatus?.groq?.hasApiKey);
+      const hasApiKey = Boolean(getActiveProviderKeyStatus().hasApiKey);
       const hasOwner = hasOwnerConfigured();
       if (!hasApiKey || !hasOwner) return true;
       if (isSetupComplete()) return false;
@@ -343,7 +352,7 @@
       const modelValue = getActiveProfile()?.model || appState.settings.model;
       syncSetupModelSelection(modelValue);
       if (setupApiKeyHint) {
-        const hasApiKey = Boolean(appState.settings.apiKeyStatus?.groq?.hasApiKey);
+        const hasApiKey = Boolean(getActiveProviderKeyStatus().hasApiKey);
         if (hasApiKey) {
           setupApiKeyHint.textContent = 'Chave ja configurada. Para trocar, cole uma nova e salve.';
         }
@@ -423,7 +432,7 @@
 
         if (step === 2) {
           const apiKeyValue = String(setupApiKeyInput?.value || '').trim();
-          const hasApiKey = Boolean(appState.settings.apiKeyStatus?.groq?.hasApiKey);
+          const hasApiKey = Boolean(getActiveProviderKeyStatus().hasApiKey);
           if (!apiKeyValue && !hasApiKey) {
             const ok = root.confirm('Continuar sem API Key? O bot nao respondera com IA.');
             if (!ok) return;
