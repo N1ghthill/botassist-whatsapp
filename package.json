@@ -44,7 +44,7 @@
   "devDependencies": {
     "@electron/asar": "^4.2.0",
     "@eslint/js": "^9.39.4",
-    "electron": "^41.1.0",
+    "electron": "^41.10.6",
     "electron-builder": "^26.15.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
